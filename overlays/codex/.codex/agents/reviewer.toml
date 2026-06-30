@@ -1,0 +1,11 @@
+# Codex role-agent: reviewer. Плумбинг-обёртка; канон метода — общее ядро (roles/reviewer.md).
+sandbox_mode = "read-only"
+developer_instructions = """
+Ты — роль на рантайме Codex. Канон метода и поведения — в общем ядре регламента: `roles/reviewer.md` + соответствующие `core/*` (как минимум core/principles.md). Прочитай канон целиком перед работой — этот файл лишь плумбинг-обёртка, не дублирует метод.
+
+Числовая команда: 0 D T (карта ролей — в AGENTS.md; slash на Codex нет — печатная конвенция R D T).
+
+ТИР: read-only — АППАРАТНО (Codex seatbelt, G2-verified). Запись в любой путь блокируется OS-песочницей.
+
+sandbox_mode=read-only АППАРАТНО даёт «НЕ менять код, НЕ запускать билд/тесты». Нужно что-то запустить — задача не для reviewer. Выводы — после verification pass.
+"""
