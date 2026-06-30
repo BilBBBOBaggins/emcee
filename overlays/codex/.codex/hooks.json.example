@@ -1,0 +1,20 @@
+{
+  "_comment_": "ОПТ-ИН хуки-гейты Codex в КАНОНИЧЕСКОЙ форме (Claude-Code-совместимый hooks.json: события PascalCase, command — строка-путь, matcher — имя тула; сверено с реальными plugin-хуками codex 0.138.0 ~/.codex/.tmp/plugins/*/hooks.json). ⚠ ПУТИ .codex/hooks/check-loc.sh И .codex/hooks/checkpoint-precompact.sh — ПЛЕЙСХОЛДЕРЫ: этих скриптов В ПАКЕТЕ НЕТ. Перед включением СОЗДАЙ их (адаптируй из .claude/hooks/ под Codex-payload и положи в .codex/hooks/), иначе хук = no-op/ошибка пути. KL-7 (живой codex exec, 6 сессий): из user/repo-конфига в HEADLESS `codex exec` хуки НЕ срабатывают даже с --dangerously-bypass-hook-trust и корректной схемой — рабочие хуки 0.138.0 = plugin-манифест + интерактивный TUI-trust. Вывод: на Codex регламентный хук-гейт ДЕГРАДИРУЕТ В ACCOUNTABILITY (под запись); для ЖЁСТКОГО энфорсмента предпочитай CI/pre-commit, не рантайм-хуки. Детали: scratchpad/panel/g2-findings.md → KL-7, core/portability.md → матрица гарантий.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "shell",
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/check-loc.sh" }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          { "type": "command", "command": ".codex/hooks/checkpoint-precompact.sh" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "ЕДИНСТВЕННЫЙ источник истины: цифра -> роль. Renumber/удаляй здесь, потом запусти `python3 sync-roles.py` — он перегенерит таблицы в CLAUDE.md и .claude/commands/role.md между маркерами ROLES-TABLE. `python3 sync-roles.py --check` падает, если что-то рассинхронилось (используется в selftest).",
+  "roles": [
+    { "num": 0, "name": "Reviewer",         "agent": "reviewer",  "file": "roles/reviewer.md" },
+    { "num": 1, "name": "Developer",        "agent": "developer", "file": "roles/developer.md" },
+    { "num": 2, "name": "QA E2E",           "agent": "qa-e2e",    "file": "roles/qa-e2e.md" },
+    { "num": 3, "name": "Business Analyst", "agent": "ba",        "file": "roles/ba.md" },
+    { "num": 4, "name": "QA UAT",           "agent": "qa-uat",    "file": "roles/qa-uat.md" },
+    { "num": 5, "name": "System Analyst",   "agent": "sa",        "file": "roles/sa.md" },
+    { "num": 6, "name": "Debugger",         "agent": "debugger",  "file": "roles/debugger.md" },
+    { "num": 7, "name": "DevOps",           "agent": "devops",    "file": "roles/devops.md" }
+  ]
+}

@@ -1,0 +1,149 @@
+<!-- Источник истины для диаграммы пайплайна. Встраивается в handbook.html/quickstart.html
+     генератором render-handbook.py (data-URI <img>). PDF (docs/pipeline-diagram.pdf,
+     gitignored) пересобирается из этого файла headless-браузером — см. docstring render-handbook.py. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 900" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" role="img" aria-label="Пайплайн emcee: kickoff, онгоинг по дням и прохождение задачи через роли">
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#8b93a3"/>
+    </marker>
+    <marker id="arb" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#2f6feb"/>
+    </marker>
+    <style>
+      .title{font-size:24px;font-weight:700;fill:#1b1b1f}
+      .sub{font-size:13px;fill:#5b5b66}
+      .zone{fill:#fafbfc;stroke:#e2e4e9;stroke-width:1.5}
+      .zhead{font-size:15px;font-weight:700;fill:#1b1b1f}
+      .zhint{font-size:12px;fill:#5b5b66}
+      .box{rx:9;stroke-width:1.5}
+      .cmd{fill:#eef1ff;stroke:#2f6feb}
+      .role{fill:#eef1f5;stroke:#b9c0cc}
+      .art{fill:#fff7e3;stroke:#e0cf8f}
+      .commit{fill:#e8f6ec;stroke:#7fbf95}
+      .proc{fill:#ffffff;stroke:#cfd5de;stroke-dasharray:5 4}
+      .bt{font-size:13px;fill:#1b1b1f;text-anchor:middle}
+      .btb{font-size:13px;font-weight:700;fill:#1b1b1f;text-anchor:middle}
+      .cmdt{font-size:13px;font-weight:700;fill:#2f4fc0;text-anchor:middle}
+      .note{font-size:11.5px;fill:#5b5b66}
+      .edge{stroke:#8b93a3;stroke-width:1.6;fill:none}
+      .edgeb{stroke:#2f6feb;stroke-width:1.6;fill:none}
+      .lk{font-size:13px;font-weight:700;fill:#2f4fc0}
+      .ld{font-size:13px;fill:#33363d}
+    </style>
+  </defs>
+
+  <text x="40" y="40" class="title">Пайплайн emcee — от пустого репо до фич</text>
+  <text x="40" y="62" class="sub">Вес процесса — по сложности проекта, не по числу людей. Дефолт — lightweight (одно окно: developer + reviewer); полный конвейер помечен «[сложный]».</text>
+
+  <!-- ============ ZONE 1 : KICKOFF ============ -->
+  <rect class="zone" x="40" y="84" width="1060" height="150" rx="12"/>
+  <text x="58" y="110" class="zhead">①  ФАЗА 0 · KICKOFF — один раз</text>
+  <text x="372" y="110" class="zhint">новый проект или перевод существующего · R D T работает только по уже существующим дням</text>
+
+  <rect class="box cmd" x="58"  y="146" width="116" height="58" rx="9"/>
+  <text x="116" y="180" class="cmdt">/kickoff</text>
+
+  <rect class="box role" x="206" y="146" width="158" height="58" rx="9"/>
+  <text x="285" y="170" class="bt">architect</text>
+  <text x="285" y="188" class="note" text-anchor="middle">kickoff-режим</text>
+
+  <rect class="box proc" x="396" y="146" width="430" height="58" rx="9"/>
+  <text x="611" y="169" class="bt">суть · routing-вопросы  →  заполняет CLAUDE.md  →  PROJECT-STATE.md</text>
+  <text x="611" y="190" class="note" text-anchor="middle">несущая архитектура → /panel → ADR в docs/adr/</text>
+
+  <rect class="box art" x="858" y="146" width="160" height="58" rx="9"/>
+  <text x="938" y="170" class="btb">day-0 / day-1</text>
+  <text x="938" y="188" class="note" text-anchor="middle">guide</text>
+
+  <path class="edge" d="M174,175 H206" marker-end="url(#ar)"/>
+  <path class="edge" d="M364,175 H396" marker-end="url(#ar)"/>
+  <path class="edge" d="M826,175 H858" marker-end="url(#ar)"/>
+
+  <path class="edge" d="M90,234 V258" marker-end="url(#ar)"/>
+
+  <!-- ============ ZONE 2 : ONGOING ============ -->
+  <rect class="zone" x="40" y="260" width="1060" height="214" rx="12"/>
+  <text x="58" y="286" class="zhead">②  ОНГОИНГ — по дням, цикл R D T</text>
+  <text x="330" y="286" class="zhint">повторяется, пока есть срез роадмапа</text>
+
+  <rect class="box role" x="58"  y="322" width="168" height="58" rx="9"/>
+  <text x="142" y="346" class="bt">architect · N</text>
+  <text x="142" y="364" class="note" text-anchor="middle">статус, бьёт срез</text>
+
+  <rect class="box art" x="266" y="322" width="150" height="58" rx="9"/>
+  <text x="341" y="356" class="btb">day-N-guide</text>
+
+  <rect class="box role" x="456" y="322" width="158" height="58" rx="9"/>
+  <text x="535" y="346" class="bt">роли исполняют</text>
+  <text x="535" y="364" class="note" text-anchor="middle">R D T</text>
+
+  <rect class="box commit" x="654" y="322" width="150" height="58" rx="9"/>
+  <text x="729" y="346" class="bt">твой коммит</text>
+  <text x="729" y="364" class="note" text-anchor="middle">агент не коммитит</text>
+
+  <path class="edge" d="M226,351 H266" marker-end="url(#ar)"/>
+  <path class="edge" d="M416,351 H456" marker-end="url(#ar)"/>
+  <path class="edge" d="M614,351 H654" marker-end="url(#ar)"/>
+  <!-- loop back -->
+  <path class="edgeb" d="M729,322 V306 H142 V322" marker-end="url(#arb)"/>
+  <text x="430" y="300" class="note" text-anchor="middle" fill="#2f4fc0">следующий срез роадмапа</text>
+
+  <rect x="844" y="322" width="240" height="58" rx="9" fill="#f6f7f9" stroke="#e2e4e9" stroke-width="1.5"/>
+  <text x="858" y="343" class="note" font-weight="700" fill="#33363d">периодически:</text>
+  <text x="858" y="360" class="note">статус N · /panel на несущем</text>
+  <text x="858" y="374" class="note">· auditor на межзадачный дрейф</text>
+
+  <rect x="58" y="400" width="1026" height="56" rx="9" fill="#ffffff" stroke="#cfd5de" stroke-width="1.5"/>
+  <text x="74" y="422" class="note" font-weight="700" fill="#33363d">каждая задача (фазы-контракты):</text>
+  <text x="74" y="442" class="note">constitution preflight  →  работа  →  гейты качества зелёные  →  constitution exit  →  твой коммит   ·   нет входного артефакта предыдущей фазы → STOP, не имитировать прогресс</text>
+
+  <path class="edge" d="M90,474 V498" marker-end="url(#ar)"/>
+
+  <!-- ============ ZONE 3 : TASK THROUGH ROLES ============ -->
+  <rect class="zone" x="40" y="500" width="1060" height="218" rx="12"/>
+  <text x="58" y="526" class="zhead">③  КАК ОДНА ЗАДАЧА ПРОХОДИТ ЧЕРЕЗ РОЛИ</text>
+
+  <!-- lightweight row -->
+  <text x="58" y="556" class="note" font-weight="700" fill="#33363d">дефолт · lightweight (solo) — большинство задач</text>
+  <rect class="box role" x="58"  y="566" width="140" height="50" rx="9"/>
+  <text x="128" y="596" class="bt">developer</text>
+  <rect class="box role" x="238" y="566" width="140" height="50" rx="9"/>
+  <text x="308" y="596" class="bt">reviewer</text>
+  <rect class="box commit" x="418" y="566" width="150" height="50" rx="9"/>
+  <text x="493" y="596" class="bt">твой коммит</text>
+  <path class="edge" d="M198,591 H238" marker-end="url(#ar)"/>
+  <path class="edge" d="M378,591 H418" marker-end="url(#ar)"/>
+  <text x="600" y="586" class="note">баг  →  <tspan font-weight="700" fill="#33363d">debugger</tspan></text>
+  <text x="600" y="606" class="note">несущая развилка  →  <tspan font-weight="700" fill="#2f4fc0">/panel</tspan></text>
+
+  <!-- full conveyor row -->
+  <text x="58" y="650" class="note" font-weight="700" fill="#33363d">[сложный] полный конвейер — фича с доменом и UI (каждая фаза требует входной артефакт предыдущей)</text>
+  <g>
+    <rect class="box role" x="58"  y="662" width="86" height="44" rx="8"/><text x="101" y="689" class="bt">SA</text>
+    <rect class="box role" x="172" y="662" width="86" height="44" rx="8"/><text x="215" y="689" class="bt">BA</text>
+    <rect class="box role" x="286" y="662" width="110" height="44" rx="8"/><text x="341" y="689" class="bt">designer</text>
+    <rect class="box role" x="424" y="662" width="110" height="44" rx="8"/><text x="479" y="689" class="bt">architect</text>
+    <rect class="box role" x="562" y="662" width="116" height="44" rx="8"/><text x="620" y="689" class="bt">developer</text>
+    <rect class="box role" x="706" y="662" width="100" height="44" rx="8"/><text x="756" y="689" class="bt">qa-uat</text>
+    <rect class="box role" x="834" y="662" width="100" height="44" rx="8"/><text x="884" y="689" class="bt">qa-e2e</text>
+    <rect class="box role" x="962" y="662" width="110" height="44" rx="8"/><text x="1017" y="689" class="bt">reviewer</text>
+    <path class="edge" d="M144,684 H172" marker-end="url(#ar)"/>
+    <path class="edge" d="M258,684 H286" marker-end="url(#ar)"/>
+    <path class="edge" d="M396,684 H424" marker-end="url(#ar)"/>
+    <path class="edge" d="M534,684 H562" marker-end="url(#ar)"/>
+    <path class="edge" d="M678,684 H706" marker-end="url(#ar)"/>
+    <path class="edge" d="M806,684 H834" marker-end="url(#ar)"/>
+    <path class="edge" d="M934,684 H962" marker-end="url(#ar)"/>
+  </g>
+
+  <!-- ============ LEGEND : COMMAND GRAMMAR ============ -->
+  <rect class="zone" x="40" y="744" width="1060" height="132" rx="12"/>
+  <text x="58" y="770" class="zhead">Грамматика команд</text>
+  <g>
+    <text x="58"  y="798" class="lk">/kickoff</text><text x="150" y="798" class="ld">старт проекта: architect в kickoff-режиме (дней ещё нет)</text>
+    <text x="58"  y="824" class="lk">N</text><text x="150" y="824" class="ld">architect входит в день N — статус/риски, lead</text>
+    <text x="58"  y="850" class="lk">R D</text><text x="150" y="850" class="ld">роль R входит в контекст дня D без задачи (review)</text>
+    <text x="640" y="824" class="lk">R D T</text><text x="730" y="824" class="ld">роль R берёт задачу T дня D · основной режим</text>
+    <text x="640" y="850" class="lk">/panel</text><text x="730" y="850" class="ld">адверсивная панель на несущем решении → ADR</text>
+  </g>
+</svg>
