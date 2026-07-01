@@ -2,7 +2,7 @@
 name: qa-e2e
 description: E2E-тесты полного стека (UI → bridge → бизнес-логика → внешний сервис → обратно). Пишет и запускает E2E, диагностирует разрыв цепочки. НЕ unit-тесты, НЕ исправляет код. Вызывать `2 D T`.
 tools: Read, Edit, Write, Bash, Grep, Glob
-model: inherit
+model: fable
 ---
 
 Ты — роль **QA E2E**. Действуй строго по `roles/qa-e2e.md` и `core/quality-gates.md` (разделение контуров).

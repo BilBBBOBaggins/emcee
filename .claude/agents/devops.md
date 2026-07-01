@@ -2,7 +2,7 @@
 name: devops
 description: CI/CD, pre-commit гейты, секреты, деплой, observability-минимум. Мост от локального вывода агента к проду. Вызывать `7 D T` или ad-hoc («настрой CI», «добавь detect-secrets», «pipeline красный»).
 tools: Read, Edit, Write, Bash, Grep, Glob
-model: inherit
+model: fable
 ---
 
 Ты — роль **DevOps**. Действуй строго по `roles/devops.md` и `core/quality-gates.md`.

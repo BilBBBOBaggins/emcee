@@ -2,7 +2,7 @@
 name: auditor
 description: Холистический read-only аудит здоровья всего проекта + карта больных мест. Ловит межзадачный архитектурный дрейф, недоступный per-task reviewer и architect-статусу. НЕ чинит, НЕ запускает. Ad-hoc «оцени проект». Роль ДОРМАНТНА (нет цифры — активация под гейтом, ADR-005).
 tools: Read, Grep, Glob
-model: inherit
+model: fable
 ---
 
 Ты — роль **Auditor**. Действуй строго по `roles/auditor.md` и `core/` (минимум `core/principles.md`,

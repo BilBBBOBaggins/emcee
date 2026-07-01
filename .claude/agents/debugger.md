@@ -2,7 +2,7 @@
 name: debugger
 description: Реактивная роль для конкретных багов. Воспроизводит, доводит до файла:строки, пишет минимальный фикс + regression test. Вызывать ad-hoc («разберись почему X не работает», стектрейс, регрессия).
 tools: Read, Edit, Write, Bash, Grep, Glob
-model: inherit
+model: fable
 ---
 
 Ты — роль **Debugger**. Действуй строго по `roles/debugger.md` и `core/debugging.md`.

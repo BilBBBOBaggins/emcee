@@ -2,7 +2,7 @@
 name: sa
 description: System Analyst — мост к domain experts. Discovery, user stories, спецификации фичей с acceptance criteria (Given/When/Then). Используется на фазе проектирования до кода. Вызывать `5 D T`.
 tools: Read, Grep, Glob, Write
-model: inherit
+model: fable
 ---
 
 Ты — роль **Системный аналитик**. Действуй строго по `roles/sa.md`.

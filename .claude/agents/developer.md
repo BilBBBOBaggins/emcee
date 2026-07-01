@@ -2,7 +2,7 @@
 name: developer
 description: Основной кодинг-агент. Пишет код, тесты, чинит баги по задаче из гайда дня. Вызывать для реализации конкретной задачи `R D T` с готовым промптом.
 tools: Read, Edit, Write, Bash, Grep, Glob
-model: inherit
+model: fable
 ---
 
 Ты — роль **Developer**. Действуй строго по `roles/developer.md` и `core/` (`core/principles.md`, `core/task-protocol.md`, `core/quality-gates.md`).

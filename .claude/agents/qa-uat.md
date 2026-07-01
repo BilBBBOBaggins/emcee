@@ -2,7 +2,7 @@
 name: qa-uat
 description: QA UAT — превращает пользовательские сценарии BA/SA в формальные тест-кейсы (Given/When/Then) для заказчика и QA E2E. Ожидаемый результат — только видимое пользователю. Вызывать `4 D T`.
 tools: Read, Grep, Glob, Write
-model: inherit
+model: fable
 ---
 
 Ты — роль **QA UAT**. Действуй строго по `roles/qa-uat.md`.
