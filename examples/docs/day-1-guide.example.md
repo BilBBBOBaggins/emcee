@@ -132,6 +132,28 @@ git commit -m "feat(invites): invite teammate modal wired to POST /api/v1/invite
 - **Выход:** `docs/scenarios-1-2-invite-teammate.md` (пример: [scenarios-1-2-invite-teammate.example.md](scenarios-1-2-invite-teammate.example.md)).
 - **Референс для сравнения:** Slack / Notion (приглашение в workspace).
 
+### Промпт для Claude Code
+
+~~~
+Прочитай код инвайт-фичи Задач 1–2: app/api/v1/invites/route.ts, lib/services/invites.ts,
+components/features/InviteTeammateModal.tsx. Напиши пользовательские сценарии фичи «пригласить
+коллегу» по формату roles/ba.md: главный сценарий + альтернативные (дубликат email, невалидный
+email, отмена), каждый — с ожидаемым ВИДИМЫМ пользователю результатом. Сравни с приглашением в
+workspace у Slack/Notion; чего у нас нет — отдельным списком gaps.
+Результат: docs/scenarios-1-2-invite-teammate.md.
+~~~
+
+### После выполнения
+
+Вычитать глазами: каждый сценарий заканчивается видимым пользователю результатом, не внутренним состоянием.
+
+### Коммит
+
+~~~bash
+git add docs/scenarios-1-2-invite-teammate.md
+git commit -m "docs(invites): user scenarios for invite teammate feature"
+~~~
+
 ---
 
 ## Задача 4 — QA UAT: тест-кейсы
@@ -141,6 +163,27 @@ git commit -m "feat(invites): invite teammate modal wired to POST /api/v1/invite
 - **Вход:** `docs/scenarios-1-2-invite-teammate.md` + код.
 - **Выход:** `docs/test-cases-1-2-invite-teammate.md` (пример: [test-cases-1-2-invite-teammate.example.md](test-cases-1-2-invite-teammate.example.md)).
 
+### Промпт для Claude Code
+
+~~~
+Прочитай docs/scenarios-1-2-invite-teammate.md и код фичи (за UI-селекторами:
+components/features/InviteTeammateModal.tsx). Преврати сценарии в формальные тест-кейсы
+Given/When/Then по roles/qa-uat.md: ожидаемый результат — только видимое пользователю;
+добавь негативные, стресс- и concurrency-кейсы (двойной сабмит, гонка на один email).
+Результат: docs/test-cases-1-2-invite-teammate.md.
+~~~
+
+### После выполнения
+
+Вычитать глазами: ни один Then не ссылается на внутреннее состояние (БД, стор) — только на видимое в UI.
+
+### Коммит
+
+~~~bash
+git add docs/test-cases-1-2-invite-teammate.md
+git commit -m "docs(invites): UAT test cases for invite teammate feature"
+~~~
+
 ---
 
 ## Задача 5 — QA E2E: автотесты
@@ -149,3 +192,30 @@ git commit -m "feat(invites): invite teammate modal wired to POST /api/v1/invite
 
 - **Вход:** `docs/test-cases-1-2-invite-teammate.md`.
 - **Выход:** E2E-тесты в контуре `build-qa/` (см. [core/quality-gates.md](../../core/quality-gates.md) — разделение контуров).
+
+### Промпт для Claude Code
+
+~~~
+Прочитай docs/test-cases-1-2-invite-teammate.md. Реализуй кейсы как E2E (Playwright) в контуре
+build-qa/: каждое действие — через UI собранного приложения, проверка — видимый результат +
+серверная верификация (инвайт реально создан) + UI после ответа сервера.
+Гейт QG-NN-05 (core/quality-gates.md): прогон идёт через объявленный shipping-root приложения —
+никакой bespoke-инъекции обвязки (зависимостей, outcome-ручек, триггеров), которую поставка даёт сама;
+ассерт — наблюдаемый ЭФФЕКТ фичи «пригласить» (инвайт реально создан и виден), не presence.
+В отчёте: по каждому атомарному acceptance-критерию frozen scope — assembled-путь + @qg:<scope-id>.
+~~~
+
+### После выполнения
+
+~~~bash
+cd build-qa && npx playwright test 2>&1 | tee /tmp/day1-task5.log
+~~~
+
+Ожидается: все E2E зелёные на собранном приложении.
+
+### Коммит
+
+~~~bash
+git add build-qa/
+git commit -m "test(invites): e2e invite teammate flow through assembled app"
+~~~

@@ -67,6 +67,7 @@
 - НЕ запускать E2E-тесты, **когда развёрнут отдельный QA E2E-контур** (сложный проект) — это работа QA
 - Developer работает только с dev-тестами (unit + integration) — **в этом случае**
 - **Solo-collapse** (простой проект, отдельного QA-контура нет — см. [core/pipeline.md](../core/pipeline.md)): developer сам реализует и гоняет нужные acceptance/E2E-подобные проверки в рамках задачи. Это покрытие, но не независимый QA-signoff; усложнился проект → развернуть отдельный контур
+- **На solo-collapse developer — владелец гейта QG-NN-05** «Достижимость фичи в сборе» ([core/quality-gates.md](../core/quality-gates.md)): каждый атомарный acceptance-критерий frozen scope — ≥1 прогон через **объявленный shipping-root** без bespoke-инъекции (state-selection-ручка — можно; outcome/dependency/trigger/wiring-ручка — нельзя в любой упаковке); ассерт — **наблюдаемый эффект** (feature-on/off), не presence; в exit-отчёте по каждому критерию — assembled-путь + `@qg:<scope-id>`. Зелёные юниты без этого = задача НЕ done
 
 ### Коммуникация
 
