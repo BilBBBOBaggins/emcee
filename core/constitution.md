@@ -21,6 +21,7 @@
 | QG-NN-02 | Чистая сборка без warnings | [quality-gates.md](quality-gates.md) + `stack/*` «Чистая сборка» | mechanical: компилятор/линтер |
 | QG-NN-03 | LOC-пороги: перешёл → обоснуй цельность или split | [quality-gates.md](quality-gates.md) | accountability (warn: `.claude/hooks/check-loc.sh`) |
 | QG-NN-04 | «Сломал — чини»: не отключать/скипать/ослаблять тесты | [quality-gates.md](quality-gates.md) | accountability |
+| QG-NN-05 | Каждая frozen-фича достижима/наблюдаема в сборе (через composition root, без bespoke-инъекции) — **ПРОВИЗОРНО до ратификации [ADR-015](../docs/adr/015-assembled-reachability-gate.md) панелью** | [quality-gates.md](quality-gates.md) | accountability |
 | CQ-NN-01 | Без TODO/FIXME | [code-quality.md](code-quality.md) | mechanical(opt): `.claude/hooks/check-no-todo.sh` |
 | CQ-NN-02 | Слои однонаправленно, без обратных импортов | [code-quality.md](code-quality.md) | accountability |
 | CQ-NN-03 | Без закомментированного кода | [code-quality.md](code-quality.md) | accountability |
