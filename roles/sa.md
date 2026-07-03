@@ -367,7 +367,7 @@ Status: completed | in-progress | blocked
 
 - Discovery notes: docs/discovery/YYYY-MM-DD-topic.md
 - Specification: docs/specs/feature-name.md
-- Updated ADR: docs/adr/NNN-topic.md
+- ADR-input (если спека упирается в арх-решение): предложение в спеке / handoff архитектору — сам ADR пишет architect ([core/task-protocol.md](../core/task-protocol.md); принятые ADR read-only, `roles/architect.md`)
 
 ## Findings
 
