@@ -138,6 +138,7 @@ migrations/
 - **gomock** или `testify/mock` для моков
 - Table-driven tests как стандарт для multiple cases
 - Integration tests в том же пакете что unit tests, разделение через build tags
+- Coverage-отчёт (диагностика дыр, не целевой процент — см. `roles/qa-e2e.md` §Coverage-диагностика): `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out`; HTML-карта — `go tool cover -html=coverage.out -o coverage.html`
 
 Паттерн table-driven:
 

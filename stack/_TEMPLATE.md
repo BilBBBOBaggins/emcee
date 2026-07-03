@@ -42,6 +42,7 @@ TODO: канонический layout каталогов.
 
 - TODO: тест-фреймворк, паттерн (table-driven / параметризация), разделение unit / integration.
 - TODO: команды запуска (быстрые vs полные); никаких реальных сети/таймеров в unit (см. [core/quality-gates.md](../core/quality-gates.md)).
+- TODO: команда coverage-отчёта + путь к артефакту. Назначение — **диагностика дыр** (какие файлы/пути без тестов), НЕ целевой процент и НЕ exit-гейт задачи. Гоняет qa-e2e (на solo-collapse — developer) по запросу; читают auditor/architect (см. `roles/qa-e2e.md` §Coverage-диагностика).
 
 ## Логирование
 

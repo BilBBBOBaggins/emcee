@@ -1,6 +1,9 @@
 # Библиотека промптов Anthropic → что применимо в emcee
 
 **Источник:** <https://code.claude.com/docs/en/prompt-library> (стянуто 2026-07-03).
+**Статус: принято и внесено 2026-07-03** — §1 (чеклист промпта → architect.md) и все пункты §2
+(coverage → стаб стека + go/python/react-nextjs + qa-e2e/developer; self-check UI → developer.md;
+git-археология → auditor.md; захват сессии → core/memory.md). Решение оператора.
 Это 52 копипаст-промпта для Claude Code, собранных Anthropic из Common workflows, Best practices,
 «How Anthropic teams use Claude Code» и enterprise-гайда. Каждый промпт снабжён разбором
 «Why this works». Аудитория — пользователь, который вводит промпты руками; emcee — регламент,
@@ -43,7 +46,7 @@
 | Промпт библиотеки | Суть | Куда в emcee |
 |---|---|---|
 | **fill-gaps-from-a-coverage-report** | «read coverage-summary.json and add tests for the lowest-covered files until each is above N%» — цели по тестам от фактического отчёта покрытия, не от ощущения | приём для qa-e2e/developer; опционально упоминание в [core/quality-gates.md](../../core/quality-gates.md) как способ находить дыры (не как самоцель-метрику) |
-| **implement-from-a-screenshot** | «implement this design, then take a screenshot, compare to the original, and fix differences» — визуальный self-check-цикл | [roles/designer.md](../../roles/designer.md) (дормантна, гейт O1): при активации — штатный цикл верификации макета |
+| **implement-from-a-screenshot** | «implement this design, then take a screenshot, compare to the original, and fix differences» — визуальный self-check-цикл | [roles/developer.md](../../roles/developer.md): цикл верификации на этапе **реализации** UI (designer в emcee только производит вайрфрейм, морду реализует developer); картинка — эталон сравнения, не источник кода; средство рендера — `origin: harness` |
 | **trace-how-code-evolved** | «look through the commit history of {path} and summarize how it evolved and why» — git-археология для вопроса «почему», а не «что» | явный приём в [roles/auditor.md](../../roles/auditor.md) (вход в чужой/старый проект); частично уже покрыто «git = searchable холодная память» в task-protocol |
 | **capture-what-to-remember** | «summarize what we did this session and suggest what to add to CLAUDE.md» — ручной захват знаний в конце сессии | [core/memory.md](../../core/memory.md): как ручное дополнение к PreCompact-хуку (хук пишет recovery-чекпойнт, но не смысловое «что добавить в регламент») |
 | **see-what-depends-on** | «what would break if I deleted {target}?» — оценка blast radius до удаления | микро-приём для developer/architect при refactor-задачах; кандидат в architect-чеклист разбивки |

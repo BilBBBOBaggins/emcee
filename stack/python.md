@@ -94,6 +94,7 @@ pytest -m integration                   # интеграционные
 ~~~
 
 - `freezegun`/инъекция времени вместо реального времени; никаких `time.sleep()` для синхронизации (см. [core/quality-gates.md](../core/quality-gates.md)).
+- Coverage-отчёт (диагностика дыр, не целевой процент — см. `roles/qa-e2e.md` §Coverage-диагностика): `pytest --cov=<пакет> --cov-report=term-missing` (плагин `pytest-cov`); машиночитаемый артефакт — `--cov-report=json:coverage.json`.
 
 ## Логирование
 

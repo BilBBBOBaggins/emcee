@@ -228,6 +228,7 @@ function LoginForm() {
 - **Vitest** для unit tests компонентов и утилит
 - **Testing Library** для компонентного тестирования
 - **Playwright** для E2E
+- Coverage-отчёт (диагностика дыр, не целевой процент — см. `roles/qa-e2e.md` §Coverage-диагностика): `vitest run --coverage` (провайдер `@vitest/coverage-v8`, артефакты в `coverage/`)
 
 Правила:
 
