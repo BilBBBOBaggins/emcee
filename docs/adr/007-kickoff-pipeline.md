@@ -1,7 +1,7 @@
 # ADR-007: Онбординг — kickoff-режим + сквозной нарратив (doc-слой), канон-интейк под гейтом O1
 
 Date: 2026-06-27
-Status: Proposed
+Status: Accepted (реализовано: /kickoff + core/pipeline.md, сквозной нарратив; канон-интейк — под O1 из ADR-003)
 
 > Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md). Связан с [ADR-003](003-first-km-intake.md): не отменяет его и уважает гейт O1.
 

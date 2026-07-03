@@ -1,7 +1,7 @@
 # ADR-002: Spec-driven — строим C+ сейчас, исполняемый слой откладываем
 
 Date: 2026-06-27
-Status: Proposed
+Status: Accepted (реализовано: core/spec-driven.md — контур C+ в пакете)
 
 > Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md). Связан с [ADR-001](001-scope-process-overlay.md): тот установил норму «process-overlay, не строить исполняемый код под неизмеренную боль» — этот ADR применяет ту же норму к spec-driven.
 

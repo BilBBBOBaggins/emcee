@@ -1,7 +1,7 @@
 # ADR-004: Вторая модель всем ролям (узко, opt-in) + дормантная роль Designer
 
 Date: 2026-06-27
-Status: Proposed
+Status: Accepted (реализовано: core/second-model.md + дормантная roles/designer.md под гейтом O1-D)
 
 > Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md). Применяет нормы [ADR-001](001-scope-process-overlay.md) (пакет не владеет owned-долгом) и [ADR-003](003-first-km-intake.md) (активация новой возможности — под гейтом ретро оператора).
 

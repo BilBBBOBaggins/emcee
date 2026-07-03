@@ -1,7 +1,7 @@
 # ADR-001: Охват пакета — process-overlay, а не app-bootstrap
 
 Date: 2026-06-27
-Status: Proposed
+Status: Accepted (реализовано: README/stub переформулированы, дефолт test-along, day-0-guide в генераторе; п.3 уточнён ADR-016)
 
 > Уточнение 2026-07-03: п.3 решения («вторая модель в панели рекомендована, но не обязательна»)
 > уточнён [ADR-016](016-panel-second-model-mandatory-when-available.md) — обязательна **при доступности**,

@@ -1,7 +1,7 @@
 # ADR-006: Обновление устаревшего регламента — делегирующая роль, а не код-движок
 
 Date: 2026-06-27
-Status: Proposed
+Status: Accepted (реализовано: делегирующая roles/upgrader.md, report-first)
 
 > Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md).
 
