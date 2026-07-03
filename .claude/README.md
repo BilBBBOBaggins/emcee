@@ -17,7 +17,7 @@
 | `architect` | + Write, Task | документы (ADR/spec) + параллельное чтение через Task; без Edit/Bash на проде |
 | `developer`, `qa-e2e`, `debugger`, `devops` | + Edit, Write, Bash | пишут код/тесты/конфиги |
 | `red-team`, `blue-team` | Read, Grep, Glob, Bash, Write | адверсивная панель: пишут разбор/защиту в `scratchpad/panel/`, Bash — чтобы привлечь codex |
-| `arbiter` | Read, Grep, Glob, Bash, Write | адверсивная панель: судит и пишет вердикт; Bash — **только узкий codex-фактчек спорного эмпирического пункта** (`core/adversarial-panel.md` §39), НЕ для приговора «чей довод сильнее» |
+| `arbiter` | Read, Grep, Glob, Bash, Write | адверсивная панель: судит и пишет вердикт; Bash — **только узкий codex-фактчек спорного эмпирического пункта** (`core/adversarial-panel.md` §«Арбитр codex НЕ отдаёт вердикт»), НЕ для приговора «чей довод сильнее» |
 
 Тело ролей пайплайна короткое и ссылается на канонический `roles/<роль>.md`. Тело `red-team`/`blue-team`/`arbiter` — самодостаточный системный промпт (источник метода — [../core/adversarial-panel.md](../core/adversarial-panel.md)).
 

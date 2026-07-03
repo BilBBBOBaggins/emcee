@@ -97,6 +97,8 @@ ORDER = [
     ("docs/adr/013-feature-discovery-trigger.md", "ADR-013: Триггер feature-discovery"),
     ("docs/adr/014-prompt-canon-consistency-fixes.md", "ADR-014: Фиксы консистентности промпт-канона"),
     ("docs/adr/015-assembled-reachability-gate.md", "ADR-015: Достижимость фичи в сборе (QG-NN-05)"),
+    ("docs/adr/016-panel-second-model-mandatory-when-available.md",
+     "ADR-016: Вторая модель панели — обязательна при доступности"),
 ]
 
 
