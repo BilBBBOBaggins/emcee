@@ -220,18 +220,29 @@ def check_codex_overlay_state(root):
 
 def check_stack_file(root):
     """Стек-файл: на нём висят слоты QG-NN-02 «Чистая сборка», coverage-команда (§Тесты) и
-    static-adjunct QG-NN-05. Дыра «ничей файл»: для стека вне каталога пакета генератор кладёт
-    TODO-скелет, а владельца дозаполнения раньше не было (теперь — architect, kickoff/день-0:
-    roles/architect.md). warn, не red: проект может сознательно держать стек во входном файле,
-    но тогда слоты надо закрывать там же. Ищем stack/ и docs/stack/ (docs-nested раскладка)."""
+    static-adjunct QG-NN-05. Правило event-driven (roles/architect.md §Kickoff): файл появляется
+    в момент выбора стека — на kickoff или после арх-анализа; отложенный стек легитимен
+    (генератор с backend=none его и не кладёт). Два состояния различаем по build/test-командам
+    входного файла: команды-плейсхолдеры = стек ещё не выбран (мягкое напоминание про
+    event-правило); команды заполнены = стек де-факто выбран, файла нет = дыра «ничей файл».
+    warn, не red: проект может сознательно держать стек во входном файле, но тогда слоты
+    закрываются там же. Ищем stack/ и docs/stack/ (docs-nested раскладка)."""
     d = next((p for p in (os.path.join(root, "stack"), os.path.join(root, "docs", "stack"))
               if os.path.isdir(p)), None)
     files = [] if d is None else sorted(
         fn for fn in os.listdir(d) if fn.endswith(".md") and fn != "_TEMPLATE.md")
     if not files:
-        return ("warn", "stack/<стек>.md не заведён — слоты «Чистая сборка» (QG-NN-02), coverage "
-                        "(§Тесты) и static-adjunct (QG-NN-05) без канона. Владелец — architect "
-                        "(kickoff/день-0, roles/architect.md), не пользователь")
+        cmds = check_build_test_cmds(root)
+        undecided = cmds is not None and not cmds[0]  # команды входа — ещё плейсхолдеры
+        if undecided:
+            return ("warn", "стек ещё не выбран (build/test-команды входа — плейсхолдеры) — "
+                            "легитимно на фазе арх-анализа; в момент выбора стека задача, "
+                            "фиксирующая выбор, обязана завести stack/<стек>.md "
+                            "(event-правило, roles/architect.md §Kickoff)")
+        return ("warn", "стек де-факто выбран (команды входа заполнены), а stack/<стек>.md не "
+                        "заведён — слоты «Чистая сборка» (QG-NN-02), coverage (§Тесты) и "
+                        "static-adjunct (QG-NN-05) без канона. Владелец — architect "
+                        "(event-правило kickoff/день-0), не пользователь")
     todo = [fn for fn in files if "TODO:" in read(os.path.join(d, fn))]
     if todo:
         return ("warn", f"stack-файл(ы) со скелетными TODO: {', '.join(todo)} — дозаполнить "
