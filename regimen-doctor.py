@@ -218,6 +218,27 @@ def check_codex_overlay_state(root):
     return out
 
 
+def check_stack_file(root):
+    """Стек-файл: на нём висят слоты QG-NN-02 «Чистая сборка», coverage-команда (§Тесты) и
+    static-adjunct QG-NN-05. Дыра «ничей файл»: для стека вне каталога пакета генератор кладёт
+    TODO-скелет, а владельца дозаполнения раньше не было (теперь — architect, kickoff/день-0:
+    roles/architect.md). warn, не red: проект может сознательно держать стек во входном файле,
+    но тогда слоты надо закрывать там же. Ищем stack/ и docs/stack/ (docs-nested раскладка)."""
+    d = next((p for p in (os.path.join(root, "stack"), os.path.join(root, "docs", "stack"))
+              if os.path.isdir(p)), None)
+    files = [] if d is None else sorted(
+        fn for fn in os.listdir(d) if fn.endswith(".md") and fn != "_TEMPLATE.md")
+    if not files:
+        return ("warn", "stack/<стек>.md не заведён — слоты «Чистая сборка» (QG-NN-02), coverage "
+                        "(§Тесты) и static-adjunct (QG-NN-05) без канона. Владелец — architect "
+                        "(kickoff/день-0, roles/architect.md), не пользователь")
+    todo = [fn for fn in files if "TODO:" in read(os.path.join(d, fn))]
+    if todo:
+        return ("warn", f"stack-файл(ы) со скелетными TODO: {', '.join(todo)} — дозаполнить "
+                        f"(владелец — architect/день-0, из фактов проекта)")
+    return ("green", f"stack-файл заполнен ({', '.join(files)})")
+
+
 def check_state_size(root, limit=200):
     """PROJECT-STATE — горячий снимок, не журнал. Мягко предупреждаем (🟡, не 🔴),
     если разросся > limit строк: обычно значит, что в него дописывали вместо прунинга."""
@@ -285,6 +306,9 @@ def main():
     if cx is not None:
         for level, msg in cx:
             bucket[level].append(msg)
+
+    sf = check_stack_file(root)
+    bucket[sf[0]].append(sf[1])
 
     ss = check_state_size(root)
     if ss is not None:
