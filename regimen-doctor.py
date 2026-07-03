@@ -33,11 +33,14 @@ def read(p):
 
 
 def check_placeholders(root):
-    """Незаполненные {{...}} в оставленных .md (вне код-блоков считаем тоже —
-    плейсхолдер в любом месте = недозаполнено)."""
+    """Незаполненные {{...}} в оставленных .md. Fenced-блоки считаем тоже — реальные
+    слоты живут именно там ({{build-command}} и т.п.), плейсхолдер в них = недозаполнено.
+    Игнорируем `{{...}}` внутри inline-бэктиков: это документация О синтаксисе плейсхолдера
+    (roles/upgrader.md, «оставь видимый `{{плейсхолдер}}`» и т.п.), а не слот для заполнения —
+    иначе пакет вечно красен о собственную прозу."""
     hits = []
     for p in md_files(root):
-        n = read(p).count("{{")
+        n = re.sub(r"`[^`\n]*`", "", read(p)).count("{{")
         if n:
             hits.append((os.path.relpath(p, root), n))
     return sorted(hits, key=lambda x: -x[1])
@@ -55,6 +58,38 @@ def check_dead_links(root):
             if not os.path.exists(os.path.normpath(os.path.join(d, t))):
                 dead.append(f"{os.path.relpath(p, root)}:{ln}  [{m.group(1)}]({t})")
     return dead
+
+
+CANON_DIRS = {"core", "roles", "architecture", "stack", "domain"}
+
+
+def check_harness_canon_refs(root):
+    """Пути-каноны в обвязке рантайма резолвятся (эмпирика живого апгрейда 2026-06:
+    субагенты, скопированные с пакетными путями `core/*.md` при docs-nested раскладке, =
+    13 битых канонов, молча). check_dead_links это НЕ ловит: указатели в обвязке — проза
+    в бэктиках, не markdown-ссылки. Сканируем .claude/**/*.md и .codex/**/*.toml:
+    lowercase-токен вида `dir/…/file.md` с канон-сегментом (CANON_DIRS) должен
+    существовать от корня проекта или от файла. Два сознательных сужения: (1) только
+    lowercase — шаблоны `docs/day-D-guide.md`/`<N>`/`{{...}}` отсекаются регистром/
+    чарклассом; (2) только канон-неймспейсы — пути-артефакты, которые агент СОЗДАСТ
+    (day-guides, scratchpad/panel/*), легитимно не существуют до рантайма."""
+    files = []
+    for base, ext in ((".claude", ".md"), (".codex", ".toml")):
+        d = os.path.join(root, base)
+        if os.path.isdir(d):
+            for dp, _, fns in os.walk(d):
+                files += [os.path.join(dp, fn) for fn in fns if fn.endswith(ext)]
+    tok = re.compile(r"(?<![\w/.<{])((?:[a-z0-9_-]+/)+[a-z0-9_.-]+\.md)(?![\w/])")
+    bad = []
+    for p in files:
+        d = os.path.dirname(p)
+        for t in set(tok.findall(read(p))):
+            if not CANON_DIRS & set(t.split("/")[:-1]):
+                continue
+            if not (os.path.exists(os.path.join(root, t))
+                    or os.path.exists(os.path.normpath(os.path.join(d, t)))):
+                bad.append(f"{os.path.relpath(p, root)}: `{t}`")
+    return sorted(set(bad))
 
 
 def check_roles_sync(root):
@@ -212,6 +247,14 @@ def main():
         red.append("Висячие локальные ссылки:\n" + "\n".join(f"       {d}" for d in dead))
     else:
         green.append("висячих ссылок нет")
+
+    refs = check_harness_canon_refs(root)
+    if refs:
+        red.append("Пути-каноны в обвязке НЕ резолвятся (раскладка проекта ≠ пакетной? "
+                   "перепиши пути в обвязке — roles/upgrader.md шаг 4):\n" +
+                   "\n".join(f"       {r}" for r in refs))
+    else:
+        green.append("пути-каноны обвязки резолвятся")
 
     for label, res, ok_msg in [
         ("Карта ролей (sync-roles --check)", check_roles_sync(root), "роли в синхроне"),

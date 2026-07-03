@@ -96,6 +96,7 @@ ORDER = [
     ("docs/adr/012-entry-file-per-harness.md", "ADR-012: Входной файл per-harness"),
     ("docs/adr/013-feature-discovery-trigger.md", "ADR-013: Триггер feature-discovery"),
     ("docs/adr/014-prompt-canon-consistency-fixes.md", "ADR-014: Фиксы консистентности промпт-канона"),
+    ("docs/adr/015-assembled-reachability-gate.md", "ADR-015: Достижимость фичи в сборе (QG-NN-05)"),
 ]
 
 
