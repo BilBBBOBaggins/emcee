@@ -135,8 +135,8 @@ git commit -m "feat(invites): invite teammate modal wired to POST /api/v1/invite
 ### Промпт для Claude Code
 
 ~~~
-Прочитай код инвайт-фичи Задач 1–2: app/api/v1/invites/route.ts, lib/services/invites.ts,
-components/features/InviteTeammateModal.tsx. Напиши пользовательские сценарии фичи «пригласить
+Прочитай код инвайт-фичи Задач 1–2: internal/transport/invite_handler.go,
+internal/service/invite_service.go, components/features/InviteTeammateModal.tsx. Напиши пользовательские сценарии фичи «пригласить
 коллегу» по формату roles/ba.md: главный сценарий + альтернативные (дубликат email, невалидный
 email, отмена), каждый — с ожидаемым ВИДИМЫМ пользователю результатом. Сравни с приглашением в
 workspace у Slack/Notion; чего у нас нет — отдельным списком gaps.

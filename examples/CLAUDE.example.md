@@ -30,6 +30,7 @@ B2B SaaS для управления командами и доступами. �
 
 ### Быстрые команды через цифры
 
+- **`/kickoff`** = старт проекта (дней ещё нет): архитектор в kickoff-режиме — суть → входной файл → первый срез → гайды дня. Полный пайплайн: [../core/pipeline.md](../core/pipeline.md).
 - Одно число `N` = архитектор входит в день N. Читает весь проект, выводит статус.
 - Два числа `R D` = роль R входит в контекст дня D без конкретной задачи (review или планирование).
 - Три числа `R D T` = роль R берёт задачу T из гайда дня D ([docs/day-1-guide.example.md](docs/day-1-guide.example.md)).
@@ -72,9 +73,11 @@ npm run test -- --run InviteTeammateModal
 
 ## Обязательно читать в начале каждой сессии
 
+- [../core/pipeline.md](../core/pipeline.md) — как устроен весь пайплайн: kickoff → онгоинг, кто что делает
 - [../core/principles.md](../core/principles.md) — базовые принципы работы агента
 - [../core/task-protocol.md](../core/task-protocol.md) — как агент понимает задачи + имена артефактов
 - [../core/quality-gates.md](../core/quality-gates.md) — критерии завершённости задачи
+- [../core/constitution.md](../core/constitution.md) — несущие non-negotiable + протокол сверки (preflight/exit)
 
 ## По ситуации
 
