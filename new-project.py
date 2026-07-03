@@ -23,7 +23,8 @@ import argparse, os, re, shutil, sys
 
 PACK = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PACK)
-from _pack_lib import LINK, md_files, local_target  # общий обход .md + парсинг ссылок (находка #4)
+# Общие примитивы (находка #4; консолидация C1 аудита 2026-07-03)
+from _pack_lib import LINK, md_files, local_target, target_exists, iter_lines, count_placeholders, read
 
 SKIP_TOP = {"new-project.py", "examples", "README.md", ".git", ".gitignore", "docs"}
 TESTING = {"bdd": "Вариант 1", "test-along": "Вариант 2", "tdd": "Вариант 3"}
@@ -66,7 +67,6 @@ def ask_multi(prompt: str, options: list[str]) -> list[str]:
     return out
 
 
-def read(p): return open(p, encoding="utf-8").read()
 def write(p, t):
     os.makedirs(os.path.dirname(p), exist_ok=True)
     open(p, "w", encoding="utf-8").write(t)
@@ -74,21 +74,14 @@ def write(p, t):
 
 def neutralize_dead_links(target: str) -> int:
     """[text](path) -> text для ссылок, чья цель не существует в сгенерированном
-    проекте (ссылки на модули, которые не выбрали). Обход .md и фильтрация ссылок —
-    общий примитив _pack_lib (тот же, что в selftest.py/regimen-doctor.py); здесь —
-    переписывание строки, поэтому код-фенсы трекаем локально."""
+    проекте (ссылки на модули, которые не выбрали). Обход .md, fence-трекинг и предикат
+    резолва — общие примитивы _pack_lib (те же, что в selftest.py/regimen-doctor.py)."""
     fixed = 0
     for p in md_files(target):
         d = os.path.dirname(p)
-        in_fence = False
         out_lines = []
         changed = False
-        for line in read(p).splitlines(keepends=True):
-            stripped = line.lstrip()
-            if stripped.startswith("```") or stripped.startswith("~~~"):
-                in_fence = not in_fence
-                out_lines.append(line)
-                continue
+        for _ln, line, in_fence in iter_lines(read(p), keepends=True):
             if in_fence:
                 out_lines.append(line)
                 continue
@@ -96,7 +89,7 @@ def neutralize_dead_links(target: str) -> int:
             def repl(m):
                 nonlocal changed
                 tt = local_target(m.group(2))
-                if tt is None or os.path.exists(os.path.normpath(os.path.join(d, tt))):
+                if tt is None or target_exists(d, tt):
                     return m.group(0)
                 changed = True
                 return m.group(1)  # мёртвая ссылка -> оставить только текст
@@ -605,10 +598,11 @@ def main():
             print(f'        (компилятор/typecheck/линтер) — на него ссылается core/quality-gates.md.')
             print(f'        Удали неприменимые секции и верхний блок-предупреждение.»')
 
-    # оставшиеся плейсхолдеры
+    # оставшиеся плейсхолдеры (семантика count_placeholders — та же, что у regimen-doctor:
+    # списки «шаг 3» генератора и 🔴 доктора не должны расходиться)
     left = []
     for p in md_files(target):
-        n = read(p).count("{{")
+        n = count_placeholders(read(p))
         if n:
             left.append((os.path.relpath(p, target), n))
     if left:

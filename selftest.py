@@ -13,7 +13,8 @@ import glob, json, os, re, subprocess, sys, tempfile, shutil
 
 PACK = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PACK)
-from _pack_lib import md_files, iter_links  # общий обход .md + парсинг ссылок (находка #4)
+from _pack_lib import md_files, SANDBOX_MODE_RE  # общие примитивы (находка #4; консолидация C1)
+from _pack_lib import dangling as _dangling
 
 GEN = os.path.join(PACK, "new-project.py")
 results: list[tuple[bool, str]] = []
@@ -24,15 +25,8 @@ def check(cond: bool, msg: str):
 
 
 def dangling(root: str) -> list[str]:
-    out = []
-    for p in md_files(root):
-        d = os.path.dirname(p)
-        for _ln, _m, t in iter_links(open(p, encoding="utf-8").read()):
-            if t is None:
-                continue
-            if not os.path.exists(os.path.normpath(os.path.join(d, t))):
-                out.append(f"{os.path.relpath(p, root)} -> {t}")
-    return out
+    # предикат резолва + marker-skip генераторных фрагментов — общий _pack_lib.dangling
+    return [f"{rel} -> {t}" for rel, _ln, _txt, t in _dangling(root)]
 
 
 def gen(target: str, **flags) -> subprocess.CompletedProcess:
@@ -217,7 +211,7 @@ def main() -> int:
             if not fn.endswith(".toml"):
                 continue
             tb = open(os.path.join(cxadir, fn), encoding="utf-8").read()
-            check(re.search(r'sandbox_mode\s*=\s*"(read-only|workspace-write)"', tb) is not None,
+            check(SANDBOX_MODE_RE.search(tb) is not None,
                   f"[codex] {fn}: валидный sandbox_mode")
             check('developer_instructions' in tb and len(tb.split('developer_instructions', 1)[1]) > 40,
                   f"[codex] {fn}: непустой developer_instructions")

@@ -21,43 +21,27 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _pack_lib import md_files, iter_links  # общий обход .md + парсинг ссылок (находка #4)
-
-
-def read(p):
-    # errors="replace": доктор read-only и не должен падать на одном
-    # не-UTF-8 файле (напр. бинарь с расширением .md, попавший в дерево
-    # при запуске не из корня проекта). Подсчёт {{ и ссылок от этого не страдает.
-    with open(p, encoding="utf-8", errors="replace") as f:
-        return f.read()
+# Общие примитивы (находка #4 аудита 2026-06-29; консолидация C1 аудита 2026-07-03):
+# обход .md, чтение, висячие ссылки, плейсхолдеры, sandbox-режимы.
+from _pack_lib import md_files, dangling, count_placeholders, read, SANDBOX_MODE_RE
 
 
 def check_placeholders(root):
-    """Незаполненные {{...}} в оставленных .md. Fenced-блоки считаем тоже — реальные
-    слоты живут именно там ({{build-command}} и т.п.), плейсхолдер в них = недозаполнено.
-    Игнорируем `{{...}}` внутри inline-бэктиков: это документация О синтаксисе плейсхолдера
-    (roles/upgrader.md, «оставь видимый `{{плейсхолдер}}`» и т.п.), а не слот для заполнения —
-    иначе пакет вечно красен о собственную прозу."""
+    """Незаполненные {{...}} в оставленных .md (семантика — count_placeholders _pack_lib,
+    та же, что в отчёте new-project.py: генератор и доктор не должны расходиться списками)."""
     hits = []
     for p in md_files(root):
-        n = re.sub(r"`[^`\n]*`", "", read(p)).count("{{")
+        n = count_placeholders(read(p))
         if n:
             hits.append((os.path.relpath(p, root), n))
     return sorted(hits, key=lambda x: -x[1])
 
 
 def check_dead_links(root):
-    """Висячие локальные ссылки [text](path). Обход и фильтрация ссылок — общий примитив
-    _pack_lib (тот же, что в selftest.py/new-project.py)."""
-    dead = []
-    for p in md_files(root):
-        d = os.path.dirname(p)
-        for ln, m, t in iter_links(read(p)):
-            if t is None:
-                continue
-            if not os.path.exists(os.path.normpath(os.path.join(d, t))):
-                dead.append(f"{os.path.relpath(p, root)}:{ln}  [{m.group(1)}]({t})")
-    return dead
+    """Висячие локальные ссылки [text](path). Обход, фильтрация и предикат резолва — общий
+    примитив _pack_lib.dangling (тот же, что в selftest.py); генераторные фрагменты
+    (CODEX-DELTA-HEADER — ссылки от корня-точки-материализации) он пропускает сам."""
+    return [f"{rel}:{ln}  [{txt}]({t})" for rel, ln, txt, t in dangling(root)]
 
 
 CANON_DIRS = {"core", "roles", "architecture", "stack", "domain"}
@@ -199,7 +183,7 @@ def check_codex_overlay_state(root):
         # architect/auditor/red-team/blue-team/arbiter) — паритет с claude-стороной
         tomls = sorted(fn for fn in os.listdir(adir) if fn.endswith(".toml"))
         for fn in tomls:
-            if not re.search(r'sandbox_mode\s*=\s*"(read-only|workspace-write)"', read(os.path.join(adir, fn))):
+            if not SANDBOX_MODE_RE.search(read(os.path.join(adir, fn))):
                 badmode.append(fn[:-5])
         if miss:
             out.append(("red", f"Codex: агент-профили отсутствуют для ролей: {miss}"))
