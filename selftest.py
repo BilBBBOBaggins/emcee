@@ -190,6 +190,21 @@ def main() -> int:
               "[qg] evidence дописан — doctor зелёный по QG-NN-05 (2/2, waiver не требуется)")
         open(stub_state, "w", encoding="utf-8").write(stub_body)  # вернуть стаб — full-проект дальше не трогаем
 
+        # скан цифр «N D T» (аудит 2026-07-03 S3/D2): протухшая цифра в прозе субагента
+        # обязана красить sync-roles --check, таблицы при этом остаются в синхроне
+        bap = os.path.join(s, ".claude", "agents", "ba.md")
+        ba_body = open(bap, encoding="utf-8").read()
+        check("`3 D T`" in ba_body, "[digits] фикстура: ba.md несёт цифру 3 D T")
+        open(bap, "w", encoding="utf-8").write(ba_body.replace("`3 D T`", "`9 D T`"))
+        cd = subprocess.run([sys.executable, os.path.join(s, "sync-roles.py"), "--check"], cwd=s,
+                            capture_output=True, text=True)
+        check(cd.returncode == 1 and "9 D T" in cd.stderr and "ba.md" in cd.stderr,
+              "[digits] протухшая цифра в прозе субагента = --check rc=1 с именем файла")
+        open(bap, "w", encoding="utf-8").write(ba_body)
+        cd2 = subprocess.run([sys.executable, os.path.join(s, "sync-roles.py"), "--check"], cwd=s,
+                             capture_output=True, text=True)
+        check(cd2.returncode == 0, "[digits] цифра возвращена — --check снова зелёный")
+
         s = os.path.join(base, "py")
         r = gen(s, name="Py Service", backend="python", frontend="none",
                 arch="modular-monolith", domain="regulated", testing="test-along", wiring="no")

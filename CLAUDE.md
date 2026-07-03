@@ -50,7 +50,7 @@
 | 7 | DevOps | [roles/devops.md](roles/devops.md) |
 <!-- ROLES-TABLE:END -->
 
-{{В проекте оставь только те роли что реально используются. **Единственный источник истины — `roles.json`**: переназначай/удаляй цифры там, затем `python3 sync-roles.py` (перегенерит эту таблицу во входном файле; на Claude Code — также таблицу в `.claude/commands/role.md`). Цифра в секции «Формат вызова» каждого `roles/*.md` — только пример; sync-roles.py --check предупредит о рассинхроне. Канонические имена артефактов пайплайна — в [core/task-protocol.md](core/task-protocol.md).}}
+{{В проекте оставь только те роли что реально используются. **Единственный источник истины — `roles.json`**: переназначай/удаляй цифры там, затем `python3 sync-roles.py` (перегенерит эту таблицу во входном файле; на Claude Code — также таблицу в `.claude/commands/role.md`). Цифры «N D T» в прозе ролевых поверхностей (`roles/*.md` §Формат вызова, `.claude/agents/*.md`, `.codex/agents/*.toml`) сверяются `sync-roles.py --check` с roles.json: renumber, не поправивший прозу, — красный, скрипт назовёт файлы. Канонические имена артефактов пайплайна — в [core/task-protocol.md](core/task-protocol.md).}}
 
 **«День»** — инкремент плана проекта. Задачи дня лежат в `docs/day-<N>-guide.md`: каждая содержит блок «Промпт для Claude Code», «После выполнения», «Коммит». Формат и рабочий пример — `examples/docs/day-1-guide.example.md`. Имена всех артефактов пайплайна — [core/task-protocol.md](core/task-protocol.md).
 

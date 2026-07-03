@@ -11,9 +11,12 @@ ROLES-TABLE во ВСЕХ runtime-таргетах, чтобы они НЕ др�
 сгенерированный проект (claude / codex) и сам пакет.
 
   python3 sync-roles.py           # перегенерировать таблицы из roles.json
-  python3 sync-roles.py --check   # rc=1, если таблицы рассинхронились или ссылки битые (для CI/selftest)
+  python3 sync-roles.py --check   # rc=1, если таблицы рассинхронились, ссылки битые
+                                  # или цифры «N D T» в прозе ролей ≠ roles.json (для CI/selftest)
 
-Renumber/удаление ролей: правишь roles.json, потом запускаешь sync. Маркеры:
+Renumber/удаление ролей: правишь roles.json, потом запускаешь sync. Таблицы перегенерируются
+сами; цифры «N D T» в ПРОЗЕ ролевых поверхностей sync поправить не может — он их сверяет
+(--check = rc 1) и называет файлы для ручной правки. Маркеры таблиц:
   <!-- ROLES-TABLE:START ... -->  ...таблица...  <!-- ROLES-TABLE:END -->
 """
 from __future__ import annotations
@@ -21,6 +24,7 @@ import json, os, re, sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 PAT = re.compile(r"(<!-- ROLES-TABLE:START.*?-->)(.*?)(<!-- ROLES-TABLE:END -->)", re.S)
+DTT = re.compile(r"(?:`|Числовая команда:\s*`?)(\d)\s+D\s+T")
 
 
 def load_roles() -> list[dict]:
@@ -78,10 +82,32 @@ def validate(roles: list[dict]) -> list[str]:
     return errs
 
 
+def check_digit_refs(roles: list[dict]) -> list[str]:
+    """Захардкоженные цифры вида «N D T» в прозе ролевых поверхностей (roles/*.md,
+    .claude/agents/*.md, codex .toml) сверяются с roles.json: renumber, не поправивший
+    прозу, оставляет протухший диспатч при зелёных таблицах (аудит 2026-07-03 S3/D2)."""
+    errs = []
+    cdir = next((d for d in (os.path.join(BASE, "overlays", "codex", ".codex", "agents"),
+                             os.path.join(BASE, ".codex", "agents")) if os.path.isdir(d)), None)
+    for r in roles:
+        paths = [os.path.join(BASE, r["file"]),
+                 os.path.join(BASE, ".claude", "agents", f"{r['agent']}.md")]
+        if cdir:
+            paths.append(os.path.join(cdir, f"{r['agent']}.toml"))
+        for p in paths:
+            if not os.path.exists(p):
+                continue
+            for d in set(DTT.findall(open(p, encoding="utf-8").read())):
+                if int(d) != r["num"]:
+                    errs.append(f"цифра «{d} D T» в {os.path.relpath(p, BASE)} ≠ roles.json "
+                                f"({r['name']} = {r['num']}) — поправь прозу руками")
+    return errs
+
+
 def main() -> int:
     check = "--check" in sys.argv
     roles = load_roles()
-    errs = validate(roles)
+    errs = validate(roles) + check_digit_refs(roles)
     # Вход (CLAUDE.md / AGENTS.md) несёт ОДНУ нейтральную таблицу ролей (claude_table: R → roles/*.md);
     # codex-AGENTS.md рендерится из того же тела (ADR-012), потому таблица идентична. Codex-диспатч
     # (.codex/agents/*.toml) — проза в codex-delta-хедере, не отдельная синк-таблица.
