@@ -62,7 +62,8 @@ continue»). Плюс: `[hooks]` в `config.toml` принимает мусор 
   остаётся печатной конвенцией.
 - **docs-only / scratchpad-only тиры** — проза (G2 RED, живой агент: cwd всегда писибелен, карв-аут недостижим).
 - **Запрет Bash у арбитра** (на Claude Code аппаратно через отсутствие Bash) — на Codex проза.
-- **Хуки** — wired, активация KL-7-pending.
+- **Хуки** — accountability (KL-7 закрыт RED: в headless `codex exec` хуки НЕ срабатывают;
+  жёсткий гейт → CI/pre-commit).
 
 Все деградации — в матрице гарантий [core/portability.md](../../core/portability.md); эмпирика
 G2/KL-7 — в [g2-findings](../../docs/evidence/g2-findings.md).
