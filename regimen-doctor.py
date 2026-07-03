@@ -23,7 +23,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Общие примитивы (находка #4 аудита 2026-06-29; консолидация C1 аудита 2026-07-03):
 # обход .md, чтение, висячие ссылки, плейсхолдеры, sandbox-режимы.
-from _pack_lib import md_files, dangling, count_placeholders, read, SANDBOX_MODE_RE
+from _pack_lib import md_files, dangling, count_placeholders, read, SANDBOX_MODE_RE, SKIP_DIRS
 
 
 def check_placeholders(root):
@@ -234,6 +234,61 @@ def check_stack_file(root):
     return ("green", f"stack-файл заполнен ({', '.join(files)})")
 
 
+QG_SCOPE_HEAD = re.compile(r"^##\s+Frozen scope\b", re.M)
+QG_ID_ITEM = re.compile(r"^\s*[-*]\s+`([A-Za-z0-9][A-Za-z0-9_.-]*)`")
+QG_ANNOT = re.compile(r"@qg:([A-Za-z0-9][A-Za-z0-9_.-]*)")
+
+
+def check_qg_evidence(root):
+    """QG-NN-05 durable evidence (core/quality-gates.md §Достижимость, ADR-015): каждый
+    scope-id из секции «## Frozen scope» PROJECT-STATE обязан иметь checked-in аннотацию
+    `@qg:<scope-id>` где-то в проекте (assembled-тест или генерируемый манифест).
+    Пункт с пометкой «waiver» в строке — вне сверки (waiver под запись).
+    Проверяется НАЛИЧИЕ evidence (машинная опора гейта); качество — reviewer/spot-check.
+    Возвращает (ok, missing, total) | ("format", None, None) — секция есть, но ни один
+    пункт не парсится (формат-дрейф) | None — секции нет / ещё плейсхолдеры."""
+    p = os.path.join(root, "docs", "PROJECT-STATE.md")
+    if not os.path.exists(p):
+        return None
+    body = read(p)
+    m = QG_SCOPE_HEAD.search(body)
+    if not m:
+        return None
+    sect = body[m.end():]
+    nxt = re.search(r"^##\s", sect, re.M)
+    if nxt:
+        sect = sect[:nxt.start()]
+    if "{{" in sect:
+        return None  # секция ещё стаб — срез не заморожен
+    want, items = [], 0
+    for line in sect.splitlines():
+        if re.match(r"^\s*[-*]\s", line):
+            items += 1
+        im = QG_ID_ITEM.match(line)
+        if im and "waiver" not in line.lower():
+            want.append(im.group(1))
+    if not want:
+        return ("format", None, None) if items > 1 else None  # 1 пункт = строка shipping-root
+    found = set()
+    for dp, _, fns in os.walk(root):
+        if any(os.sep + d in dp + os.sep for d in SKIP_DIRS):
+            continue
+        for fn in fns:
+            fp = os.path.join(dp, fn)
+            if os.path.abspath(fp) == os.path.abspath(p):
+                continue  # PROJECT-STATE хранит ссылку, не evidence
+            try:
+                if os.path.getsize(fp) > 2_000_000:
+                    continue
+                t = read(fp)
+            except OSError:
+                continue
+            if "@qg:" in t:
+                found |= set(QG_ANNOT.findall(t))
+    missing = [w for w in want if w not in found]
+    return (not missing, missing, len(want))
+
+
 def check_state_size(root, limit=200):
     """PROJECT-STATE — горячий снимок, не журнал. Мягко предупреждаем (🟡, не 🔴),
     если разросся > limit строк: обычно значит, что в него дописывали вместо прунинга."""
@@ -246,7 +301,11 @@ def check_state_size(root, limit=200):
 def main():
     ap = argparse.ArgumentParser(description="Гейт готовности регламента (read-only).")
     ap.add_argument("--dir", default=".", help="корень проекта (по умолчанию текущий)")
-    root = os.path.abspath(ap.parse_args().dir)
+    ap.add_argument("--qg", action="store_true",
+                    help="строгий QG-NN-05: отсутствие @qg-evidence по frozen scope = 🔴 "
+                         "(done-гейт среза; для CI/pre-commit/exit)")
+    args = ap.parse_args()
+    root = os.path.abspath(args.dir)
 
     red, green, warn = [], [], []
 
@@ -304,6 +363,21 @@ def main():
 
     sf = check_stack_file(root)
     bucket[sf[0]].append(sf[1])
+
+    qg = check_qg_evidence(root)
+    if qg is not None:
+        ok, missing, total = qg
+        if ok == "format":
+            warn.append("QG-NN-05: секция «Frozen scope» в PROJECT-STATE есть, но ни один пункт "
+                        "не парсится — формат: «- `SCOPE-ID` — критерий» "
+                        "(core/quality-gates.md §Достижимость)")
+        elif ok:
+            green.append(f"QG-NN-05: @qg-evidence на месте ({total} scope-id ↔ аннотации)")
+        else:
+            msg = (f"QG-NN-05: критерии frozen scope БЕЗ @qg-evidence: {', '.join(missing)} "
+                   f"({len(missing)}/{total}) — срез не done, пока evidence не checked-in "
+                   f"(core/quality-gates.md §Достижимость, ADR-015)")
+            (red if args.qg else warn).append(msg)
 
     ss = check_state_size(root)
     if ss is not None:

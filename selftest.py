@@ -160,6 +160,36 @@ def main() -> int:
             check(os.path.exists(os.path.join(s, canon, f"{nm}.md")),
                   f"[skills] {nm} указывает на существующий {canon}/{nm}.md")
 
+        # QG-NN-05 evidence-чек doctor'а (аудит 2026-07-03 S2): заморозить scope из 2 id,
+        # заannoтировать один — doctor обязан назвать второй; --qg обязан дать rc=1
+        stub_state = os.path.join(s, "docs", "PROJECT-STATE.md")
+        stub_body = open(stub_state, encoding="utf-8").read()
+        check("## Frozen scope (QG-NN-05)" in stub_body,
+              "[qg] стаб PROJECT-STATE несёт секцию Frozen scope")
+        open(stub_state, "w", encoding="utf-8").write(
+            "# PROJECT-STATE — QG fixture\n\n## Frozen scope (QG-NN-05)\n\n"
+            "- Shipping root(s): `cmd/app/main.go`\n"
+            "- `QGT-01` — критерий с evidence\n"
+            "- `QGT-02` — критерий без evidence\n"
+            "- `QGT-03` — эргономика — waiver: без output-дифференциала\n")
+        os.makedirs(os.path.join(s, "tests"), exist_ok=True)
+        open(os.path.join(s, "tests", "assembled_test.go"), "w", encoding="utf-8").write(
+            "// @qg:QGT-01\nfunc TestAssembled(t *testing.T) {}\n")
+        dq = subprocess.run([sys.executable, os.path.join(s, "regimen-doctor.py"), "--dir", s],
+                            cwd=s, capture_output=True, text=True)
+        check("БЕЗ @qg-evidence: QGT-02 (1/2)" in dq.stdout,
+              "[qg] doctor называет ровно непокрытый scope-id (QGT-02; waiver QGT-03 вне сверки)")
+        dqs = subprocess.run([sys.executable, os.path.join(s, "regimen-doctor.py"), "--dir", s, "--qg"],
+                             cwd=s, capture_output=True, text=True)
+        check(dqs.returncode == 1 and "QGT-02" in dqs.stdout,
+              "[qg] строгий --qg: непокрытый критерий = rc=1 (done-гейт среза)")
+        open(os.path.join(s, "tests", "assembled_test.go"), "a", encoding="utf-8").write("// @qg:QGT-02\n")
+        dqg = subprocess.run([sys.executable, os.path.join(s, "regimen-doctor.py"), "--dir", s, "--qg"],
+                             cwd=s, capture_output=True, text=True)
+        check("@qg-evidence на месте (2 scope-id" in dqg.stdout,
+              "[qg] evidence дописан — doctor зелёный по QG-NN-05 (2/2, waiver не требуется)")
+        open(stub_state, "w", encoding="utf-8").write(stub_body)  # вернуть стаб — full-проект дальше не трогаем
+
         s = os.path.join(base, "py")
         r = gen(s, name="Py Service", backend="python", frontend="none",
                 arch="modular-monolith", domain="regulated", testing="test-along", wiring="no")

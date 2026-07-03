@@ -226,6 +226,10 @@ git diff --name-only HEAD | grep -E '\.(cpp|h|ts|go|py)$' | xargs wc -l | sort -
 - **Durable evidence:** связка «критерий scope ↔ assembled-тест» материализуется checked-in — аннотация
   `@qg:<scope-id>` в тесте или генерируемый манифест; PROJECT-STATE хранит ссылку, не копию. Наличие
   evidence машинно-проверяемо (сверка аннотаций против списка scope); качество — reviewer + spot-check.
+  **Машинный референт и проверялка:** секция `## Frozen scope (QG-NN-05)` в `docs/PROJECT-STATE.md`,
+  пункты вида ``- `SCOPE-ID` — атомарный критерий`` (пометка `waiver` в строке = вне сверки); сверку
+  наличия делает `regimen-doctor.py` (🟡 в обычном прогоне, `--qg` — строгий 🔴 как done-гейт среза
+  для CI/pre-commit/exit). Пример заполнения — `examples/docs/PROJECT-STATE.example.md`.
 - **Опциональный static-adjunct (warn):** dead-export / grep продакшен-вызовов ловит подкласс «ноль
   prod-вызовов» дёшево, но НЕ ловит опциональный параметр с дефолтом при живом вызове (boss-кейс
   ADR-015) — комплемент, не замена assembled-теста. Команда — per-stack в `stack/<stack>.md`

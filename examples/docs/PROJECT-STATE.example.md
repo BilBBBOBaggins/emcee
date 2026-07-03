@@ -16,6 +16,19 @@ Last updated: 2026-04-18 (День 1)
 - **Метрики** (пересчитываются на входе в день, не накапливаются): 14 коммитов · 86/86 тестов ·
   ~2 400 LOC — команды в [roles/architect.md](../../roles/architect.md) (секция status report).
 
+## Frozen scope (QG-NN-05)
+
+Shipping root(s): `cmd/acme/main.go` (API) · `app/layout.tsx` (web) — фиксирует architect;
+задача, меняющая entry-point поставки, обязана обновить строку
+([core/quality-gates.md](../../core/quality-gates.md) §Достижимость).
+
+- `INV-01` — владелец приглашает участника по email с ролью; после accept приглашённый видит
+  команду. Evidence: `tests/assembled/invite_flow_test.go` (аннотация `@qg:INV-01`).
+- `INV-02` — повторный инвайт на pending-email отклоняется с видимой пользователю ошибкой.
+  Evidence: там же (`@qg:INV-02`).
+- `INV-03` — автоскрытие toast через 5 секунд — waiver: эргономика без output-дифференциала,
+  E2E-контур, не гейт.
+
 ## В работе
 
 - Приём приглашения (accept invite) — запланировано на День 2.

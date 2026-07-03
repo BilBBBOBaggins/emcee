@@ -198,6 +198,13 @@ Last updated: {{YYYY-MM-DD}}
 - Фаза: старт.
 - Стек/команды — во входном файле регламента (здесь не дублировать).
 
+## Frozen scope (QG-NN-05)
+<!-- Заполняет architect при заморозке среза (core/quality-gates.md §Достижимость):
+     пункты «- `SCOPE-ID` — атомарный критерий»; в assembled-тесте — аннотация @qg:SCOPE-ID.
+     Сверка наличия evidence: python3 regimen-doctor.py (строгий done-гейт: --qg). -->
+- Shipping root(s): {{артефакт поставки → entry-point}}
+- {{SCOPE-ID и критерий}}
+
 ## В работе
 - {{первая фича}}
 
