@@ -1,5 +1,7 @@
 # Master of Ceremonies
 
+🇷🇺 [Русская версия](README.ru.md)
+
 Agent-driven development regimen for **Claude Code and Codex** — the agent does the main work, not the human. The package and repository's short name is `emcee`.
 
 ## What this is

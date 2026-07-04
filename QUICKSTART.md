@@ -1,5 +1,7 @@
 # QUICKSTART — how to start and keep discipline
 
+🇷🇺 [Русская версия](QUICKSTART.ru.md)
+
 This package is an **agent work regimen** layered on top of your project: rules, roles, numeric
 commands `R D T`, quality gates, and an adversarial panel for important decisions. It doesn't
 create the application itself — the agent or a standard tool initializes the stack.
