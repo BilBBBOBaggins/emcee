@@ -1,20 +1,20 @@
 ---
 name: spec-driven
-description: Контракт-первый цикл (C+) для задач с ЖЁСТКИМ контрактом — парсеры, вычисления, валидаторы, трансформации, протоколы. Тест пишется ДО кода и независимым автором, тесты проходят адверсивную вычитку. Используй, когда задача = жёсткий контракт с однозначным вход/выход. НЕ для живых продуктовых доменов.
+description: Contract-first cycle (C+) for tasks with a HARD contract — parsers, computations, validators, transformations, protocols. The test is written BEFORE the code, by an independent author; tests undergo an adversarial review pass. Use when the task = a hard contract with unambiguous input/output. NOT for live product domains.
 ---
 
-Метод C+ для жёстких контрактов: добавляет **новый угол проверки** (oracle), а не автоматизацию.
-**Полное — в `core/spec-driven.md`** (от корня проекта): прочитай целиком, если задача контрактная. (Discovery у Codex — этот SKILL.md в `.codex/skills/spec-driven/`.)
+The C+ method for hard contracts: it adds a **new angle of verification** (an oracle), not automation.
+**Full version in `core/spec-driven.md`** (from the project root): read it in full if the task is contractual. (Discovery on Codex — this SKILL.md in `.codex/skills/spec-driven/`.)
 
-Кратко:
+In short:
 
-- **Когда:** только жёсткие контракты (парсер/вычисление/валидатор/трансформация = «Вариант 3 TDD»).
-  НЕ для живых доменов (спека дрейфует → замороженный тест закрепит кривое ожидание).
-- **Три oracle:** (1) тесты пишет **независимый автор ≠ реализатор**; (2) **adversarial test-review**
-  «что тесты НЕ ловят»; (3) **codex-сверка контракта** на high-stakes.
-- **Цикл:** spec-as-contract → RED (независимый) → адверсивная вычитка тестов → GREEN (реализатор,
-  **не правит RED-тест ради зелёного**) → constitution exit + per-task commit.
-- **Защита:** кривой тест = дефект контракта (к architect/пользователю, не подгонять); правило трёх
-  попыток; раздулся diff → задача больше контракта, на декомпозицию.
-- Это методология, не исполняемый слой; manual `R D T` и человеческий commit сохраняются (ADR-002).
-- **Когда НЕ:** только жёсткий контракт. Живой продуктовый домен (спека дрейфует) → обычный Test-along/BDD, не C+. Не уверен — спроси, не применяй по умолчанию.
+- **When:** only hard contracts (parser/computation/validator/transformation = "Variant 3 TDD").
+  NOT for live domains (the spec drifts → a frozen test would lock in a wrong expectation).
+- **Three oracles:** (1) tests are written by an **independent author ≠ the implementer**; (2) an **adversarial test review**
+  of "what the tests do NOT catch"; (3) a **codex contract check** on high-stakes tasks.
+- **Cycle:** spec-as-contract → RED (independent) → adversarial review pass on the tests → GREEN (the implementer,
+  **does not edit the RED test just to turn it green**) → constitution exit + per-task commit.
+- **Safeguard:** a wrong test = a contract defect (escalate to the architect/user, don't just patch it); the three-attempt
+  rule; a bloated diff → the task is bigger than the contract, decompose it.
+- This is a methodology, not an executable layer; the manual `R D T` and human commit are preserved (ADR-002).
+- **When NOT to:** only for a hard contract. A live product domain (spec drifts) → regular Test-along/BDD, not C+. Not sure — ask, don't apply it by default.

@@ -1,95 +1,99 @@
-# ADR-007: Онбординг — kickoff-режим + сквозной нарратив (doc-слой), канон-интейк под гейтом O1
+# ADR-007: Onboarding — kickoff mode + end-to-end narrative (doc layer), canonical intake under gate O1
 
 Date: 2026-06-27
-Status: Accepted (реализовано: /kickoff + core/pipeline.md, сквозной нарратив; канон-интейк — под O1 из ADR-003)
+Status: Accepted (implemented: /kickoff + core/pipeline.md, end-to-end narrative; canonical intake — under O1 from ADR-003)
 
-> Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md). Связан с [ADR-003](003-first-km-intake.md): не отменяет его и уважает гейт O1.
+> Decision reached via an adversarial panel run (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md). Related to [ADR-003](003-first-km-intake.md): does not supersede it and respects gate O1.
 
-## Коротко
+## In short
 
-Жалоба оператора: «развернул регламент — не знаю, что дальше; месяц не работал по пайплайну, сам
-плаваю». Боль реальна, но она на ~90% документационная — лечится без строительства движков. Поэтому
-строим **doc/онбординг-слой**: сквозной нарратив `core/pipeline.md` («как работать» от старта до
-онгоинга) + **kickoff-режим архитектора**, который выводит проект из «пусто» в «план на день 1» и сам
-заполняет `CLAUDE.md`. А канонический интейк (файлы roadmap/brief + интейк-движок) **не строим** —
-жалоба «месяц не работал» означает ноль стартов, то есть гейт O1 из ADR-003 не пройден.
+Operator complaint: "I deployed the regimen — I don't know what's next; I haven't worked the pipeline
+for a month, I'm drifting on my own." The pain is real, but it's ~90% documentation-shaped — it's
+fixable without building engines. So we build a **doc/onboarding layer**: an end-to-end narrative in
+`core/pipeline.md` ("how to work" from kickoff to ongoing) + an **architect kickoff mode** that takes
+the project from "empty" to "day 1 plan" and fills in `CLAUDE.md` itself. Canonical intake (roadmap/brief
+files + an intake engine), however, **is not built** — the "haven't worked for a month" complaint means
+zero starts, i.e. gate O1 from ADR-003 has not been passed.
 
-## Контекст
+## Context
 
-Оператор (соло, ground truth): «развернул регламент — не знаю, что дальше; не работал по пайплайну
-месяц, сам плаваю». Конкретные дыры:
+Operator (solo, ground truth): "I deployed the regimen — I don't know what's next; haven't worked the
+pipeline for a month, I'm drifting on my own." Concrete gaps:
 
-- нет связного нарратива «как работать»;
-- роадмап и гайды берутся «ниоткуда» в доках;
-- архитектора нечем чисто вызвать на старте (в `roles.json` его нет; команда `0` двусмысленна; на
-  старте дней ещё нет);
-- плейсхолдеры заполняются руками («не знаю, где что лежит»).
+- no coherent "how to work" narrative;
+- the roadmap and guides appear "out of nowhere" in the docs;
+- there's no clean way to invoke the architect at the start (it has no entry in `roles.json`; the
+  command `0` is ambiguous; at the start there are no days yet);
+- placeholders get filled in by hand ("I don't know where anything lives").
 
-Это тот самый intake, который ADR-003 отложил под гейт **O1** («строить, только если ретро 2–3
-СТАРТОВ покажет потерю на входе»). Панель постановила: **сигнал O1 не пройден** — «месяц не работал»
-означает неиспользование, ноль стартов, неизмеренную потерю на входе (ADR-003 прямо помечает «нет
-приложения» как сигнал к пересмотру охвата, а не к интейку). Но **боль реальна и на ~90%
-документационная** — лечится без снятия O1.
+This is the very intake that ADR-003 deferred under gate **O1** ("build only if a retro on 2–3
+STARTS shows loss at the entry point"). The panel ruled: **signal O1 has not passed** — "haven't worked
+for a month" means non-use, zero starts, unmeasured loss at entry (ADR-003 explicitly flags "no
+uptake" as a signal to revisit scope, not to build intake). But **the pain is real and ~90%
+documentation-shaped** — fixable without lifting O1.
 
-## Решение
+## Decision
 
-**Строим doc/онбординг-слой (проза и патчи, ноль owned-движка). Канонический интейк оставляем под
-гейтом O1.**
+**We build a doc/onboarding layer (prose and patches, zero owned engine). Canonical intake stays under
+gate O1.**
 
-**Построено сейчас:**
+**Built now:**
 
-1. **`core/pipeline.md`** — сквозной нарратив: ФАЗА 0 KICKOFF → онгоинг (`R D T`); цепочка «откуда
-   берутся срез / гайды / спеки»; best-case пример со всеми ролями (помечен «[сложный]»); при этом
-   **solo-collapse — это дефолт.**
-2. **Kickoff-режим в `roles/architect.md`** (проза): команда `/kickoff` выводит проект из «пусто» в
-   «план на день 1». **Lightweight по умолчанию**; задаёт **только routing-вопросы** (stop-rule:
-   доменное дискавери — это к SA, не дублировать); **сам заполняет `CLAUDE.md` с правилом
-   provenance** (`[от юзера]` / `[код]` / `[вывод]`; без источника — видимый `{{плейсхолдер}}`, не
-   угадывать); фиксирует сказанное в разделе `PROJECT-STATE` (приоритеты от юзера, без сочинённой
-   roadmap-схемы); несущее решение → `/panel` → ADR; производит первые гайды дня.
-3. **Тонкая команда `/kickoff`** (`.claude/commands/kickoff.md`) — указатель на kickoff-режим (того
-   же класса, что `/role` и `/panel`; owned-долг ≈ как у `panel.md`). Не дублирует процесс и не
-   заменяет day-0-guide.
-4. **Грамматика команд** (`core/task-protocol.md`): `/kickoff` для старта; снята двусмысленность `0`
-   (одно число = архитектор-lead; три числа = роль).
-5. **qa solo-collapse** — дефолт нарратива + скоупинг в `quality-gates.md`, `developer.md`,
-   `qa-e2e.md`, `qa-uat.md`: разделение QA-контуров действует, **только** когда развёрнут отдельный
-   QA E2E (сложный проект). На простом проекте developer покрывает acceptance / E2E-подобное (но это
-   не независимый signoff).
+1. **`core/pipeline.md`** — end-to-end narrative: PHASE 0 KICKOFF → ongoing (`R D T`); the chain of
+   "where the slice / guides / specs come from"; a best-case example with all roles (marked
+   "[complex]"); while **solo-collapse is the default.**
+2. **Kickoff mode in `roles/architect.md`** (prose): the `/kickoff` command takes the project from
+   "empty" to "day 1 plan". **Lightweight by default**; asks **only routing questions** (stop rule:
+   domain discovery belongs to the system analyst, don't duplicate it); **fills in `CLAUDE.md` itself
+   under the provenance rule** (`[from user]` / `[from code]` / `[inferred]`; no source → a visible
+   `{{placeholder}}`, never guess); records what was said in the `PROJECT-STATE` section (user
+   priorities, no invented roadmap scheme); a load-bearing decision → `/panel` → ADR; produces the
+   first day guides.
+3. **A thin `/kickoff` command** (`.claude/commands/kickoff.md`) — a pointer to kickoff mode (same
+   class as `/role` and `/panel`; owned debt ≈ same as `panel.md`). Does not duplicate the process and
+   does not replace day-0-guide.
+4. **Command grammar** (`core/task-protocol.md`): `/kickoff` for the start; the ambiguity of `0` is
+   removed (one number = architect-lead; three numbers = role).
+5. **QA solo-collapse** — the narrative's default + scoping in `quality-gates.md`, `developer.md`,
+   `qa-e2e.md`, `qa-uat.md`: the split between QA loops applies **only** when a separate QA E2E is
+   deployed (a complex project). On a simple project the developer covers acceptance / E2E-like
+   testing (but this is not an independent signoff).
 
-**Что не построено** (под гейтом O1 или выброшено):
+**Not built** (under gate O1 or dropped):
 
-- Канонические `roadmap.md` / `product-brief.md` как **файлы** + запись в task-protocol + бутстрап
-  генератором (это owned PM-долг, противоречащий ADR-001; снятие O1 не пройдено). Вместо них — снимок
-  приоритетов в `PROJECT-STATE`.
-- Интейк-интервью как движок или Workflow.
-- автозаполнение без пометки источника (provenance) — это посеяло бы непрослеживаемый дефект в продукт (O3).
-- Дублирование SA-discovery в архитекторе (stop-rule).
+- Canonical `roadmap.md` / `product-brief.md` as **files** + an entry in task-protocol + bootstrap via
+  the generator (this is owned PM debt, contradicting ADR-001; lifting O1 has not passed). Instead — a
+  snapshot of priorities in `PROJECT-STATE`.
+- Intake interview as an engine or workflow.
+- Auto-fill without a provenance marker — this would seed an untraceable defect into the product (O3).
+- Duplicating SA discovery in the architect (stop rule).
 
-## Последствия
+## Consequences
 
-**Плюсы:** вопрос «развернул, а дальше что?» закрыт нарративом + kickoff-режимом; выборы оператора
-(`/kickoff`, agent-fill) выжили (с provenance); ноль owned-движка и канон-PM (охват ADR-001/003 цел);
-двусмысленность грамматики снята; qa solo-collapse устранил противоречие между нарративом и ролями.
+**Upsides:** the question "I deployed it, now what?" is closed by the narrative + kickoff mode;
+the operator's choices (`/kickoff`, agent-fill) survived (with provenance); zero owned engine and no
+canonical PM (ADR-001/003 scope stays intact); the grammar ambiguity is removed; QA solo-collapse
+resolved the contradiction between the narrative and the roles.
 
-**Риски и открытые вопросы:**
+**Risks and open questions:**
 
-- [ ] Гейт O1 (зеркало ADR-003) — эмпирический: канонический интейк (файлы roadmap/brief,
-      интейк-движок) строить только после ретроспективы **2–3 реальных стартов** с измеренной потерей
-      на входе. Один анекдот оператора «плаваю» гейт не снимает (иначе гейты пакета декоративны).
-- [ ] Дисциплина provenance (O3): автозаполнение с пометкой источника делает дефект видимым, но
-      соло-review всё равно может его проштамповать. Признанный остаток: риск снижен (стал видимым),
-      но не устранён.
-- [ ] Граница «маршрутизация / доменное дискавери». Правило «архитектор маршрутизирует, системный
-      аналитик опрашивает домен» проверяется прогоном; уточнить, если на практике размывается.
+- [ ] Gate O1 (a mirror of ADR-003) — empirical: canonical intake (roadmap/brief files, an intake
+      engine) is to be built only after a retrospective on **2–3 real starts** with measured loss at
+      entry. A single operator anecdote of "drifting" does not lift the gate (otherwise the package's
+      gates are decorative).
+- [ ] Provenance discipline (O3): auto-fill with a source marker makes a defect visible, but a
+      solo review can still rubber-stamp it. Acknowledged residual: the risk is reduced (made
+      visible), not eliminated.
+- [ ] The "routing / domain discovery" boundary. The rule "the architect routes, the system analyst
+      interviews the domain" is validated by running it; refine if it blurs in practice.
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **Full v1: `/kickoff` + канонические roadmap.md/PROJECT-BRIEF.md + интейк-движок, со снятием O1.**
-  Отклонён: снятие O1 на анекдоте противоречит собственному гейту (декоративность гейтов 003–006);
-  PM-канон противоречит ADR-001.
-- **Дать архитектору цифру в `roles.json`.** Отклонён: ломает конвенцию «одно число =
-  архитектор-lead» + требует пересмотра всей грамматики; `/kickoff` чище.
-- **Слить qa-uat и qa-e2e.** Отклонён: они комплементарны (проектирование кейсов vs кодинг + прогон +
-  диагностика); вместо слияния — solo-collapse по умолчанию (на простом проекте developer покрывает
-  оба).
+- **Full v1: `/kickoff` + canonical roadmap.md/PROJECT-BRIEF.md + an intake engine, lifting O1.**
+  Rejected: lifting O1 on an anecdote contradicts the gate itself (would make gates 003–006
+  decorative); PM canon contradicts ADR-001.
+- **Give the architect a number in `roles.json`.** Rejected: breaks the convention "one number =
+  architect-lead" + requires revising the whole grammar; `/kickoff` is cleaner.
+- **Merge qa-uat and qa-e2e.** Rejected: they're complementary (case design vs. coding + running +
+  diagnosing); instead of merging — solo-collapse by default (on a simple project the developer covers
+  both).

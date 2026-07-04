@@ -1,32 +1,32 @@
-# React + Next.js — правила работы со стеком
+# React + Next.js — stack rules
 
-Специфические правила для фронтенда на React + Next.js + TypeScript. Общие принципы в [core/](../core/).
+Specific rules for the frontend on React + Next.js + TypeScript. General principles are in [core/](../core/).
 
 ## Next.js App Router
 
-- **App Router** стандарт, не Pages Router
-- Server Components по умолчанию, Client Components только где нужна интерактивность
-- Client Components обозначаются явно через `"use client"` в начале файла
-- Минимизировать Client Components — каждый компонент в клиенте увеличивает bundle size
+- **App Router** is the standard, not the Pages Router
+- Server Components by default, Client Components only where interactivity is needed
+- Client Components are marked explicitly via `"use client"` at the top of the file
+- Minimize Client Components — every component sent to the client increases bundle size
 
-Структура:
+Structure:
 
 ~~~
 app/
   layout.tsx            # root layout
   page.tsx              # home page
-  (auth)/               # route group для auth flow
+  (auth)/               # route group for the auth flow
     login/page.tsx
     register/page.tsx
   dashboard/
     layout.tsx          # nested layout
     page.tsx
 components/
-  ui/                   # shadcn/ui base components (не модифицировать)
-  features/             # feature-specific components (бизнес-логика)
+  ui/                   # shadcn/ui base components (do not modify)
+  features/             # feature-specific components (business logic)
   shared/               # reusable across features
 lib/
-  utils.ts              # утилиты
+  utils.ts              # utilities
   api/                  # API client
 hooks/                  # custom React hooks
 types/                  # shared TypeScript types
@@ -34,7 +34,7 @@ types/                  # shared TypeScript types
 
 ## TypeScript
 
-Strict mode обязателен. В `tsconfig.json`:
+Strict mode is mandatory. In `tsconfig.json`:
 
 ~~~json
 {
@@ -48,28 +48,28 @@ Strict mode обязателен. В `tsconfig.json`:
 }
 ~~~
 
-Правила:
+Rules:
 
-- Запрет на `any` кроме как в type guards
-- `unknown` вместо `any` для типов которые реально неизвестны
-- Предпочтение type inference — не аннотировать если TS сам выводит
-- `type` vs `interface` — `interface` для объектов которые могут расширяться, `type` для union types и computed types
-- Enum'ы через `const` objects с `as const`, не через `enum` keyword (tree-shaking не работает с enum)
+- `any` is forbidden except in type guards
+- `unknown` instead of `any` for types that are genuinely unknown
+- Prefer type inference — don't annotate if TS already infers it
+- `type` vs `interface` — `interface` for objects that may be extended, `type` for union types and computed types
+- Enums via `const` objects with `as const`, not the `enum` keyword (tree-shaking doesn't work with `enum`)
 
-## Компоненты
+## Components
 
-Правила:
+Rules:
 
-- Один компонент — один файл
-- Именование: PascalCase.tsx (`UserProfile.tsx`)
-- Вспомогательные функции и типы в том же файле если используются только в этом компоненте
-- Большие компоненты (> 200 строк) — split на sub-components
-- Props типизированы через interface/type в том же файле
+- One component — one file
+- Naming: PascalCase.tsx (`UserProfile.tsx`)
+- Helper functions and types in the same file if used only by that component
+- Large components (> 200 lines) — split into sub-components
+- Props typed via interface/type in the same file
 
-Структура файла компонента:
+Component file structure:
 
 ~~~tsx
-"use client"  // только если нужно
+"use client"  // only if needed
 
 import { useState } from "react"
 // imports
@@ -88,13 +88,13 @@ export function UserProfile({ userId, showEmail = false }: UserProfileProps) {
 
 ## shadcn/ui
 
-Используется как основа для UI. Правила:
+Used as the UI foundation. Rules:
 
-- Базовые компоненты в `components/ui/` (из shadcn CLI) — **не модифицировать напрямую**
-- Если нужна кастомизация — создать обёртку в `components/shared/` или `components/features/`
-- Обновление shadcn: повторный запуск CLI перезаписывает компоненты, твои модификации в `ui/` потеряются
+- Base components in `components/ui/` (from the shadcn CLI) — **do not modify directly**
+- If customization is needed — create a wrapper in `components/shared/` or `components/features/`
+- Updating shadcn: re-running the CLI overwrites components, your modifications in `ui/` will be lost
 
-Пример обёртки:
+Wrapper example:
 
 ~~~tsx
 // components/shared/PrimaryButton.tsx
@@ -109,14 +109,14 @@ export function PrimaryButton({ children, ...props }) {
 }
 ~~~
 
-## Стили
+## Styling
 
-- **Tailwind CSS** — единственный способ стилизации
-- Запрет на CSS-in-JS (styled-components, emotion)
-- Запрет на CSS modules кроме случаев когда Tailwind не справляется (редко — обычно это знак что нужен custom CSS variable или Tailwind plugin)
-- Tailwind classes прямо в JSX
-- Для сложных conditional классов — `clsx` или `cn` utility
-- Design tokens (цвета, spacing) через Tailwind config, не inline
+- **Tailwind CSS** — the only styling method
+- CSS-in-JS is forbidden (styled-components, emotion)
+- CSS modules are forbidden except when Tailwind can't cope (rare — usually a sign that a custom CSS variable or a Tailwind plugin is needed)
+- Tailwind classes directly in JSX
+- For complex conditional classes — `clsx` or the `cn` utility
+- Design tokens (colors, spacing) via the Tailwind config, not inline
 
 ~~~tsx
 import { cn } from "@/lib/utils"
@@ -130,24 +130,24 @@ import { cn } from "@/lib/utils"
 
 ## State management
 
-По убыванию приоритета:
+In decreasing order of priority:
 
-1. **Local state** через `useState` — для компонент-specific state
-2. **Server state** через **TanStack Query** — для данных из API
-3. **Global state** через **Zustand** — только если нужен cross-component state который не server state
-4. **URL state** через Next.js router и search params — для shareable state
+1. **Local state** via `useState` — for component-specific state
+2. **Server state** via **TanStack Query** — for data from the API
+3. **Global state** via **Zustand** — only if cross-component state is needed that isn't server state
+4. **URL state** via the Next.js router and search params — for shareable state
 
-Правило: большинство state — это server state. TanStack Query покрывает caching, invalidation, optimistic updates.
+Rule: most state is server state. TanStack Query covers caching, invalidation, optimistic updates.
 
-Запрещено:
+Forbidden:
 
-- Redux — избыточен для большинства случаев, TanStack Query + Zustand решают те же проблемы проще
-- Context для global state — работает плохо с re-renders, используй Zustand
-- useEffect для data fetching — антипаттерн, используй TanStack Query
+- Redux — excessive for most cases, TanStack Query + Zustand solve the same problems more simply
+- Context for global state — works poorly with re-renders, use Zustand
+- `useEffect` for data fetching — an anti-pattern, use TanStack Query
 
 ## Data fetching
 
-Server Components для initial load:
+Server Components for initial load:
 
 ~~~tsx
 // app/dashboard/page.tsx (Server Component by default)
@@ -157,7 +157,7 @@ async function DashboardPage() {
 }
 ~~~
 
-TanStack Query для мутаций и client-side fetching:
+TanStack Query for mutations and client-side fetching:
 
 ~~~tsx
 "use client"
@@ -177,11 +177,11 @@ function OrderList() {
 }
 ~~~
 
-API-вызовы типизированы. Типы либо из shared package с бэкендом, либо генерируются из OpenAPI спеки.
+API calls are typed. Types either come from a package shared with the backend, or are generated from the OpenAPI spec.
 
-## Формы
+## Forms
 
-**React Hook Form + Zod** для валидации:
+**React Hook Form + Zod** for validation:
 
 ~~~tsx
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -203,41 +203,41 @@ function LoginForm() {
 }
 ~~~
 
-Схема Zod — source of truth. Типы выводятся из неё через `z.infer`. Та же схема может использоваться на бэкенде (если Node.js) для double validation.
+The Zod schema is the source of truth. Types are inferred from it via `z.infer`. The same schema can be used on the backend (if Node.js) for double validation.
 
-## Роутинг
+## Routing
 
-- Next.js file-based routing через App Router
-- Параметры URL типизированы через generated types или manual types
-- Redirects через middleware или server actions, не через `window.location`
-- `<Link>` из Next.js для навигации, не `<a>` (кроме external links)
+- Next.js file-based routing via App Router
+- URL parameters typed via generated types or manual types
+- Redirects via middleware or server actions, not via `window.location`
+- `<Link>` from Next.js for navigation, not `<a>` (except for external links)
 
 ## Accessibility
 
-- Semantic HTML обязательно — `<button>` для кнопок, `<nav>` для навигации, `<main>` для main content
-- `aria-*` attributes где нужно (не везде — семантические теги часто достаточны)
-- Клавиатурная навигация работает для всех interactive elements
-- Focus states видимы (не `outline: none` без replacement)
-- Alt text для изображений
-- Form labels связаны с inputs через `htmlFor` или wrapping
+- Semantic HTML is mandatory — `<button>` for buttons, `<nav>` for navigation, `<main>` for main content
+- `aria-*` attributes where needed (not everywhere — semantic tags are often enough)
+- Keyboard navigation works for all interactive elements
+- Focus states are visible (no `outline: none` without a replacement)
+- Alt text for images
+- Form labels linked to inputs via `htmlFor` or wrapping
 
-Тесты a11y в CI через `@axe-core/playwright` или подобное.
+A11y tests in CI via `@axe-core/playwright` or similar.
 
-## Тесты
+## Tests
 
-- **Vitest** для unit tests компонентов и утилит
-- **Testing Library** для компонентного тестирования
-- **Playwright** для E2E
-- Coverage-отчёт (диагностика дыр, не целевой процент — см. `roles/qa-e2e.md` §Coverage-диагностика): `vitest run --coverage` (провайдер `@vitest/coverage-v8`, артефакты в `coverage/`)
+- **Vitest** for unit tests of components and utilities
+- **Testing Library** for component testing
+- **Playwright** for E2E
+- Coverage report (diagnoses gaps, not a target percentage — see `roles/qa-e2e.md` §Coverage diagnostics): `vitest run --coverage` (provider `@vitest/coverage-v8`, artifacts in `coverage/`)
 
-Правила:
+Rules:
 
-- Тестируй что видит пользователь, не implementation details
-- `getByRole`, `getByLabelText`, `getByText` — предпочтительнее `getByTestId`
-- `data-testid` — fallback, не основной selector
-- Snapshot tests только для стабильных компонентов, не для forms и dynamic UI
+- Test what the user sees, not implementation details
+- `getByRole`, `getByLabelText`, `getByText` — preferred over `getByTestId`
+- `data-testid` — a fallback, not the primary selector
+- Snapshot tests only for stable components, not for forms and dynamic UI
 
-Пример:
+Example:
 
 ~~~tsx
 import { render, screen } from "@testing-library/react"
@@ -260,7 +260,7 @@ test("clicking submit calls onSubmit with form data", async () => {
 
 ## Performance
 
-- Dynamic imports для больших компонентов не нужных на initial render:
+- Dynamic imports for large components not needed on initial render:
 
 ~~~tsx
 import dynamic from "next/dynamic"
@@ -271,16 +271,16 @@ const HeavyChart = dynamic(() => import("./HeavyChart"), {
 })
 ~~~
 
-- `next/image` для всех изображений — автоматическая оптимизация, lazy loading, responsive
-- `React.memo` только после профилирования, не превентивно — чаще добавляет overhead чем помогает
-- `useMemo` / `useCallback` только для реально тяжёлых вычислений или референсов в dependency arrays
+- `next/image` for all images — automatic optimization, lazy loading, responsive
+- `React.memo` only after profiling, not preemptively — more often adds overhead than helps
+- `useMemo` / `useCallback` only for genuinely heavy computations or references in dependency arrays
 
-## Конфигурация и environment
+## Configuration and environment
 
-- `.env.local` для локальных dev values
-- `.env.production` для production defaults
-- Секреты никогда не в `.env*` файлах коммитящихся в git — только `.env.local` (в .gitignore)
-- Environment variables типизированы через schema (Zod) и валидируются при старте:
+- `.env.local` for local dev values
+- `.env.production` for production defaults
+- Secrets never in `.env*` files committed to git — only `.env.local` (in .gitignore)
+- Environment variables typed via a schema (Zod) and validated at startup:
 
 ~~~ts
 // lib/env.ts
@@ -295,23 +295,23 @@ const envSchema = z.object({
 export const env = envSchema.parse(process.env)
 ~~~
 
-## Чистая сборка (clean build)
+## Clean build
 
-«Без warnings» из [core/quality-gates.md](../core/quality-gates.md) для этого стека = три зелёных проверки:
+"No warnings" from [core/quality-gates.md](../core/quality-gates.md) for this stack = three green checks:
 
 ~~~bash
-npx tsc --noEmit        # strict typecheck без ошибок
-npm run lint            # ESLint / next lint без нарушений
-npm run build           # next build без warnings
+npx tsc --noEmit        # strict typecheck with no errors
+npm run lint            # ESLint / next lint with no violations
+npm run build           # next build with no warnings
 ~~~
 
-Тип-ошибка, ESLint-нарушение или warning сборки = задача не завершена. Подавление (`// @ts-ignore`, `eslint-disable`) — только с причиной в комментарии (см. Запреты ниже).
+A type error, an ESLint violation, or a build warning = the task is not done. Suppression (`// @ts-ignore`, `eslint-disable`) — only with a reason in a comment (see Prohibitions below).
 
-## Запреты
+## Prohibitions
 
-- `any` — кроме type guards
-- `// @ts-ignore` без комментария с причиной — use `// @ts-expect-error: reason` если реально нужно
-- Inline styles (`style={{ ... }}`) кроме dynamic values которые нельзя выразить через Tailwind
-- `dangerouslySetInnerHTML` без санитизации через DOMPurify или аналог
-- `localStorage` / `sessionStorage` для sensitive data — только для UI preferences
-- Direct DOM manipulation через `document.*` кроме focus management и analogous edge cases
+- `any` — except in type guards
+- `// @ts-ignore` without a comment stating the reason — use `// @ts-expect-error: reason` if it's genuinely needed
+- Inline styles (`style={{ ... }}`) except for dynamic values that can't be expressed via Tailwind
+- `dangerouslySetInnerHTML` without sanitization via DOMPurify or an equivalent
+- `localStorage` / `sessionStorage` for sensitive data — only for UI preferences
+- Direct DOM manipulation via `document.*` except for focus management and analogous edge cases

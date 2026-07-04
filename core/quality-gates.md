@@ -1,126 +1,128 @@
-# Критерии завершённости задачи
+# Task Completion Criteria
 
-Автоматизированные проверки которые должны быть зелёными прежде чем задача считается сделанной.
+Automated checks that must be green before a task is considered done.
 
-## Обязательный прогон при завершении — [QG-NN-01 · non-negotiable · mechanical: тест-раннер]
+## Mandatory Run on Completion — [QG-NN-01 · non-negotiable · mechanical: test runner]
 
-После последнего изменения в задаче — полная сборка и прогон всех тестов.
+After the last change in the task — a full build and run of all tests.
 
-Команда проекта:
+Project command:
 
 ~~~bash
 {{build-command}} && {{test-command}}
 ~~~
 
-Обязательные параметры команды:
+Mandatory command parameters:
 
-- **Параллелизм**: тесты гоняются параллельно по ядрам (`-j12`, `--parallel`, эквивалент для твоего раннера)
-- **Verbose output**: полный вывод каждого теста, не только результат pass/fail
-- **Сохранение логов**: вывод пишется в файл для последующего анализа без перезапуска
+- **Parallelism**: tests run in parallel across cores (`-j12`, `--parallel`, or the equivalent for your runner)
+- **Verbose output**: full output for every test, not just the pass/fail result
+- **Log retention**: output is written to a file for later analysis without rerunning
 
-Пример команды с сохранением вывода:
+Example command with output retention:
 
 ~~~bash
 {{test-command}} 2>&1 | tee /tmp/test-latest.log
 ~~~
 
-{{Адаптируй под свой стек и путь.}}
+{{Adapt to your stack and path.}}
 
-## Правило "не теряй логи"
+## "Don't Lose Logs" Rule
 
-Если тест упал — никогда не перезапускать без анализа логов. Перезапуск перезаписывает лог и теряет данные о падении.
+If a test fails — never rerun without analyzing the logs. Rerunning overwrites the log and loses the failure data.
 
-Порядок при flaky-падении:
+Procedure for a flaky failure:
 
-1. Открыть лог последнего прогона
-2. Найти конкретное падение — какой assert, какие значения, какой стек
-3. Решить: это реальный баг или flakiness
-4. Если реальный баг — чинить
-5. Если flakiness — найти причину (timing, shared state, нестабильный сетевой вызов) и устранить, не игнорировать
+1. Open the log of the last run
+2. Find the specific failure — which assert, which values, which stack trace
+3. Decide: is this a real bug or flakiness
+4. If it's a real bug — fix it
+5. If it's flakiness — find the cause (timing, shared state, an unstable network call) and eliminate it, don't ignore it
 
-## Правило "один логический юнит = один прогон"
+## "One Logical Unit = One Run" Rule
 
-Единица проверки — **завершённый логический юнит работы** (связный набор файлов одной задачи: класс + тест + bridge + view), а не отдельный файл. Довёл юнит до целостного состояния → один билд + прогон тестов.
+The unit of verification is a **completed logical unit of work** (a coherent set of files for one task: class + test + bridge + view), not a single file. Once you've brought the unit to a coherent state → one build + test run.
 
-- **Не** билдить после каждого файла — на компилируемом стеке это build-churn и трата времени (два цикла «код → билд → код → билд» вместо одного).
-- **Не** копить через границу задачи — несколько несвязанных изменений до первой проверки прячут, что именно сломалось.
+- **Do not** build after every file — on a compiled stack this is build churn and wasted time (two "code → build → code → build" cycles instead of one).
+- **Do not** accumulate changes across a task boundary — several unrelated changes before the first check hide exactly what broke.
 
-Граница юнита = граница задачи (`R D T`): её и проверяй атомарно.
+Unit boundary = task boundary (`R D T`): verify it atomically.
 
-Исключение — изолированная рискованная точечная правка (трогаешь критичный инвариант/протокол в одном файле, и быстрый сигнал важнее общего темпа): проверь сразу, не дожидаясь остального.
+Exception — an isolated, risky, targeted edit (you're touching a critical invariant/protocol in a single file, and a fast signal matters more than overall pace): verify it immediately, without waiting for the rest.
 
-## Правило "без warnings" — [QG-NN-02 · non-negotiable · mechanical: команда проверки стека]
+## "No Warnings" Rule — [QG-NN-02 · non-negotiable · mechanical: stack check command]
 
-Статический контроль должен быть clean — и проверяется это **одной фиксированной командой проекта**, а не решением агента «какие линтеры тут уместны». Конкретная команда и её состав (компилятор / typecheck / линтер / форматтер) определены в `stack/<stack>.md` → раздел «Чистая сборка» и запекаются при init. Агент команду **запускает**, а не выбирает — никаких токенов и рассуждений «про стек».
+Static analysis must be clean — and this is verified by **one fixed project command**, not by the agent deciding "which linters are appropriate here." The specific command and its composition (compiler / typecheck / linter / formatter) are defined in `stack/<stack>.md` → "Clean build" section and are baked in at init. The agent **runs** the command, it doesn't choose it — no tokens or reasoning "about the stack."
 
 ~~~bash
-{{check-command}}   # одна команда проекта, напр. `make check`; состав — в stack/<stack>.md
+{{check-command}}   # one project command, e.g. `make check`; composition is in stack/<stack>.md
 ~~~
 
-Должно быть зелёным. Warnings и нарушения не допустимы, не игнорируются, не подавляются (`#pragma`, `// @ts-ignore`, `# type: ignore`, `eslint-disable`, `# noqa` и аналоги) без явной причины в комментарии рядом.
+Must be green. Warnings and violations are not permitted, not ignored, not suppressed (`#pragma`, `// @ts-ignore`, `# type: ignore`, `eslint-disable`, `# noqa`, and similar) without an explicit reason in a comment nearby.
 
-Если предупреждение легитимно — рефакторить код чтобы его не было. Если оно от сторонней библиотеки — изолировать её подключение, не давать распространяться.
+If a warning is legitimate — refactor the code so it goes away. If it comes from a third-party library — isolate its integration, don't let it spread.
 
-## Правило "быстрые тесты быстрые"
+## "Fast Tests Are Fast" Rule
 
-Весь прогон unit+integration тестов укладывается в {{TARGET_TEST_TIME}} (обычно 15-30 секунд).
+The full unit+integration test run fits within {{TARGET_TEST_TIME}} (typically 15-30 seconds).
 
-Сетевые таймауты не ждутся реально — мокаются через setter:
+Network timeouts are not waited out for real — they're mocked via a setter:
 
 ~~~
-service.setTimeoutMs(10)       // в тесте
-service.setRetryDelayMs(5)     // в тесте
+service.setTimeoutMs(10)       // in test
+service.setRetryDelayMs(5)     // in test
 ~~~
 
-Тесты не зависят от порядка выполнения, не используют `sleep()` для синхронизации, не делают реальных сетевых вызовов.
+Tests do not depend on execution order, do not use `sleep()` for synchronization, and do not make real network calls.
 
-Если тест требует реальной сети или медленной операции — это не unit-тест, это E2E. Отдельный контур (см. ниже).
+If a test requires a real network or a slow operation — it's not a unit test, it's E2E. A separate track (see below).
 
-## Разделение контуров тестирования
+## Separation of Testing Tracks
 
-**Когда применимо:** разделение ниже действует, **только если развёрнут отдельный QA E2E-контур**
-(сложный проект — см. [pipeline.md](pipeline.md) → solo-collapse). На простом проекте (solo-collapse)
-отдельного QA-контура нет: developer сам реализует и гоняет нужные acceptance/E2E-подобные проверки в
-рамках своей задачи (это НЕ независимый QA-signoff, но покрытие есть). Разворачивай отдельный контур,
-когда «зелёные unit, но кнопка не работает» становится реальным риском. Но развёртывание контура — **не
-потолок покрытия**: достижимость каждой frozen-фичи в сборе (QG-NN-05, ниже) обязательна и на
-solo-collapse — там владелец гейта сам developer.
+**When applicable:** the separation below applies **only if a separate QA E2E track is deployed**
+(a complex project — see [pipeline.md](pipeline.md) → solo-collapse). On a simple project (solo-collapse)
+there is no separate QA track: the developer implements and runs the necessary acceptance/E2E-like checks
+themselves within their own task (this is NOT independent QA signoff, but coverage exists). Deploy a
+separate track when "green units, but the button doesn't work" becomes a real risk. But deploying the
+track is **not a coverage ceiling**: assembled reachability of every frozen-scope feature (QG-NN-05,
+below) is mandatory even on solo-collapse — there the gate owner is the developer themself.
 
-Если в проекте есть несколько типов тестов — они физически разделены:
+If a project has several types of tests — they are physically separated:
 
-| Контур | Кто запускает | Билд-директория | Что проверяет |
+| Track | Who runs it | Build directory | What it checks |
 |--------|--------------|-----------------|---------------|
-| Dev-тесты | Разработчик после каждого коммита | `build/` | Unit, integration, быстро, моки |
-| Assembled contract tests | QA E2E (владелец QG-NN-05) | `build-qa/` (свой таргет/директория тестов) | Достижимость frozen-фич через объявленные shipping-roots: быстрый раннер на уровне сборки, импорт только объявленных roots, без test-only wiring, ассерт эффекта (§QG-NN-05) |
-| E2E-тесты | QA по запросу | `build-qa/` | Полный стек, реальный сервер, всё через UI |
+| Dev tests | Developer, after every commit | `build/` | Unit, integration, fast, mocks |
+| Assembled contract tests | QA E2E (owner of QG-NN-05) | `build-qa/` (its own target/test directory) | Reachability of frozen features through declared shipping roots: a fast build-level runner, importing only declared roots, no test-only wiring, effect assertion (§QG-NN-05) |
+| E2E tests | QA, on request | `build-qa/` | Full stack, real server, everything through the UI |
 
-Разделение обеспечивается:
+Separation is ensured by:
 
-- Разные build targets
-- Разные директории билда
-- Разные раннеры
-- Разная ответственность ролей — разработчик не гоняет E2E, QA не гоняет unit
+- Different build targets
+- Different build directories
+- Different runners
+- Different role responsibilities — the developer doesn't run E2E, QA doesn't run unit tests
 
-Запреты UI-обхода (qa-e2e.md «Запрещённые паттерны», invoke/direct API) действуют **в E2E-контуре**;
-в контуре assembled contract tests обход браузера легален по построению — там дисциплину держат
-требования §QG-NN-05 (объявленный root, без bespoke-инъекции, effect-assert). На **solo-collapse**
-контуры схлопываются: отдельный build-dir не требуется, требования по существу остаются.
+The prohibitions on UI-bypassing (qa-e2e.md "Forbidden Patterns", invoke/direct API) apply **in the
+E2E track**; in the assembled contract tests track, bypassing the browser is legal by construction —
+there, discipline is held by the requirements of §QG-NN-05 (declared root, no bespoke injection,
+effect-assert). On **solo-collapse** the tracks collapse into one: a separate build-dir is not required,
+but the requirements in substance remain.
 
-Тестовые артефакты **всех** контуров (включая `build-qa/` и assembled-suite) подпадают под QG-NN-01/02
-наравне с продуктовым кодом: QA-тесты со strict-ошибками, красящие `check` рабочего дерева, = задача
-НЕ done (эмпирика: run 2 Balatro — суите-владелец не подержал собственные файлы к clean-build).
+Test artifacts of **all** tracks (including `build-qa/` and the assembled suite) fall under QG-NN-01/02
+just like product code: QA tests with strict errors that make the working tree's `check` fail = the task
+is **NOT done** (empirical evidence: Balatro run 2 — the suite owner did not hold their own files to a
+clean build).
 
-Это предотвращает смешение и случайный запуск медленных тестов в dev-цикле.
+This prevents mixing tests and accidentally running slow tests in the dev cycle.
 
-## LOC-пороги как сигнал — [QG-NN-03 · non-negotiable · accountability: check-loc.sh = warn]
+## LOC Thresholds as a Signal — [QG-NN-03 · non-negotiable · accountability: check-loc.sh = warn]
 
-Большой файл — **подозрение** на нарушение Single Responsibility, не доказательство. Никакое число не отличает длинный-но-цельный парсер от спагетти — поэтому порог не выносит вердикт сам, а **будит суждение**: файл перешёл порог для своего типа → обязан обоснованный ответ «делает одну вещь, вот почему» **или** split. Молча проигнорить нельзя (фиксируется в exit-отчёте задачи); судит по ответственностям reviewer / скилл code-quality, а не строки.
+A large file is a **suspicion** of a Single Responsibility violation, not proof. No number distinguishes a long-but-coherent parser from spaghetti — so the threshold doesn't render a verdict by itself, it **wakes up judgment**: a file that crosses the threshold for its type → must get a reasoned answer of "it does one thing, here's why" **or** a split. Silently ignoring it is not allowed (it's recorded in the task's exit report); the reviewer / code-quality skill judges by responsibilities, not lines.
 
-Порог — растяжка, а не гейт: `check-loc.sh` (PostToolUse-хук, включён в `.claude/settings.json.example`) печатает warning по пересёкшему файлу, но не блокирует мерж. Решение «split или обоснованно оставить» — архитектурное, не арифметическое.
+The threshold is a tripwire, not a gate: `check-loc.sh` (a PostToolUse hook, included in `.claude/settings.json.example`) prints a warning for the file that crossed it, but does not block the merge. The decision "split or justifiably keep" is architectural, not arithmetic.
 
-Пороги-растяжки под проект (ориентир, не вердикт; адаптируй под свой стек):
+Project tripwire thresholds (a guideline, not a verdict; adapt to your stack):
 
-| Тип кода | Лимит .cpp / .go / .ts | Лимит .h / header |
+| Code type | .cpp / .go / .ts limit | .h / header limit |
 |----------|------------------------|-------------------|
 | Business logic | 500 | 200 |
 | Bridge/adapter | 700 | 250 |
@@ -129,145 +131,152 @@ solo-collapse — там владелец гейта сам developer.
 | UI view | — | 800 |
 | UI component | — | 500 |
 
-Проверка перед каждым билдом:
+Check before every build:
 
 ~~~bash
 git diff --name-only HEAD | grep -E '\.(cpp|h|ts|go|py)$' | xargs wc -l | sort -rn
 ~~~
 
-Если файл превысил порог — обоснуй цельность в exit-отчёте ИЛИ split по responsibility (см. паттерны ниже). Авто-split ради цифры — не цель.
+If a file exceeds the threshold — justify its coherence in the exit report OR split by responsibility (see patterns below). Auto-splitting just to hit a number is not the goal.
 
-## Split-паттерны
+## Split Patterns
 
-Когда файл вырос за лимит, типичные способы разделения:
+When a file grows past the limit, typical ways to split it:
 
-- **По responsibility**: один класс делает две вещи — раздели на два класса
-- **Partial class**: для bridge-моделей и controllers — заголовок один, реализация в нескольких .cpp по функциональным группам (`AppController.cpp` + `AppControllerActions.cpp`)
-- **Sub-components**: для UI — выделить переиспользуемые части в отдельные компоненты
-- **Sub-parsers**: для парсеров — один парсер на тип ответа/сущности
-- **Phase split**: для state machine или протокола — по фазам протокола
+- **By responsibility**: one class does two things — split it into two classes
+- **Partial class**: for bridge models and controllers — one header, implementation spread across several .cpp files by functional group (`AppController.cpp` + `AppControllerActions.cpp`)
+- **Sub-components**: for UI — extract reusable parts into separate components
+- **Sub-parsers**: for parsers — one parser per response/entity type
+- **Phase split**: for a state machine or protocol — by protocol phase
 
-Выбор паттерна зависит от причины роста файла. Это архитектурное решение — если агент не уверен, спросить пользователя.
+The choice of pattern depends on why the file grew. This is an architectural decision — if the agent is unsure, ask the user.
 
-## Правило "сломал — чини" — [QG-NN-04 · non-negotiable · accountability]
+## "You Broke It, You Fix It" Rule — [QG-NN-04 · non-negotiable · accountability]
 
-Все падающие тесты после твоих изменений — твоя ответственность. Не существует "pre-existing failure" как оправдания.
+Every failing test after your changes is your responsibility. There is no "pre-existing failure" excuse.
 
-- Не отключать тест
-- Не пропускать через `skip`/`ignore`/`disabled`
-- Не менять assertion под текущее (сломанное) поведение
-- Не комментировать
+- Don't disable a test
+- Don't skip it via `skip`/`ignore`/`disabled`
+- Don't change the assertion to match the current (broken) behavior
+- Don't comment it out
 
-Чинить так чтобы тест проверял то что должен, и проходил потому что код правильный.
+Fix it so the test checks what it should, and passes because the code is correct.
 
-## Достижимость фичи в сборе — [QG-NN-05 · non-negotiable · accountability · ратифицирован панелью — [ADR-015](../docs/adr/015-assembled-reachability-gate.md)]
+## Assembled Feature Reachability — [QG-NN-05 · non-negotiable · accountability · ratified by the panel — [ADR-015](../docs/adr/015-assembled-reachability-gate.md)]
 
-Зелёные тесты доказывают, что **юниты корректны**, — не что **продукт делает обещанное**. Тест, который
-сам подставляет обвязку, которую в поставке даёт композиция приложения (передаёт зависимость, зовёт
-триггер, инъектирует конфиг руками), проверяет функцию в изоляции и **молчит о том, подключена ли она**.
-Фича может иметь зелёный юнит-контракт, **ноль продакшен-вызовов** и happy-path e2e, который её не
-упражняет, — всё зелено, а в собранном продукте она мертва (реальный класс дефекта —
-[ADR-015](../docs/adr/015-assembled-reachability-gate.md)).
+Green tests prove that **units are correct** — not that **the product does what it promised**. A test
+that supplies, by itself, the wiring that the application's composition provides in shipping (passes in
+a dependency, calls a trigger, injects config by hand) checks the function in isolation and **stays
+silent on whether it's wired in**. A feature can have a green unit contract, **zero production calls**,
+and a happy-path e2e that doesn't exercise it — everything green, while it's dead in the assembled
+product (a real defect class — [ADR-015](../docs/adr/015-assembled-reachability-gate.md)).
 
-Правило: **каждый атомарный acceptance-критерий замороженного объёма (frozen scope) обязан иметь ≥1
-прогон через объявленный shipping composition root** — ту же точку входа, которой фичу собирает
-поставка, — **без bespoke-инъекции** обвязки, которую продукт обязан предоставить сам. Тест доводит
-собранную систему до характерного случая и ассертит **наблюдаемый эффект** фичи.
+Rule: **every atomic acceptance criterion of the frozen scope must have ≥1 run through a declared
+shipping composition root** — the same entry point that shipping uses to assemble the feature — **without
+bespoke injection** of wiring that the product must supply itself. The test drives the assembled system
+to a characteristic case and asserts the feature's **observable effect**.
 
-- **Референт frozen scope — канонический, не «по памяти»:** **product-level scope-документ**
-  (scope-freeze / scope-секция `docs/PROJECT-STATE.md` / зафиксированные обещания пользователю) **плюс**
-  acceptance-пункты задач текущего среза (гайды дня `docs/day-<N>-guide.md`,
-  [task-protocol.md](task-protocol.md) §Канонические имена; срез замораживает architect при разбивке —
-  [../roles/architect.md](../roles/architect.md) §Разбивка). Для product-facing фичи acceptance обязан
-  быть **product-observable**; сверка при закрытии среза — против product-level списка, не только против
-  задачной разбивки (задачная декомпозиция сама может вынести wiring за скоуп дня — ровно так потерялись
-  обе фичи инцидента ADR-015). Downstream-артефакты (тест-кейсы qa-uat, сценарии BA) **уточняют**
-  критерии frozen scope, но не расширяют его; эргономические уточнения без output-дифференциала
-  (автоскрытие toast, фокус) — E2E-контур или waiver, не гейт. Классификация «вне гейта»
-  (infra / engine-слой / refactor) — только **под запись** в preflight с причиной; молчаливый пропуск
-  запрещён.
-- **Единица учёта — атомарный acceptance-критерий** (Given/When/Then). Compound-пункт → split или явный
-  waiver под запись. Атомарные критерии группируются в **классы эквивалентности** — «характерный случай
-  на класс поведения», не тест на каждый из N однотипных вариантов: цель — каждая frozen-фича достижима
-  и наблюдаема, не полнота перебора комбинаций.
-- **Shipping composition root объявляется явно.** Architect фиксирует root(s) при kickoff/разбивке (в
-  PROJECT-STATE / гайде дня), **по одному на артефакт поставки** (CLI, web-app, …); QG-тесты
-  импортируют/запускают только объявленные roots. Формулы вида app entry / `useX` / `startX` / DI-корень —
-  **примеры, не меню**: root определяет поставка, фиксирует architect — не удобство теста. Для
-  multi-артефактного продукта критерий привязывается к артефакту(ам), где фича обещана: **≥1 прогон на
-  каждый такой артефакт** (прогон через дешёвый CLI-root не закрывает фичу, обещанную в web); критерий
-  без привязки — через каждый объявленный root либо сужение под запись. Декларация обновляется
-  event-driven: задача, меняющая entry-point/root поставки, обязана обновить её.
-- **Валидность suite — mutation-фальсифицируемость:** assembled-suite, не краснеющая при удалении
-  production-wiring фичи, фиктивна. Проверяется автором при создании suite и выборочно auditor'ом
-  (spot-check, не постоянная CI-матрица).
-- **Наблюдаемость = наблюдаемый эффект:** разница product-output между feature-on и feature-off, а не
-  присутствие артефактов фичи. Presence-ассерт («элемент есть», «label рисуется», «свойство
-  установлено») гейт не проходит — анти-паттерны ассертов #1–#4 из
-  [qa-e2e](../roles/qa-e2e.md#запрещённые-паттерны-в-тестах) действуют здесь для **любого** исполнителя
-  гейта, включая developer на solo-collapse (#5 «invoke обходит UI» — E2E-специфичен; в assembled-контуре
-  его роль играет запрет bespoke-инъекции). Валидность ассерта — та же мутация: отключи эффект, сохранив
-  label, — гейт обязан упасть. Фича без чёткого выходного дифференциала (чисто визуальная/эстетическая) →
-  waiver под запись.
-- **«В сборе» = через composition root, не обязательно через браузер.** Часть покрытия живёт в контуре
-  **assembled contract tests** (быстрый раннер на уровне сборки — см. таблицу контуров выше), тонкий e2e —
-  сверху. Запрет — не «медленно», а **инъекция интеграции, которую поставка опускает** (обобщение
-  анти-паттерна qa-e2e #5 «invoke обходит UI» на любой слой: тест, вписывающий проводку сам, проверяет
-  юнит, а не продукт).
-- **Детерминизм — предусловие, но ручка выбирает состояние, не исход.** Довод собранной системы до
-  нужного состояния — через явный **state-selection** control-surface продукта (сеяный RNG, время,
-  начальные persisted-данные), не рандомом. Ручка, задающая **outcome / зависимость / триггер / wiring**
-  (`testOverrides: {bossModifierFor: …}` и любая её переупаковка — под «конфиг», seed,
-  persisted-данные или иное оформление), = bespoke-инъекция. Persisted-данные — state-selection,
-  **только если такие данные способна записать сама поставка**; фикстура с производным состоянием,
-  которое обязан вычислить wiring (сейв с уже материализованным `activeModifier`), задаёт outcome. QG-прогон идёт в **release-like конфигурации** только через публичные входы
-  продукта. Правильно выбранное состояние упражняет реальный wiring: нет проводки — никакой seed эффекта
-  не даст, тест красный.
-- **Durable evidence:** связка «критерий scope ↔ assembled-тест» материализуется checked-in — аннотация
-  `@qg:<scope-id>` в тесте или генерируемый манифест; PROJECT-STATE хранит ссылку, не копию. Наличие
-  evidence машинно-проверяемо (сверка аннотаций против списка scope); качество — reviewer + spot-check.
-  **Машинный референт и проверялка:** секция `## Frozen scope (QG-NN-05)` в `docs/PROJECT-STATE.md`,
-  пункты вида ``- `SCOPE-ID` — атомарный критерий`` (пометка `waiver` в строке = вне сверки); сверку
-  наличия делает `regimen-doctor.py` (🟡 в обычном прогоне, `--qg` — строгий 🔴 как done-гейт среза
-  для CI/pre-commit/exit). Пример заполнения — `examples/docs/PROJECT-STATE.example.md`.
-- **Опциональный static-adjunct (warn):** dead-export / grep продакшен-вызовов ловит подкласс «ноль
-  prod-вызовов» дёшево, но НЕ ловит опциональный параметр с дефолтом при живом вызове (boss-кейс
-  ADR-015) — комплемент, не замена assembled-теста. Команда — per-stack в `stack/<stack>.md`
-  (по образцу `{{check-command}}` QG-NN-02); в core — только слот.
-- **Юнит-контракты не выкидываются.** Они локализуют баг («где сломано»); собранный прогон ловит «что
-  не подключено». Unit снизу — корректность, assembled-suite сверху — достижимость; слои дополняют.
+- **The reference for frozen scope is canonical, not "from memory":** the **product-level scope document**
+  (scope-freeze / the scope section of `docs/PROJECT-STATE.md` / fixed promises made to the user) **plus**
+  the acceptance items of the current slice's tasks (day guides `docs/day-<N>-guide.md`,
+  [task-protocol.md](task-protocol.md) §Canonical artifact names; the slice is frozen by the architect at breakdown
+  — [../roles/architect.md](../roles/architect.md) §Breaking the next slice into day guides). For a product-facing feature, acceptance
+  must be **product-observable**; reconciliation at slice closeout is against the product-level list, not
+  only against the task breakdown (task decomposition can itself push wiring out of a day's scope — that's
+  exactly how both features of the ADR-015 incident got lost). Downstream artifacts (qa-uat test cases,
+  BA scenarios) **refine** the frozen scope's criteria but do not expand it; ergonomic refinements without
+  an output differential (auto-hiding a toast, focus) belong to the E2E track or a waiver, not the gate.
+  Classifying something as "out of gate scope" (infra / engine layer / refactor) is only valid **on the
+  record** in preflight with a reason; a silent skip is forbidden.
+- **The unit of accounting is an atomic acceptance criterion** (Given/When/Then). A compound item → split
+  it or an explicit waiver on the record. Atomic criteria are grouped into **equivalence classes** — "one
+  characteristic case per behavior class," not a test for each of N variants of the same kind: the goal is
+  that every frozen feature is reachable and observable, not exhaustive coverage of every combination.
+- **The shipping composition root is declared explicitly.** The architect fixes the root(s) at
+  kickoff/breakdown (in PROJECT-STATE / the day guide), **one per shipping artifact** (CLI, web app, …);
+  QG tests import/run only declared roots. Formulas like app entry / `useX` / `startX` / DI root are
+  **examples, not a menu**: shipping determines the root, the architect fixes it — not the test's
+  convenience. For a multi-artifact product, a criterion is tied to the artifact(s) where the feature is
+  promised: **≥1 run per such artifact** (a run through a cheap CLI root does not close a feature promised
+  on the web); a criterion with no attachment must run through every declared root, or a narrowing on the
+  record. The declaration is updated event-driven: a task that changes the shipping entry-point/root must
+  update it.
+- **Suite validity is mutation falsifiability:** an assembled suite that doesn't turn red when a
+  feature's production wiring is removed is fictitious. Checked by the author when creating the suite and
+  selectively by the auditor (a spot-check, not a permanent CI matrix).
+- **Observability = observable effect:** the difference in product output between feature-on and
+  feature-off, not the presence of the feature's artifacts. A presence assert ("element exists", "label
+  renders", "property is set") does not pass the gate — assert anti-patterns #1–#4 from
+  [qa-e2e](../roles/qa-e2e.md#forbidden-patterns-in-tests) apply here to **any** executor of the gate,
+  including the developer on solo-collapse (#5 "invoke bypasses the UI" is E2E-specific; in the assembled
+  track its role is played by the ban on bespoke injection). Assert validity uses the same mutation: turn
+  off the effect while keeping the label — the gate must fail. A feature with no clear output differential
+  (purely visual/aesthetic) → a waiver on the record.
+- **"Assembled" means through the composition root, not necessarily through the browser.** Part of the
+  coverage lives in the **assembled contract tests** track (a fast build-level runner — see the tracks
+  table above), with thin e2e on top. The prohibition isn't "too slow" — it's **injecting integration
+  wiring that shipping omits** (a generalization of qa-e2e anti-pattern #5 "invoke bypasses the UI" to any
+  layer: a test that wires things in itself is checking a unit, not the product).
+- **Determinism is a precondition, but the handle selects state, not outcome.** Driving the assembled
+  system to the needed state happens through an explicit **state-selection** control surface of the
+  product (seeded RNG, time, initial persisted data), not randomness. A handle that sets the **outcome /
+  dependency / trigger / wiring** (`testOverrides: {bossModifierFor: …}` and any repackaging of it — as
+  "config," a seed, persisted data, or any other framing) is bespoke injection. Persisted data is
+  state-selection **only if the shipping product itself is able to write such data**; a fixture with
+  derived state that the wiring must compute (a save with an already-materialized `activeModifier`) sets
+  an outcome. The QG run happens in a **release-like configuration**, only through the product's public
+  inputs. A correctly chosen state exercises real wiring: with no wiring, no seed will produce an effect,
+  and the test fails.
+- **Durable evidence:** the link "scope criterion ↔ assembled test" is materialized checked-in — a
+  `@qg:<scope-id>` annotation in the test, or a generated manifest; PROJECT-STATE holds a reference, not
+  a copy. The presence of evidence is machine-checkable (reconciling annotations against the scope list);
+  quality is reviewer + spot-check. **Machine reference and checker:** the `## Frozen scope (QG-NN-05)`
+  section in `docs/PROJECT-STATE.md`, items of the form ``- `SCOPE-ID` — atomic criterion`` (a `waiver`
+  marker on the line = out of reconciliation); `regimen-doctor.py` performs the presence check (🟡 in a
+  normal run, `--qg` — strict 🔴 as a slice done-gate for CI/pre-commit/exit). Example fill-in —
+  `examples/docs/PROJECT-STATE.example.md`.
+- **Optional static adjunct (warn):** dead-export / grepping production calls catches the "zero prod
+  calls" subclass cheaply, but does NOT catch an optional parameter with a default at a live call site
+  (the boss case of ADR-015) — a complement, not a replacement for the assembled test. The command is
+  per-stack in `stack/<stack>.md` (following the pattern of `{{check-command}}` in QG-NN-02); core holds
+  only the slot.
+- **Unit contracts are not discarded.** They localize the bug ("where it's broken"); the assembled run
+  catches "what isn't wired in." Units below give correctness, the assembled suite above gives
+  reachability; the layers complement each other.
 
-**Владелец гейта:** QA E2E ([../roles/qa-e2e.md](../roles/qa-e2e.md)) — assembled-behavior suite как
-блокирующий done-гейт поверх developer-контрактов. **На solo-collapse** (нет отдельного QA-контура)
-владелец — сам developer: именно тут дыра больнее всего (некому независимо проверить стык), поэтому гейт
-действует и без развёрнутого QA; статическую проверку assembled-свидетельства делает reviewer
-([../roles/reviewer.md](../roles/reviewer.md), read-only чеклист). Критерий frozen scope без
-assembled-пути = задача **НЕ done** (под запись, как QG-NN-04). В exit/QA-отчёте: по каждому атомарному
-критерию — assembled-путь + ассерт эффекта + `@qg:<scope-id>`-ссылка.
-**Принятые остатки** (явно, [ADR-015](../docs/adr/015-assembled-reachability-gate.md)): на solo-collapse
-без CI гейт — самоаттестация с машинно-проверяемым наличием evidence, без гарантии его качества;
-на стеках без static-adjunct машинная опора слабее (матрица гарантий, паттерн ADR-010/011).
+**Gate owner:** QA E2E ([../roles/qa-e2e.md](../roles/qa-e2e.md)) — the assembled-behavior suite as a
+blocking done-gate on top of the developer's contracts. **On solo-collapse** (no separate QA track) the
+owner is the developer themself: this is exactly where the hole hurts most (no one to independently check
+the seam), so the gate applies even without a deployed QA; the static check of assembled evidence is done
+by the reviewer ([../roles/reviewer.md](../roles/reviewer.md), a read-only checklist). A frozen-scope
+criterion with no assembled path = the task is **NOT done** (on the record, like QG-NN-04). In the
+exit/QA report: for every atomic criterion — the assembled path + the effect assert + a
+`@qg:<scope-id>` reference.
+**Accepted gaps** (explicitly, [ADR-015](../docs/adr/015-assembled-reachability-gate.md)): on
+solo-collapse without CI, the gate is self-attestation with machine-checkable evidence presence, without
+a guarantee of its quality; on stacks without a static adjunct the machine backing is weaker (a matrix of
+guarantees, the ADR-010/011 pattern).
 
-## Правило "не бисектить тесты"
+## "Don't Bisect Tests" Rule
 
-Если тест упал — читай ошибку, ищи причину в своём коде, чини.
+If a test fails — read the error, find the cause in your code, fix it.
 
-Не запускать тест 10 раз "посмотреть flaky или стабильно". Первый упавший прогон — это факт. Анализируй его.
+Don't run the test 10 times "to see if it's flaky or stable." The first failed run is a fact. Analyze it.
 
-## Формат верификации завершения (доказательство, не «я закончил»)
+## Completion Verification Format (Proof, Not "I'm Done")
 
-«Я закончил» — **не** верификация. Завершая задачу, предъяви структурированное **доказательство**, что
-изменение соответствует контракту/спеке — четыре блока:
+"I'm done" is **not** verification. When finishing a task, present a structured **proof** that the change
+matches the contract/spec — four blocks:
 
 ~~~
-COMPLETENESS  — каждое требование задачи имеет код И тест
-CORRECTNESS   — поведение совпадает с ожидаемым (тесты зелёные по правильной причине, не подогнаны)
-EVIDENCE      — конкретика: N тестов passed/failed, какие команды прогнаны, какие критерии сверены
-⚠ WARNINGS    — пробелы/риски, которые ты НЕ закрыл (непокрытый кейс, допущение, отложенное)
+COMPLETENESS  — every task requirement has code AND a test
+CORRECTNESS   — behavior matches expectations (tests are green for the right reason, not rigged)
+EVIDENCE      — specifics: N tests passed/failed, which commands were run, which criteria were checked
+⚠ WARNINGS    — gaps/risks you did NOT close (an uncovered case, an assumption, something deferred)
 ~~~
 
-Это форма вывода для **exit задачи, reviewer и qa**. «Всё зелёно» без конкретики и «готово, но одно
-предупреждение» — второе честнее: пустой `WARNINGS` допустим, только если пробелов реально нет, а не
-потому что ты их не искал. Сопровождает constitution exit ([constitution.md](constitution.md)), не
-заменяет его. (= [principles.md](principles.md) PR-NN-03: находки проверяются по факту `файл:строка`,
-не утверждаются.)
+This is the output format for **task exit, reviewer, and QA**. "All green" with no specifics versus
+"done, but one warning" — the second is more honest: an empty `WARNINGS` is acceptable only if there
+really are no gaps, not because you didn't look for them. It accompanies the constitution exit
+([constitution.md](constitution.md)), it does not replace it. (= [principles.md](principles.md) PR-NN-03:
+findings are verified against actual `file:line`, not asserted.)

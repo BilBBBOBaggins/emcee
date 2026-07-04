@@ -1,27 +1,30 @@
-# Feature: Пригласить участника по email
+# Feature: Invite a teammate by email
 
 Status: approved
 Owner: SA
 Related ADRs: [ADR-001](../adr/001-modular-monolith.example.md)
 Last updated: 2026-04-17
 
-Формат — [roles/sa.md](../../../roles/sa.md). Это вход для architect (тех. спецификация) и developer (acceptance criteria).
+Format — [roles/sa.md](../../../roles/sa.md). This is input for the architect (technical spec) and the developer (acceptance criteria).
 
 ## Context
 
-Чтобы команда начала пользоваться продуктом, владелец должен пригласить коллег. Без приглашений продукт мёртв на старте onboarding (см. [domain/b2b-saas.md](../../../domain/b2b-saas.md) — onboarding/activation). Первый шаг: отправка приглашения; приём инвайта — отдельная фича (День 2).
+For the team to start using the product, the owner must invite colleagues. Without invitations the
+product is dead at the start of onboarding (see [domain/b2b-saas.md](../../../domain/b2b-saas.md) —
+onboarding/activation). First step: sending the invitation; accepting the invite is a separate
+feature (Day 2).
 
 ## Users and use cases
 
 Primary users:
-- **Team owner / admin**: приглашает коллег по email, видит подтверждение отправки.
+- **Team owner / admin**: invites colleagues by email, sees a send confirmation.
 
 Secondary users (affected but not primary):
-- **Приглашённый**: получает письмо (приём — вне scope этой spec).
+- **Invitee**: receives the email (accepting it is out of scope for this spec).
 
 ## User stories
 
-### Story 1: Отправить приглашение
+### Story 1: Send an invitation
 
 As a team admin,
 I want to invite a teammate by email,
@@ -32,44 +35,49 @@ So that they can join my team without me sharing credentials.
 
 Acceptance criteria:
 
-1. **Scenario: Успешная отправка**
-   Given я админ команды и открыл форму приглашения
-   When я ввожу валидный email и нажимаю Send
-   Then создаётся pending-инвайт в моём tenant
-   And я вижу подтверждение «Invitation sent to <email>».
+1. **Scenario: Successful send**
+   Given I'm a team admin and I've opened the invite form
+   When I enter a valid email and click Send
+   Then a pending invite is created in my tenant
+   And I see the confirmation "Invitation sent to <email>".
 
-2. **Scenario: Повторное приглашение**
-   Given на этот email уже есть pending-инвайт в моей команде
-   When я пытаюсь пригласить его снова
-   Then система не создаёт второй инвайт
-   And я вижу «This person already has a pending invite».
+2. **Scenario: Repeat invitation**
+   Given this email already has a pending invite in my team
+   When I try to invite them again
+   Then the system doesn't create a second invite
+   And I see "This person already has a pending invite".
 
-3. **Scenario: Невалидный email**
-   Given форма приглашения открыта
-   When email пуст или невалиден
-   Then отправка заблокирована (кнопка Send неактивна).
+3. **Scenario: Invalid email**
+   Given the invite form is open
+   When the email is empty or invalid
+   Then submission is blocked (the Send button is disabled).
 
 ## Non-functional requirements
 
-- **Security:** email из тела запроса не определяет tenant — tenant строго из auth-контекста (изоляция, [architecture/multi-tenant.md](../../../architecture/multi-tenant.md)).
-- **Performance:** ответ API < 300 ms; отправка письма асинхронна (очередь), не блокирует ответ.
-- **Compliance:** email — ПД, в логи не писать в открытом виде ([core/code-quality.md](../../../core/code-quality.md), [domain/regulated.md](../../../domain/regulated.md) если применимо).
+- **Security:** the email in the request body doesn't determine the tenant — the tenant comes
+  strictly from the auth context (isolation, [architecture/multi-tenant.md](../../../architecture/multi-tenant.md)).
+- **Performance:** API response < 300 ms; sending the email is asynchronous (queued), doesn't block
+  the response.
+- **Compliance:** email is PII, must not be written to logs in the clear
+  ([core/code-quality.md](../../../core/code-quality.md), [domain/regulated.md](../../../domain/regulated.md) if applicable).
 
 ## Data model changes
 
-Новая сущность `invites`: `id`, `tenant_id`, `email`, `status` (pending|accepted|revoked|expired), `created_at`. Уникальность: один активный (pending) инвайт на (`tenant_id`, `email`).
+New entity `invites`: `id`, `tenant_id`, `email`, `status` (pending|accepted|revoked|expired),
+`created_at`. Uniqueness: one active (pending) invite per (`tenant_id`, `email`).
 
 ## Open questions
 
-- [ ] Email-провайдер (SES / Postmark / SMTP)? — блокер реальной отправки, нужно решение пользователя.
-- [ ] Лимит pending-инвайтов на tenant и срок жизни инвайта? — уточнить у domain expert.
+- [ ] Email provider (SES / Postmark / SMTP)? — blocks the real send, needs a user decision.
+- [ ] Limit on pending invites per tenant and invite lifetime? — clarify with the domain expert.
 
 ## Assumptions
 
-- We assume auth-middleware уже кладёт `tenant_id` в контекст. Verified: реализовано в каркасе (PROJECT-STATE).
-- We assume приём инвайта делается отдельной фичей. If wrong — расширить scope на День 1.
+- We assume the auth middleware already puts `tenant_id` in the context. Verified: implemented in
+  the scaffold (PROJECT-STATE).
+- We assume accepting the invite is a separate feature. If wrong — expand the scope for Day 1.
 
 ## Out of scope
 
-- Приём приглашения по токену из письма (День 2).
-- Bulk-инвайты, инвайт по ссылке, роли при приглашении.
+- Accepting the invitation via the token from the email (Day 2).
+- Bulk invites, invite-by-link, roles at invite time.

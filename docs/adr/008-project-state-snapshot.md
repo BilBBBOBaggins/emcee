@@ -1,96 +1,106 @@
-# ADR-008: PROJECT-STATE — снимок, а не журнал (анти-разрастание)
+# ADR-008: PROJECT-STATE — a snapshot, not a journal (anti-sprawl)
 
 Date: 2026-06-27
-Status: Accepted (реализовано: канон снимка в core/memory.md + roles/architect.md §Обновление PROJECT-STATE, стаб генератора)
+Status: Accepted (implemented: snapshot canon in core/memory.md + roles/architect.md §Updating PROJECT-STATE, generator stub)
 
-Решение получено не адверсивной панелью, а брейнштормом с оператором: вопрос доковый, легко обратимый и не несущий (никакой архитектуры кода он не меняет). Опирается на модель памяти из [core/memory.md](../../core/memory.md).
+The decision was reached not via an adversarial panel but through a brainstorm with the operator: the question is doc-only, easily reversible, and not load-bearing (it changes no code architecture). It builds on the memory model from [core/memory.md](../../core/memory.md).
 
-## Коротко
+## In short
 
-`docs/PROJECT-STATE.md` — файл статуса, который архитектор читает на входе в каждый день. В стабе у
-него была секция **«Сделано»**, куда дописывали выполненное. Дописывали всегда, а чистили — никогда,
-поэтому файл медленно превращался в нечитаемый кумулятивный лог.
+`docs/PROJECT-STATE.md` is the status file the architect reads on entering each day. In the stub it
+had a **"Done"** section that got appended to as work was completed. It was always appended to and
+never pruned, so the file slowly turned into an unreadable cumulative log.
 
-Решение: PROJECT-STATE — это **горячий снимок «где проект сейчас», а не журнал «что было сделано»**.
-Секцию «Сделано» убрали. Архитектор на входе в день **перезаписывает файл и выкидывает отработавшее**,
-а не копит. История «что и когда» живёт в git, решения «почему» — в ADR. Память проекта = три слоя:
-горячий снимок (PROJECT-STATE) + курируемые решения (ADR) + searchable git. Тысяча коммитов контекст
-не переполняет, потому что историю никогда не грузят целиком — её спрашивают точечно. `regimen-doctor`
-мягко предупреждает (🟡), если снимок всё же разросся.
+Decision: PROJECT-STATE is a **hot snapshot of "where the project stands now", not a journal of
+"what was done"**. The "Done" section was removed. On entering a day the architect **rewrites the
+file in place and discards what has served its purpose**, rather than accumulating. The "what and
+when" history lives in git, the "why" decisions live in ADRs. Project memory has three layers: a hot
+snapshot (PROJECT-STATE) + curated decisions (ADRs) + searchable git. A thousand commits don't
+overflow the context, because history is never loaded wholesale — it's queried point by point.
+`regimen-doctor` softly warns (🟡) if the snapshot has grown anyway.
 
-## Контекст
+## Context
 
-Оператор (соло, ground truth): «что сделать, чтоб PROJECT-STATE не разросся в нечитаемое нечто?». По
-ходу штурма он задал два уточняющих вопроса, и оба попали в корень:
+Operator (solo, ground truth): "What should be done so PROJECT-STATE doesn't sprawl into an
+unreadable mess?" During the brainstorm he asked two clarifying questions, and both hit the root:
 
-1. **«Коммитов рано или поздно станут тысячи — они же всё равно переполнят контекст. Это неизбежно?»**
-2. **«Прунит (чистит) сам агент или пользователь?»**
+1. **"Commits will eventually number in the thousands — won't they overflow the context anyway? Is
+   that inevitable?"**
+2. **"Does the agent itself prune it, or does the user?"**
 
-Источник боли — стаб PROJECT-STATE с секцией «Сделано». Это **магнит разрастания**: она всегда
-«горячая» (читается на входе в каждый день), растёт без потолка и при этом дублирует то, что и так
-есть в git. Соло-разработчик дописывать в неё будет, а вручную чистить — нет.
+The source of the pain is the PROJECT-STATE stub with its "Done" section. It's a **sprawl magnet**:
+always "hot" (read on entering every day), grows without a ceiling, and duplicates what's already in
+git. A solo developer will keep appending to it but will not prune it by hand.
 
-## Решение
+## Decision
 
-**PROJECT-STATE — снимок, не журнал. Чистит агент. История и «почему» вынесены в git и ADR.**
+**PROJECT-STATE is a snapshot, not a journal. The agent prunes it. History and the "why" live in
+git and ADRs.**
 
-Конкретно:
+Specifically:
 
-1. **Убрали секцию «Сделано»** из стаба ([new-project.py](../../new-project.py)) и из эталона
-   ([examples/docs/PROJECT-STATE.example.md](../../examples/docs/PROJECT-STATE.example.md)). В шапку
-   файла добавлено правило «снимок, не журнал». Стек и команды из снимка убраны — они durable и живут
-   в `CLAUDE.md`, дублировать незачем.
-2. **Архитектор чистит на входе в день** ([roles/architect.md](../../roles/architect.md) → «Обновление
-   PROJECT-STATE»): обновляет **перезаписью на месте**, выкидывая решённые open questions, закрытые
-   риски и уехавшую «В работе». Факт при этом не теряется — он остаётся в git.
-3. **Три слоя памяти проекта сделаны явными** (в [core/task-protocol.md](../../core/task-protocol.md) и
+1. **Removed the "Done" section** from the stub ([new-project.py](../../new-project.py)) and from
+   the reference example
+   ([examples/docs/PROJECT-STATE.example.md](../../examples/docs/PROJECT-STATE.example.md)). The
+   file's header now states the rule "a snapshot, not a journal." The stack and commands were removed
+   from the snapshot — they're durable and live in `CLAUDE.md`; no reason to duplicate them.
+2. **The architect prunes it on entering a day**
+   ([roles/architect.md](../../roles/architect.md) → "Updating PROJECT-STATE"): it updates the file
+   **by rewriting it in place**, discarding resolved open questions, closed risks, and stale "In
+   progress" items. No fact is lost in the process — it stays in git.
+3. **The project's three memory layers are made explicit** (in
+   [core/task-protocol.md](../../core/task-protocol.md) and
    [core/memory.md](../../core/memory.md)):
-   - **горячий снимок** — PROJECT-STATE, перезаписывается, цель ≤ ~1 экран;
-   - **курируемое «почему»** — `docs/adr/`, ограниченный набор несущих решений;
-   - **searchable git** — вся история «что и когда», запрашивается точечно, не грузится целиком.
-4. **Конвенция сообщений коммита** (Conventional Commits: `тип(scope): что`) закреплена в
-   `task-protocol.md`. Без осмысленных сообщений git как «холодная память» не работает —
-   `git log --grep` по «fix stuff» бесполезен.
-5. **`regimen-doctor` мягко предупреждает** (🟡, не блокирует), если PROJECT-STATE перевалил ~200 строк
-   — это бэкстоп-напоминание прочистить.
+   - **hot snapshot** — PROJECT-STATE, rewritten in place, target ≤ ~1 screen;
+   - **curated "why"** — `docs/adr/`, a limited set of load-bearing decisions;
+   - **searchable git** — the entire "what and when" history, queried point by point, never loaded
+     wholesale.
+4. **A commit message convention** (Conventional Commits: `type(scope): what`) is fixed in
+   `task-protocol.md`. Without meaningful messages, git doesn't work as "cold memory" —
+   `git log --grep` over "fix stuff" is useless.
+5. **`regimen-doctor` softly warns** (🟡, doesn't block) if PROJECT-STATE has passed ~200 lines —
+   this is a backstop reminder to prune.
 
-**Ответы на два вопроса оператора** (записаны, потому что они и есть обоснование):
+**Answers to the operator's two questions** (recorded because they are themselves the rationale):
 
-- **Тысячи коммитов — это не неизбежное разрастание.** Опасение предполагает, что историю надо
-  «держать», чтобы её знать. Не надо: её **никогда не читают целиком**, а спрашивают точечно —
-  `git log --since=…`, `--grep`, `git log <путь>`, `git shortlog`. «Что важного было» живёт не в тысяче
-  коммитов, а в десятке **курируемых ADR** (читаешь 10 файлов, а не 1000 коммитов). Поэтому
-  кумулятивная секция в файле — строго худший вариант: всегда горячая, растёт вечно, дублирует git.
-- **Чистит агент, не пользователь.** Это естественная точка — архитектор и так обновляет PROJECT-STATE
-  на входе в день. Файл под git, поэтому чистка **безопасна и обратима** (git — это undo). А ручная
-  чистка пользователем — ровно то, что не делается и потому копит разрастание. Мягкое предупреждение
-  doctor — страховка, если агент всё же не прочистил.
+- **Thousands of commits are not inevitable sprawl.** The worry assumes that history must be
+  "held onto" in order to be known. It doesn't: it's **never read wholesale**, it's queried point by
+  point — `git log --since=…`, `--grep`, `git log <path>`, `git shortlog`. "What mattered" doesn't
+  live in a thousand commits but in a dozen **curated ADRs** (you read 10 files, not 1000 commits).
+  That's why a cumulative section in a file is strictly the worse option: always hot, grows forever,
+  duplicates git.
+- **The agent prunes it, not the user.** This is the natural point — the architect already updates
+  PROJECT-STATE on entering a day. The file is under git, so pruning is **safe and reversible** (git
+  is the undo). Manual pruning by the user is exactly the thing that doesn't happen and therefore
+  accumulates sprawl. The doctor's soft warning is insurance in case the agent still doesn't prune.
 
-## Последствия
+## Consequences
 
-**Плюсы:** PROJECT-STATE остаётся коротким снимком (≤ ~1 экран) вместо растущего лога; модель повторяет
-дисциплину памяти самого пакета (`core/memory.md`: горячее ядро + тонкий индекс + холодный стор);
-чистка обратима, потому что всё под git; человек получает явный ответ «что делать, чтоб не распухло».
+**Upsides:** PROJECT-STATE stays a short snapshot (≤ ~1 screen) instead of a growing log; the model
+mirrors the package's own memory discipline (`core/memory.md`: hot core + thin index + cold store);
+pruning is reversible because everything is under git; the human gets an explicit answer to "what to
+do so it doesn't bloat."
 
-**Риски и открытые вопросы:**
+**Risks and open questions:**
 
-- [ ] Дисциплина чистки держится на агенте. Если архитектор не чистит на входе в день, файл всё равно
-      поползёт. Единственный бэкстоп — мягкое 🟡 doctor. Жёсткий гейт сознательно не ставим: у снимка
-      размер законно колеблется, блок по числу строк был бы слишком груб.
-- [ ] Порог 200 строк — прикидка, не измерение. Подстроить, если 🟡 срабатывает слишком рано или поздно
-      на реальных проектах.
-- [ ] Предельный масштаб. На годах и десятках тысяч коммитов даже точечные git-запросы шумят. Лечит это
-      курируемый слой (ADR плюс, при нужде, редкие phase-summary), а не git. Сейчас не строим —
-      потребности ещё нет.
+- [ ] Pruning discipline rests on the agent. If the architect doesn't prune on entering a day, the
+      file will still creep up. The only backstop is the doctor's soft 🟡. We deliberately don't put in
+      a hard gate: a snapshot's size legitimately fluctuates, a block on line count would be too
+      blunt.
+- [ ] The 200-line threshold is an estimate, not a measurement. Adjust if 🟡 fires too early or too
+      late on real projects.
+- [ ] Extreme scale. Over years and tens of thousands of commits, even point queries against git get
+      noisy. The curated layer (ADRs plus, if needed, the occasional phase summary) addresses this,
+      not git. We're not building this now — the need isn't there yet.
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **Оставить кумулятивную «Сделано».** Отклонено: всегда горячая, растёт без потолка, дублирует git —
-  это и есть само разрастание.
-- **Чистит пользователь вручную.** Отклонено: ручная чистка — ровно то, что не делается; именно она и
-  копит «нечитаемое нечто».
-- **Жёсткий гейт doctor (🔴) по размеру.** Отклонено: снимок законно меняется в размере; жёсткий блок по
-  числу строк слишком груб — выбрано мягкое 🟡.
-- **Переименовать секцию «Следующий день» → «Следующий срез».** Отклонено: трогает 8 файлов, включая
-  иммутабельные ADR-003 и ADR-005 (нарушение их read-only-статуса), и к анти-разрастанию отношения не
-  имеет — это разрастание объёма правок ради косметики.
+- **Keep the cumulative "Done" section.** Rejected: always hot, grows without a ceiling, duplicates
+  git — this is sprawl itself.
+- **The user prunes manually.** Rejected: manual pruning is exactly the thing that doesn't happen;
+  it's precisely what accumulates the "unreadable mess."
+- **A hard doctor gate (🔴) on size.** Rejected: a snapshot legitimately varies in size; a hard block
+  on line count is too blunt — the soft 🟡 was chosen instead.
+- **Rename the "Next day" section → "Next slice".** Rejected: touches 8 files, including immutable
+  ADR-003 and ADR-005 (violating their read-only status), and has nothing to do with anti-sprawl —
+  it's a sprawl of edits for cosmetics.

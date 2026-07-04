@@ -1,5 +1,5 @@
 {
-  "_comment": "ЕДИНСТВЕННЫЙ источник истины: цифра -> роль. Renumber/удаляй здесь, потом запусти `python3 sync-roles.py` — он перегенерит таблицы в CLAUDE.md и .claude/commands/role.md между маркерами ROLES-TABLE. `python3 sync-roles.py --check` падает, если что-то рассинхронилось (используется в selftest).",
+  "_comment": "The SINGLE source of truth: digit -> role. Renumber/remove here, then run `python3 sync-roles.py` — it regenerates the tables in CLAUDE.md and .claude/commands/role.md between the ROLES-TABLE markers. `python3 sync-roles.py --check` fails if anything is out of sync (used by selftest).",
   "roles": [
     { "num": 0, "name": "Reviewer",         "agent": "reviewer",  "file": "roles/reviewer.md" },
     { "num": 1, "name": "Developer",        "agent": "developer", "file": "roles/developer.md" },

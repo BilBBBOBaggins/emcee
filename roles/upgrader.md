@@ -1,75 +1,81 @@
-# Роль: Upgrader (ДОРМАНТНАЯ — обновление устаревшего регламента)
+# Role: Upgrader (DORMANT — upgrading a stale regimen)
 
-> **СТАТУС: дормантный делегирующий регламент.** Не в `roles.json` (нет цифры, не в числовом
-> пайплайне). Вызывается ad-hoc: «обнови регламент по `roles/upgrader.md`». Это **гайд делегирования**
-> (как День-0 делегирует init стека), а НЕ код-фича генератора: `new-project.py` намеренно НЕ имеет
-> `--mode upgrade` — owned merge-движок + манифест версии = сохранённый версионный owned-результат,
-> запрещённый [ADR-001](../docs/adr/001-scope-process-overlay.md) ([ADR-006](../docs/adr/006-regimen-upgrade.md)).
-> Обновление делает **агент**, разбираясь по git-диффу, человек ревьюит и коммитит.
+> **STATUS: dormant delegating regimen.** Not in `roles.json` (no digit, not in the numeric
+> pipeline). Invoked ad hoc: "upgrade the regimen per `roles/upgrader.md`". This is a **delegation
+> guide** (the way Day 0 delegates stack init), NOT a generator code feature: `new-project.py`
+> deliberately has NO `--mode upgrade` — an owned merge engine + version manifest = a persisted
+> versioned owned artifact, forbidden by [ADR-001](../docs/adr/001-scope-process-overlay.md)
+> ([ADR-006](../docs/adr/006-regimen-upgrade.md)).
+> The upgrade is done by an **agent**, working it out from the git diff; a human reviews and commits.
 
-Применяется, когда регламент emcee уже стоял со **старой версии** и отстал (overlay его НЕ
-обновляет — он не перезатирает существующие файлы). Цель — подтянуть package-owned части, **не тронув**
-пользовательский контент.
+Applies when the emcee regimen has already been installed from an **older version** and has fallen
+behind (the overlay does NOT update it — it doesn't overwrite existing files). The goal is to bring
+package-owned parts up to date **without touching** user content.
 
-## Несущий принцип: report-first, авто только на чистом, человек коммитит
+## Load-bearing principle: report-first, auto only on clean files, a human commits
 
-1. **Кандидат-база (не точная 3-way-база).** Сгенерировать свежий регламент во временный каталог
-   теми же опциями, что подтвердит оператор (стек/testing/wiring/arch/domain — взять из текущего
-   входного файла регламента и набора файлов, **подтвердить у оператора**, не угадывать). Это реконструкция, не
-   сохранённый provenance — поэтому на спорных option-зависимых файлах НЕ авто-применять.
+1. **Candidate base (not an exact 3-way base).** Generate a fresh regimen into a temporary directory
+   with the same options the operator confirms (stack/testing/wiring/arch/domain — take from the
+   current regimen entry file and file set, **confirm with the operator**, don't guess). This is a
+   reconstruction, not preserved provenance — so on disputed option-dependent files do NOT auto-apply.
    ```bash
-   ./new-project.py --name "<имя>" --dir /tmp/regimen-new --mode new \
-       --backend <стек> --testing <как было> --wiring yes
+   ./new-project.py --name "<name>" --dir /tmp/regimen-new --mode new \
+       --backend <stack> --testing <as before> --wiring yes
    ```
-2. **Классификация по ФАЙЛУ** (граница owned/user вычислима по файлу, не по строке):
-   - **clean package-owned** — файлы БЕЗ пользовательских `{{...}}` и без проектного контента: чистые
-     `core/*.md` (те, где нет `{{`), `sync-roles.py`, `regimen-doctor.py` + обвязка рантайма (на Claude
-     Code — `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, универсальные `.claude/skills/*`;
-     на Codex — `AGENTS.md`, `.codex/agents/*`, `.codex/skills/*`; `origin: harness:<name>`). Их можно авто-обновить.
-   - **mixed / user-owned** — входной файл регламента (`CLAUDE.md`/`AGENTS.md`), `roles.json`, `docs/`, `core/*.md` С `{{...}}` (заполненные
-     юзером), `roles/*.md` с заполненными `{{...}}` (особенно `qa-e2e`, `qa-uat`). **НЕ авто-трогать.**
-   - `render-handbook.py` — package-only, генератором в проект НЕ копируется → его в проекте нет, в
-     upgrade-набор не входит.
-3. **REPORT-FIRST (обязательно).** До любых правок — отчёт:
-   - что дрейфнуло: `git diff` / `diff` между `/tmp/regimen-new/<файл>` и текущим по package-owned;
-   - какие **новые** файлы появились (напр. `core/second-model.md`, `roles/designer.md`,
+2. **Classify by FILE** (the owned/user boundary is computable per file, not per line):
+   - **clean package-owned** — files WITHOUT user `{{...}}` and without project content: clean
+     `core/*.md` (those without `{{`), `sync-roles.py`, `regimen-doctor.py` + executable wiring (on
+     Claude Code — `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, generic
+     `.claude/skills/*`; on Codex — `AGENTS.md`, `.codex/agents/*`, `.codex/skills/*`;
+     `origin: harness:<name>`). These can be auto-updated.
+   - **mixed / user-owned** — the regimen entry file (`CLAUDE.md`/`AGENTS.md`), `roles.json`, `docs/`,
+     `core/*.md` WITH `{{...}}` (filled in by the user), `roles/*.md` with filled-in `{{...}}`
+     (especially `qa-e2e`, `qa-uat`). **Do NOT auto-touch.**
+   - `render-handbook.py` — package-only, NOT copied into the project by the generator → it doesn't
+     exist in the project, not part of the upgrade set.
+3. **REPORT-FIRST (mandatory).** Before any edits — a report:
+   - what has drifted: `git diff` / `diff` between `/tmp/regimen-new/<file>` and the current one, for
+     package-owned files;
+   - which **new** files have appeared (e.g. `core/second-model.md`, `roles/designer.md`,
      `roles/auditor.md`, `roles/upgrader.md`);
-   - **ADR-дельта** — какие `docs/adr/` есть в новом пакете, которых не было: каждый ADR объясняет
-     ЧТО и ПОЧЕМУ поменялось в регламенте (читать их, а не только дифф).
-4. **Авто-применение — только на clean package-owned** (запись в working tree). Принести новые файлы.
-   **Никогда не авто-3-way на mixed-файлах** — синтаксически чистый, но семантически противоречивый
-   merge не даёт конфликта и проходит молча (regimen-doctor смысл нормы не проверяет).
-   **Раскладка проекта — закон для обвязки.** Если package-owned части живут в проекте не по
-   пакетным путям (напр. docs-nested: `docs/core/`, `docs/roles/`), авто-применяемые файлы обвязки
-   (`.claude/agents|commands|skills`, `.codex/*`) копируются НЕ дословно: каждый внутренний
-   путь-канон (`core/…`, `roles/…`, `architecture/…`) переписывается под фактическую раскладку.
-   Выбор раскладки и факт переписывания — под запись в отчёте. (Эмпирика 2026-06, живой апгрейд:
-   13 субагентов с пакетными путями при docs-nested = битые каноны, ни один гейт не поймал.)
-5. **Mixed-файлы — точечно, показывая каждый дифф.** Перенести НОВЫЙ package-контент (напр. новые
-   указатели во входном файле регламента → «По ситуации»), сохранив все пользовательские fills и проектное.
-   Неоднозначно → спросить оператора (PR-NN-02). **«Существующие не тронуты» — не опция:** «НЕ
-   авто-трогать» из классификации значит «не перезаписывать автоматом», а не «пропустить». По
-   КАЖДОМУ mixed-файлу в отчёте — вердикт «новый package-контент: перенесён / отклонён оператором /
-   дельты нет». Молчаливый пропуск = under-upgrade под запись (та же логика, что QG-NN-04: отставание
-   не исчезает оттого, что файл не потрогали; эмпирика того же апгрейда 2026-06 — 5 ролей остались
-   на поколения позади при свежем ядре рядом).
-6. **Ресинк и проверка:** `python3 sync-roles.py` → `python3 regimen-doctor.py` (🟢?) → `git diff`.
-   **Exit-гейт резолва:** каждый `.md`-путь, упомянутый обвязкой, существует в дереве проекта
-   (regimen-doctor проверяет механически — «пути-каноны обвязки резолвятся»); битый путь = апгрейд
-   **НЕ done**.
-7. **Человек ревьюит `git diff` и коммитит сам.** Агент working tree меняет только после report-first
-   и **никогда не коммитит** (конституция). Отдельный коммит «upgrade регламента» — чтобы дифф был
-   виден в истории.
+   - **ADR delta** — which `docs/adr/` exist in the new package that didn't exist before: every ADR
+     explains WHAT and WHY changed in the regimen (read them, not just the diff).
+4. **Auto-apply — only to clean package-owned files** (a write into the working tree). Bring in new
+   files. **Never auto-3-way-merge mixed files** — a syntactically clean but semantically
+   contradictory merge produces no conflict and passes silently (regimen-doctor doesn't check the
+   meaning of the norm).
+   **Project layout is law for wiring.** If package-owned parts live in the project at non-package
+   paths (e.g. docs-nested: `docs/core/`, `docs/roles/`), auto-applied wiring files
+   (`.claude/agents|commands|skills`, `.codex/*`) are NOT copied verbatim: every internal canonical
+   path (`core/…`, `roles/…`, `architecture/…`) is rewritten to match the actual layout. The layout
+   choice and the fact of rewriting must be recorded in the report. (2026-06 empirical evidence, a
+   live upgrade: 13 subagents with package paths under a docs-nested layout = broken canonical paths,
+   no gate caught it.)
+5. **Mixed files — surgically, showing every diff.** Carry over NEW package content (e.g. new
+   pointers in the regimen entry file → "Situational"), preserving all user fills and project content.
+   Ambiguous → ask the operator (PR-NN-02). **"Existing ones untouched" is not an option:** "Do NOT
+   auto-touch" in the classification means "don't overwrite automatically," not "skip." For EVERY
+   mixed file, the report must record a verdict: "new package content: carried over / rejected by the
+   operator / no delta." A silent skip = an under-upgrade that must be recorded (the same logic as
+   QG-NN-04: lag doesn't disappear just because the file wasn't touched; empirical evidence from the
+   same 2026-06 upgrade — 5 roles stayed generations behind next to a freshly upgraded core).
+6. **Resync and check:** `python3 sync-roles.py` → `python3 regimen-doctor.py` (🟢?) → `git diff`.
+   **Resolution exit gate:** every `.md` path mentioned by the wiring exists in the project tree
+   (regimen-doctor checks this mechanically — "wiring canonical paths resolve"); a broken path = the
+   upgrade is **NOT done**.
+7. **A human reviews the `git diff` and commits it themselves.** The agent changes the working tree
+   only after report-first and **never commits** (constitution). A separate "regimen upgrade" commit
+   — so the diff is visible in history.
 
-## Запрещено
+## Forbidden
 
-- НЕ авто-перезаписывать файлы с пользовательскими `{{...}}` или проектным контентом.
-- НЕ строить owned merge-движок/манифест в генераторе (⊥ ADR-001) — обновление = разбор агентом.
-- НЕ коммитить за пользователя; неоднозначный merge → стоп, вопрос оператору.
+- Do NOT auto-overwrite files with user `{{...}}` or project content.
+- Do NOT build an owned merge engine/manifest into the generator (⊥ ADR-001) — the upgrade = agent-driven analysis.
+- Do NOT commit on the user's behalf; an ambiguous merge → stop, ask the operator.
 
-## Кто хочет тулинг
+## For those who want tooling
 
-Это не обязательно. Кому нужен формальный template-update, может вести проект под
-[copier](https://copier.readthedocs.io/) / [cruft](https://cruft.github.io/cruft/) самостоятельно —
-пакет этого НЕ требует и от них НЕ зависит (у ранних overlay-проектов нет provenance-файла, ретро-
-внедрить его = та же миграция, которой мы избегаем).
+This isn't required. Anyone who wants a formal template-update can run their project under
+[copier](https://copier.readthedocs.io/) / [cruft](https://cruft.github.io/cruft/) on their own — the
+package doesn't require this and doesn't depend on them (early overlay projects have no provenance
+file, retrofitting one is the very migration we're avoiding).

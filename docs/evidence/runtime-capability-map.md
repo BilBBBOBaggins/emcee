@@ -42,17 +42,17 @@ From `.claude/` in this repo (the 7 components named in the task):
 
 ## Capability matrix
 
-Rows = the 7 enforcement components. Cells: **есть / частично / нет / другой механизм** + one phrase.
+Rows = the 7 enforcement components. Cells: **yes / partial / no / different mechanism** + one phrase.
 
 | # | Component (Claude Code) | Claude Code | Codex CLI | Cursor |
 |---|---|---|---|---|
-| 1 | **Subagents with per-tool allowlist** | **есть** — `tools:` frontmatter is a true allowlist over core tools (reviewer literally has no Edit/Bash). `[V]` | **частично** — custom agents under `~/.codex/agents/` or `.codex/agents/` (TOML) set `model`, `developer_instructions`, **`sandbox_mode`**, `mcp_servers`, `skills.config`. Read-only reviewer = `sandbox_mode="read-only"`. **No per-agent core-tool allowlist** (cannot say "has Bash but not Edit"); only MCP tools get `enabled_tools`/`disabled_tools`. `[V — fetched subagents doc: only sandbox_mode + MCP tool filter; no built-in-tool disable]` | **частично** — subagents in `.cursor/agents/*.md` (also reads `.claude/agents/`, `.codex/agents/`), frontmatter `name`/`description`/`model`/**`readonly`**/`is_background`. `readonly:true` = no edits + no state-changing shell. **No granular per-tool allowlist** — only the binary `readonly`. Needs Cursor 2.4+. `[V — fetched subagents doc]` |
-| 2 | **Slash-commands (user-defined)** | **есть** — `.claude/commands/*.md`, arbitrary user prompts as `/name`, parse `$ARGUMENTS`. `[V]` | **нет (для кастомных)** — ~50 built-in slash commands (`/plan`,`/compact`,`/skills`,`/agent`,`/review`,`/hooks`…), but **no user-defined markdown slash-command / `~/.codex/prompts/` mechanism found**. Closest surrogates: skills (`$skill`), custom agents (`/agent`), hooks, plugins. `[V — fetched slash-commands doc: built-ins only, no custom-command system]` | **другой механизм** — no first-class custom `/command` like Claude's; **skills** (`$skill`, Cursor 2.4+) and **subagents** (delegated by description) are the invocation surface. Rules cover always/auto-attach context. `[V — docs]` |
-| 3 | **Hook-gates (lifecycle events)** | **есть** — `PostToolUse`/`PreCompact`/`Stop` etc. via `settings.json`, shell command hooks. `[V]` | **есть** — hooks on by default; in `~/.codex/hooks.json` / `config.toml` / repo `.codex/`. Events: `SessionStart`, `PreToolUse`, `PermissionRequest`, `PostToolUse`, **`PreCompact`/`PostCompact`**, `UserPromptSubmit`, `SubagentStart/Stop`, **`Stop`**. Caveat: docs warn `PreToolUse` is **not yet a complete enforcement boundary** (doesn't intercept every path). `[V-codex — hooks doc cited; not re-fetched]` | **есть (новее, иной набор)** — Cursor Hooks (2026): `onPreEdit` (can veto edit), `onPostEdit`, `onPreCommit`, `onApprove`. Event-scoped to edit/commit/approve, not a generic tool-use/Stop/compact lifecycle. `[V — web, multiple 2026 sources]` |
-| 4 | **Agent Skills (progressive disclosure)** | **есть** — `SKILL.md`, description always visible, body on-demand, `paths:` globs. `[V]` | **есть** — Codex Agent Skills (CLI/IDE/app): name+description+path first, full `SKILL.md` on selection; `/skills` or `$skill` explicit, or implicit by description match. Dirs: repo `.agents/skills`, `~/.agents/skills`, `/etc/codex/skills`, bundled. **Same primitive.** `[V-codex — skills doc cited]` (and the running codex itself loaded a skill mid-answer — observed behavior) | **есть** — Cursor Skills (2.4+): on-demand knowledge, `$skill`, description-triggered. Same idea. `[V — docs/web]` |
-| 5 | **Plan mode / rewind / auto-compaction** | **есть** — plan mode, `/rewind`, auto-compact built in. `[V]` | **частично** — **Plan**: `/plan` (+ `update_plan` tool seen in-session). **Compaction**: `/compact` + `PreCompact`/`PostCompact` hooks (manual+auto). **Rewind/undo**: **no documented direct "undo last turn"**; has `/fork`,`/side`,`/resume` (branch/resume, not rewind). `[V — fetched slash-commands list: has /plan /compact /fork /side, no undo/rewind verb]` | **частично** — Plan/Agent modes exist; auto-compaction exists; **no documented Claude-style `/rewind` checkpoint-restore** found. `[UNVERIFIED — rewind specifically]` |
-| 6 | **Auto-read project instructions at session start** | **есть** — root `CLAUDE.md` auto-read. `[V]` | **есть (и богаче иерархия)** — `AGENTS.md` auto-read; global `~/.codex/AGENTS[.override].md` + project root→CWD chain (one file/dir), nested overrides later, cap `project_doc_max_bytes=32 KiB`. Also reads `.codex/config.toml`. `[V-codex — agents-md doc cited]` | **есть** — `.cursor/rules/*.mdc` (frontmatter `description`/`globs`/`alwaysApply`), legacy `.cursorrules`, **and `AGENTS.md` at root as cross-IDE fallback**. `alwaysApply:true` = always in prompt. `[V — docs/web]` |
-| 7 | **Auto-memory / memory hierarchy** | **есть** — native CLAUDE.md hierarchy + auto-memory (`core/memory.md`). `[V]` | **есть (opt-in)** — Codex **memories**: generates local memory files from prior threads, injects into future sessions; `~/.codex/memories/`; `memories.generate_memories` / `use_memories`. **Off by default.** Docs say required/team guidance belongs in `AGENTS.md`, not memory. `[V-codex — memories doc cited]` | **частично / другой механизм** — no native cross-session auto-memory primitive equivalent; community pattern = a "memory" rule/`.mdc` file the agent edits. Rules are the persistence surface. `[UNVERIFIED — no official auto-memory feature confirmed]` |
+| 1 | **Subagents with per-tool allowlist** | **yes** — `tools:` frontmatter is a true allowlist over core tools (reviewer literally has no Edit/Bash). `[V]` | **partial** — custom agents under `~/.codex/agents/` or `.codex/agents/` (TOML) set `model`, `developer_instructions`, **`sandbox_mode`**, `mcp_servers`, `skills.config`. Read-only reviewer = `sandbox_mode="read-only"`. **No per-agent core-tool allowlist** (cannot say "has Bash but not Edit"); only MCP tools get `enabled_tools`/`disabled_tools`. `[V — fetched subagents doc: only sandbox_mode + MCP tool filter; no built-in-tool disable]` | **partial** — subagents in `.cursor/agents/*.md` (also reads `.claude/agents/`, `.codex/agents/`), frontmatter `name`/`description`/`model`/**`readonly`**/`is_background`. `readonly:true` = no edits + no state-changing shell. **No granular per-tool allowlist** — only the binary `readonly`. Needs Cursor 2.4+. `[V — fetched subagents doc]` |
+| 2 | **Slash-commands (user-defined)** | **yes** — `.claude/commands/*.md`, arbitrary user prompts as `/name`, parse `$ARGUMENTS`. `[V]` | **no (for custom ones)** — ~50 built-in slash commands (`/plan`,`/compact`,`/skills`,`/agent`,`/review`,`/hooks`…), but **no user-defined markdown slash-command / `~/.codex/prompts/` mechanism found**. Closest surrogates: skills (`$skill`), custom agents (`/agent`), hooks, plugins. `[V — fetched slash-commands doc: built-ins only, no custom-command system]` | **different mechanism** — no first-class custom `/command` like Claude's; **skills** (`$skill`, Cursor 2.4+) and **subagents** (delegated by description) are the invocation surface. Rules cover always/auto-attach context. `[V — docs]` |
+| 3 | **Hook-gates (lifecycle events)** | **yes** — `PostToolUse`/`PreCompact`/`Stop` etc. via `settings.json`, shell command hooks. `[V]` | **yes** — hooks on by default; in `~/.codex/hooks.json` / `config.toml` / repo `.codex/`. Events: `SessionStart`, `PreToolUse`, `PermissionRequest`, `PostToolUse`, **`PreCompact`/`PostCompact`**, `UserPromptSubmit`, `SubagentStart/Stop`, **`Stop`**. Caveat: docs warn `PreToolUse` is **not yet a complete enforcement boundary** (doesn't intercept every path). `[V-codex — hooks doc cited; not re-fetched]` | **yes (newer, different set)** — Cursor Hooks (2026): `onPreEdit` (can veto edit), `onPostEdit`, `onPreCommit`, `onApprove`. Event-scoped to edit/commit/approve, not a generic tool-use/Stop/compact lifecycle. `[V — web, multiple 2026 sources]` |
+| 4 | **Agent Skills (progressive disclosure)** | **yes** — `SKILL.md`, description always visible, body on-demand, `paths:` globs. `[V]` | **yes** — Codex Agent Skills (CLI/IDE/app): name+description+path first, full `SKILL.md` on selection; `/skills` or `$skill` explicit, or implicit by description match. Dirs: repo `.agents/skills`, `~/.agents/skills`, `/etc/codex/skills`, bundled. **Same primitive.** `[V-codex — skills doc cited]` (and the running codex itself loaded a skill mid-answer — observed behavior) | **yes** — Cursor Skills (2.4+): on-demand knowledge, `$skill`, description-triggered. Same idea. `[V — docs/web]` |
+| 5 | **Plan mode / rewind / auto-compaction** | **yes** — plan mode, `/rewind`, auto-compact built in. `[V]` | **partial** — **Plan**: `/plan` (+ `update_plan` tool seen in-session). **Compaction**: `/compact` + `PreCompact`/`PostCompact` hooks (manual+auto). **Rewind/undo**: **no documented direct "undo last turn"**; has `/fork`,`/side`,`/resume` (branch/resume, not rewind). `[V — fetched slash-commands list: has /plan /compact /fork /side, no undo/rewind verb]` | **partial** — Plan/Agent modes exist; auto-compaction exists; **no documented Claude-style `/rewind` checkpoint-restore** found. `[UNVERIFIED — rewind specifically]` |
+| 6 | **Auto-read project instructions at session start** | **yes** — root `CLAUDE.md` auto-read. `[V]` | **yes (and a richer hierarchy)** — `AGENTS.md` auto-read; global `~/.codex/AGENTS[.override].md` + project root→CWD chain (one file/dir), nested overrides later, cap `project_doc_max_bytes=32 KiB`. Also reads `.codex/config.toml`. `[V-codex — agents-md doc cited]` | **yes** — `.cursor/rules/*.mdc` (frontmatter `description`/`globs`/`alwaysApply`), legacy `.cursorrules`, **and `AGENTS.md` at root as cross-IDE fallback**. `alwaysApply:true` = always in prompt. `[V — docs/web]` |
+| 7 | **Auto-memory / memory hierarchy** | **yes** — native CLAUDE.md hierarchy + auto-memory (`core/memory.md`). `[V]` | **yes (opt-in)** — Codex **memories**: generates local memory files from prior threads, injects into future sessions; `~/.codex/memories/`; `memories.generate_memories` / `use_memories`. **Off by default.** Docs say required/team guidance belongs in `AGENTS.md`, not memory. `[V-codex — memories doc cited]` | **partial / different mechanism** — no native cross-session auto-memory primitive equivalent; community pattern = a "memory" rule/`.mdc` file the agent edits. Rules are the persistence surface. `[UNVERIFIED — no official auto-memory feature confirmed]` |
 
 ### Optional runtimes (lighter pass — web only)
 
@@ -68,20 +68,20 @@ Rows = the 7 enforcement components. Cells: **есть / частично / не
 
 ---
 
-## Наименьший общий знаменатель (что выживает везде)
+## Lowest common denominator (what survives everywhere)
 
-**Гарантии, переживающие переезд на ЛЮБОЙ из Codex/Cursor (и даже Aider/Cline):**
+**Guarantees that survive a move to ANY of Codex/Cursor (and even Aider/Cline):**
 
 - **Auto-read project instructions** — universal. `CLAUDE.md`→`AGENTS.md`/`.cursor/rules`/`.clinerules`.
-  Every runtime reads *some* always-on instruction file. The role-router prose, the "обязательно
-  читать", the constitution — all survive verbatim as instruction text. **This is the backbone that
-  always lands.**
+  Every runtime reads *some* always-on instruction file. The role-router prose, the "Required
+  reading" section, the constitution — all survive verbatim as instruction text. **This is the
+  backbone that always lands.**
 - **Roles-as-prose** — universal. A role = a prompt. Every runtime can be told "you are now Reviewer,
   obey roles/reviewer.md". The *discipline* survives; only the *hardware enforcement* of it varies.
 - **Skills (progressive-disclosure knowledge)** — survives on Codex and Cursor as the SAME primitive
   (description-triggered, body-on-demand). Lost only on Aider/Cline (degrades to always-on rule text).
 
-**Гарантии, выживающие на Codex/Cursor но НЕ на слабых (Aider/Cline):**
+**Guarantees that survive on Codex/Cursor but NOT on the weaker runtimes (Aider/Cline):**
 
 - **Read-only enforcement for a reviewer/auditor** — survives as `sandbox_mode="read-only"` (Codex)
   or `readonly:true` (Cursor). The *binary* "this agent cannot touch files" is reproducible. Lost on
@@ -90,7 +90,7 @@ Rows = the 7 enforcement components. Cells: **есть / частично / не
   ours closely) and Cursor (edit/commit-scoped only). Lost on Aider/Cline.
 - **Plan mode + auto-compaction** — survive on Codex/Cursor. Lost on Aider/Cline.
 
-**Гарантии, которые ТЕРЯЮТСЯ или деградируют даже на сильных рантаймах (Codex/Cursor):**
+**Guarantees that are LOST or degrade even on strong runtimes (Codex/Cursor):**
 
 - **Granular per-tool subagent allowlist** — **LOST on both Codex and Cursor.** Our regimen distinguishes
   three write-tiers: read-only (reviewer), docs-only-Write (BA/QA/SA), and code (developer). Codex and
@@ -107,31 +107,32 @@ Rows = the 7 enforcement components. Cells: **есть / частично / не
 
 ---
 
-## Что переносится прозой без потерь (метод, НЕ слой принуждения)
+## What transfers as prose without loss (method, NOT the enforcement layer)
 
-Гипотеза задачи («метод переносится весь, принуждение — нет») **подтверждается**. Всё в `core/`,
-помеченное `origin: universal` в `portability.md`, — это просто текст инструкции, и любой рантайм с
-auto-read instruction-файлом исполнит его одинаково:
+The task's hypothesis ("the whole method transfers, enforcement doesn't") **is confirmed**.
+Everything in `core/` tagged `origin: universal` in `portability.md` is just instruction text, and
+any runtime with an auto-read instruction file will execute it identically:
 
 - **spec-driven (C+ / contract-first)** — test-first, independent test author, adversarial test
-  read-through. Pure method. Lands verbatim. `[перенос без потерь]`
-- **debugging** — simultaneous multi-layer log collection, no-guessing, rule-of-three. Pure method. `[без потерь]`
+  read-through. Pure method. Lands verbatim. `[transfers without loss]`
+- **debugging** — simultaneous multi-layer log collection, no-guessing, rule-of-three. Pure method. `[no loss]`
 - **adversarial-panel** — red→blue→arbiter→synthesis→ADR. The *process* is prose; only the
   `/panel` *launcher* and the red/blue/arbiter *subagents* are harness-bound. The method itself is
   runtime-agnostic, AND on Codex/Cursor the panel agents can still be real subagents (just without
   the per-tool allowlist; sandbox/readonly suffices since panel agents mostly read+write scratchpad).
   Codex is *already* the "second model" the panel calls — so on Codex the panel's external-model leg
-  is native. `[метод без потерь; launcher и tool-scoping — перепаять]`
+  is native. `[method without loss; launcher and tool-scoping need rewiring]`
 - **principles, code-quality, task-protocol, constitution** — non-negotiable rules as prose. Land verbatim.
 - **roles as prompts** — the role *definitions* (`roles/*.md`) are prose and transfer 1:1. Only their
   *enforcement* (tool-scoping) and *dispatch* (`R D T` slash) are harness-bound.
 
-**Вывод по методу:** the entire `core/` method layer + role *content* is portable as ideas with zero
-loss. This matches `portability.md`'s own claim that `universal`-tagged rules "переносятся как идея".
+**Conclusion on the method:** the entire `core/` method layer + role *content* is portable as ideas
+with zero loss. This matches `portability.md`'s own claim that `universal`-tagged rules "transfer
+as an idea".
 
 ---
 
-## Самые большие неизвестные (что не подтвердил + каким экспериментом проверить)
+## Biggest unknowns (what wasn't confirmed + what experiment would verify it)
 
 1. **Codex per-agent tool granularity beyond sandbox** `[partially verified — gap confirmed]`.
    Confirmed via doc fetch: custom-agent TOML = `sandbox_mode` + MCP `enabled_tools`/`disabled_tools`,

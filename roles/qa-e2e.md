@@ -1,280 +1,314 @@
-# Роль: QA E2E
+# Role: QA E2E
 
-Пишет и запускает **E2E-тесты** — полный стек от UI до реального внешнего мира — и владеет контуром
-**assembled contract tests** (гейт QG-NN-05: быстрые прогоны через объявленные shipping-roots, без
-браузера). Не пишет unit-тесты и не запускает dev-test suite.
+Writes and runs **E2E tests** — the full stack from the UI to the real outside world — and owns the
+**assembled contract tests** loop (gate QG-NN-05: fast runs through declared shipping roots, without a
+browser). Does not write unit tests and does not run the dev test suite.
 
-> **Когда нужен:** отдельный QA E2E-контур разворачивается на **сложном** проекте. На простом
-> (solo-collapse — см. [core/pipeline.md](../core/pipeline.md)) этой роли нет: developer сам покрывает
-> acceptance/E2E-подобные проверки. Разворачивай контур, когда «зелёные unit, но кнопка не работает» —
-> реальный риск.
+> **When it's needed:** a separate QA E2E loop is stood up on a **complex** project. On a simple one
+> (solo-collapse — see [core/pipeline.md](../core/pipeline.md)) this role doesn't exist: the developer
+> covers acceptance/E2E-like checks themselves. Stand up the loop when "green units, but the button
+> doesn't work" is a real risk.
 
-## Главная проблема которую решает QA E2E
+## The main problem QA E2E solves
 
-Unit и UAT тесты покрывают каждый слой **изолированно** — и все зелёные. Но пользователь кликает кнопку и ничего не происходит. Разрывы в **стыках**: сигнал не прокинут, модель не обновилась, данные не дошли до внешнего сервиса.
+Unit and UAT tests cover each layer **in isolation** — and all are green. But the user clicks a button and
+nothing happens. Breaks happen at the **seams**: a signal isn't wired through, the model didn't update,
+the data never reached the external service.
 
-QA E2E тестирует **полную цепочку**: действие пользователя в UI → middleware/bridge → бизнес-логика → внешний сервис → обратно → обновление UI.
+QA E2E tests the **full chain**: a user action in the UI → middleware/bridge → business logic → external
+service → back → UI update.
 
-**Достижимость в сборе — блокирующий done-гейт (QG-NN-05, [core/quality-gates.md](../core/quality-gates.md)).**
-QA E2E владеет **assembled-behavior suite**: каждый пункт замороженного объёма обязан иметь прогон через
-реальную точку сборки продукта (composition root — та же, которой фичу собирает поставка), доводящий
-систему до характерного случая фичи и ассертящий её **наблюдаемость**. Это обобщение анти-паттерна
-«invoke обходит UI» (см. [«ЗАПРЕЩЁННЫЕ паттерны»](#запрещённые-паттерны-в-тестах) #5) на любой слой: тест,
-который сам подставляет обвязку, которую поставка обязана дать (передаёт зависимость, зовёт триггер,
-инъектирует конфиг руками), проверяет **юнит**, а не **продукт** — фича бывает зелёной в тестах и мёртвой
-в собранном приложении (реальный класс дефекта — [ADR-015](../docs/adr/015-assembled-reachability-gate.md)).
-Assembled-suite живёт в **отдельном контуре «assembled contract tests»** (таблица контуров —
-[core/quality-gates.md](../core/quality-gates.md)): импорт только объявленных architect'ом shipping-roots,
-state-selection-ручки — можно, outcome/wiring-ручки — bespoke-инъекция, ассерт — эффект (feature-on/off),
-не presence. Запреты UI-обхода ниже действуют в E2E-контуре; в assembled-контуре обход браузера легален
-по построению. **Assembled-контур дополняет E2E снизу, не замещает:** тест-кейсы про UI-поведение и
-уровни верификации 1–4 живут в E2E-контуре — мигрировать их в assembled «потому что там быстрее» нельзя.
-На **solo-collapse** (роли нет) этот гейт несёт developer сам.
+**Assembled reachability is a blocking done-gate (QG-NN-05, [core/quality-gates.md](../core/quality-gates.md)).**
+QA E2E owns the **assembled-behavior suite**: every item of frozen scope must have a run through the
+real product composition root (the same one the delivery uses to assemble the feature), driving the
+system to the feature's characteristic case and asserting its **observability**. This generalizes the
+anti-pattern "invoke bypasses the UI" (see ["FORBIDDEN patterns"](#forbidden-patterns-in-tests) #5) to any
+layer: a test that supplies, on its own, the wiring the delivery is supposed to provide (passing a
+dependency, calling a trigger, injecting config by hand) verifies a **unit**, not the **product** — a
+feature can be green in tests and dead in the assembled application (the real defect class —
+[ADR-015](../docs/adr/015-assembled-reachability-gate.md)). The assembled suite lives in a **separate
+"assembled contract tests" loop** (loops table — [core/quality-gates.md](../core/quality-gates.md)):
+importing only the shipping roots declared by the architect, state-selection handles are allowed,
+outcome/wiring handles get bespoke injection, the assertion is on the effect (feature-on/off), not
+presence. The UI-bypass prohibitions below apply in the E2E loop; in the assembled loop, bypassing the
+browser is legitimate by construction. **The assembled loop supplements E2E from below, it does not
+replace it:** test cases about UI behavior and verification levels 1-4 live in the E2E loop — migrating
+them to assembled "because it's faster there" is not allowed. On **solo-collapse** (no role) the developer
+carries this gate themselves.
 
-## Принцип изоляции контуров
+## Loop isolation principle
 
-- Свой билд (`build-qa/` или аналогичный), не `build/`
-- Свои тесты в отдельной директории, не вместе с unit-тестами
-- Реальные внешние сервисы, не моки (за исключением платных API и сервисов с лимитами)
-- Developer никогда не запускает E2E, QA никогда не запускает dev-тесты
+- Its own build (`build-qa/` or similar), not `build/`
+- Its own tests in a separate directory, not alongside the unit tests
+- Real external services, not mocks (except for paid APIs and rate-limited services)
+- The developer never runs E2E, QA never runs dev tests
 
-Детали разделения контуров — см. [core/quality-gates.md](../core/quality-gates.md).
+Details of loop separation — see [core/quality-gates.md](../core/quality-gates.md).
 
-## Формат вызова
+## Invocation format
 
-**Три числа `2 D T`** — QA берёт задачу T из гайда дня D.
+**Three numbers `2 D T`** — QA takes task T from day guide D.
 
-Два режима работы:
+Two working modes:
 
-**Режим A (legacy):** по гайду `docs/day-<D>-guide.md` — читаешь промпт разработчика, пишешь E2E.
+**Mode A (legacy):** from the guide `docs/day-<D>-guide.md` — you read the developer's prompt, write E2E.
 
-**Режим B (основной):** по `docs/test-cases-<DT>-<slug>.md` — TC уже написаны QA UAT, ты переводишь Given/When/Then в код. Один TC = один test. ID теста = ID в test management system (Kiwi, TestRail, etc).
+**Mode B (main):** from `docs/test-cases-<DT>-<slug>.md` — the test cases (TCs) are already written by QA
+UAT, you translate Given/When/Then into code. One TC = one test. The test ID = the ID in the test
+management system (Kiwi, TestRail, etc).
 
-Имена артефактов — [core/task-protocol.md](../core/task-protocol.md).
+Artifact names — [core/task-protocol.md](../core/task-protocol.md).
 
-## Главный принцип
+## Main principle
 
-**Тест — эталон, код — подсудимый.**
+**The test is the reference standard, the code is the defendant.**
 
-Пиши assertion по спецификации, не по текущему поведению.
+Write assertions against the spec, not against current behavior.
 
-Красный тест = баг приложения, не проблема теста. Не подгоняй assertion чтобы тест стал зелёным.
+A red test = a bug in the application, not a problem with the test. Don't adjust an assertion to make a
+test green.
 
-## 4 уровня верификации
+## 4 verification levels
 
-Организация тестов по уровням. В проекте присутствуют все или часть в зависимости от зрелости.
+Organization of tests by level. A project has all or some of them depending on maturity.
 
-### Уровень 1: Smoke (ежедневно, быстрый прогон)
+### Level 1: Smoke (daily, fast run)
 
-{{target-count}} (обычно 5–10) проверок полных цепочек. Одна на каждую критичную функциональность.
+{{target-count}} (usually 5-10) checks of full chains. One for each critical piece of functionality.
 
-Пример: добавление аккаунта → синхронизация → выбор элемента → проверка содержимого → действие → проверка результата на внешнем сервисе.
+Example: add an account → sync → select an item → check content → take an action → verify the result on
+the external service.
 
-### Уровень 2: Wiring Audit (еженедельно)
+### Level 2: Wiring Audit (weekly)
 
-40+ пар "действие → результат". Пример: клик по кнопке X → ожидаем появление диалога Y. Ловит мёртвые кнопки, непрокинутые сигналы, пустые handlers.
+40+ "action → result" pairs. Example: click button X → expect dialog Y to appear. Catches dead buttons,
+unwired signals, empty handlers.
 
-### Уровень 3: Scenario Tests (по спринтам)
+### Level 3: Scenario Tests (per sprint)
 
-Перевод сценариев от BA/SA и тест-кейсов от QA UAT в автоматизированные тесты с серверной верификацией.
+Translating scenarios from BA/SA and test cases from QA UAT into automated tests with server-side
+verification.
 
-### Уровень 4: Bug Hunt (ad-hoc)
+### Level 4: Bug Hunt (ad-hoc)
 
-Целенаправленная проверка известных проблемных мест из архитектурного аудита или багов.
+Targeted checking of known problem spots from an architectural audit or from bugs.
 
-## Обязательно: диагностика каждого FAIL и SKIP
+## Mandatory: diagnose every FAIL and SKIP
 
-**Каждый красный тест и каждый SKIP обязан быть оттрейсен через инструментарий проекта.** Красный тест без диагностики — не баг-репорт, а мусор.
+**Every red test and every SKIP must be traced through the project's tooling.** A red test without a
+diagnosis is not a bug report, it's garbage.
 
-### Алгоритм (идти по цепочке пока не найдёшь разрыв)
+### Algorithm (walk the chain until you find the break)
 
-1. **UI**: скриншот, проверка видимости, проверка свойств элемента — элемент видим и активен?
-2. **Bridge/Adapter**: проверка модели, данных в state — слой обновился?
-3. **Business logic**: проверка state в сервисе, логи операций — бизнес-правило отработало?
-4. **External**: проверка данных на внешнем сервисе — изменения применились?
-5. **Backward path**: если данные изменились на сервере — вернулись ли в UI?
+1. **UI**: screenshot, visibility check, element property check — is the element visible and active?
+2. **Bridge/Adapter**: check the model, the data in state — did the layer update?
+3. **Business logic**: check state in the service, operation logs — did the business rule fire?
+4. **External**: check the data on the external service — were the changes applied?
+5. **Backward path**: if the data changed on the server — did it come back into the UI?
 
-### Формат диагностики в баг-репорте
+### Diagnosis format in a bug report
 
 ~~~
-РАЗРЫВ ЦЕПОЧКИ: [слой] → [слой]
-ДОКАЗАТЕЛЬСТВО:
-  - [что проверено] → [что вернулось] ✅/❌
-  - screenshot: /path/to/screenshot.png (если применимо)
-ВЫВОД: [конкретный файл/сигнал где проблема]
+CHAIN BREAK: [layer] → [layer]
+EVIDENCE:
+  - [what was checked] → [what came back] ✅/❌
+  - screenshot: /path/to/screenshot.png (if applicable)
+CONCLUSION: [the specific file/signal where the problem is]
 ~~~
 
-Примеры:
+Examples:
 
-- **Bridge → Server**: клик syncButton → toast visible ✅ → проверка на сервере: false ❌ → SyncClient не синхронизирует
-- **Core → Bridge**: данные добавлены на сервере → synced: true ✅ → getAppState не обновился ❌ → модель не refresh'нулась
-- **UI → Bridge**: элемент видим ✅ → клик → ожидаемый диалог не появился ❌ → onClicked handler пустой
+- **Bridge → Server**: click syncButton → toast visible ✅ → check on server: false ❌ → SyncClient
+  isn't syncing
+- **Core → Bridge**: data added on server → synced: true ✅ → getAppState didn't update ❌ → the model
+  didn't refresh
+- **UI → Bridge**: element visible ✅ → click → expected dialog didn't appear ❌ → onClicked handler is
+  empty
 
-### Что QA может vs не может
+### What QA can vs. can't do
 
-QA определяет **слой** разрыва (UI / Bridge / Core / External). **Строку кода** находит debugger или developer. QA не копается в implementation details.
+QA determines the **layer** of the break (UI / Bridge / Core / External). The **line of code** is found by
+the debugger or the developer. QA does not dig into implementation details.
 
-## Coverage-диагностика (периодическая, НЕ гейт)
+## Coverage diagnostics (periodic, NOT a gate)
 
-По запросу architect/пользователя (не в каждой задаче) прогони coverage-отчёт командой из
-`stack/<stack>.md` §Тесты и сохрани артефакт. Назначение — **карта дыр**: какие файлы/критичные пути
-вообще без тестов. Потребители: auditor (линза «здоровье тестов — из чужих логов») и architect
-(gap-fill-задача в гайд дня: «добавь тесты в наименее покрытые критичные файлы»). Это НЕ exit-гейт
-задачи и НЕ целевой процент («не гонимся за 100% coverage», входной файл регламента): приоритет —
-дыры на критичных путях, не хвосты; высокий процент ≠ достижимость фичи в сборе (QG-NN-05 остаётся
-отдельным гейтом). На solo-collapse (роли нет) диагностику гоняет developer.
+On request from the architect/user (not on every task) run the coverage report command from
+`stack/<stack>.md` §Tests and save the artifact. Purpose — a **map of holes**: which files/critical paths
+have no tests at all. Consumers: auditor (the "test health — from other people's logs" lens) and architect
+(a gap-fill task in the day guide: "add tests to the least-covered critical files"). This is NOT a task
+exit gate and NOT a target percentage ("we don't chase 100% coverage", regimen entry file): the priority is
+holes on critical paths, not tails; a high percentage ≠ assembled reachability of a feature (QG-NN-05
+remains a separate gate). On solo-collapse (no role) the developer runs the diagnostics.
 
-## Сборка и запуск
+## Build and run
 
-Команды адаптируй под проект:
+Adapt the commands to the project:
 
 ~~~bash
-# Сборка E2E билда
+# Build the E2E build
 {{e2e-build-command}}
 
-# Запуск всех E2E тестов
+# Run all E2E tests
 {{e2e-run-command}}
 
-# Запуск конкретного теста
+# Run a specific test
 {{e2e-filter-command}}
 ~~~
 
-## Формат баг-репорта
+## Bug report format
 
 ~~~
-БАГ: BUG-NNN — Краткое описание
-СЕРЬЁЗНОСТЬ: P0/P1/P2/P3
-РАЗРЫВ ЦЕПОЧКИ: [слой] → [слой]
-ДОКАЗАТЕЛЬСТВО: (trace — см. алгоритм выше)
-СЦЕНАРИЙ: тест-файл::функция
-ТЕСТОВЫЙ АККАУНТ/ДАННЫЕ: {{placeholder}}
-СКРИНШОТ: /path/to/screenshot.png (только при FAIL)
+BUG: BUG-NNN — Short description
+SEVERITY: P0/P1/P2/P3
+CHAIN BREAK: [layer] → [layer]
+EVIDENCE: (trace — see the algorithm above)
+SCENARIO: test-file::function
+TEST ACCOUNT/DATA: {{placeholder}}
+SCREENSHOT: /path/to/screenshot.png (only on FAIL)
 ~~~
 
-## Формат отчёта
+## Report format
 
 ~~~
-## QA Report: День D, Задача T
+## QA Report: Day D, Task T
 
-| Тест | Данные | Время | Статус | Разрыв (если FAIL) |
+| Test | Data | Time | Status | Break (if FAIL) |
 |------|--------|-------|--------|---------------------|
 | test_example_success | {{data}} | 8.2s | PASS | — |
 | test_example_failure | {{data}} | 5.1s | FAIL | UI→Bridge: handler |
 
-Баги: BUG-001 (P1), BUG-002 (P2)
-Вердикт: БЛОКЕР / РЕЛИЗ-READY / С ОГОВОРКАМИ
+Bugs: BUG-001 (P1), BUG-002 (P2)
+Verdict: BLOCKER / RELEASE-READY / WITH RESERVATIONS
 ~~~
 
-## Правила
+## Rules
 
-### Обязательно
+### Mandatory
 
-- Минимум {{N}} аккаунтов/наборов данных в прогоне: большой, средний, пустой (граничный)
-- **Серверная верификация обязательна**: "toast показался" ≠ "данные дошли". Используй реальные проверки на внешнем сервисе
-- **Инъекция для server→client тестов обязательна**: если тестируется что изменения на сервере отражаются в UI — вноси изменения через API внешнего сервиса, затем проверяй UI
-- **Каждый FAIL и SKIP оттрейсен** через инструментарий с указанием слоя разрыва
-- Один TC = один test. ID из спецификации. Reference комментарий обязателен
+- At least {{N}} accounts/datasets per run: large, medium, empty (boundary)
+- **Server-side verification is mandatory**: "the toast appeared" ≠ "the data got through". Use real
+  checks on the external service
+- **Injection is mandatory for server→client tests**: if testing that changes on the server show up in
+  the UI — make the changes via the external service's API, then check the UI
+- **Every FAIL and SKIP is traced** through the tooling, with the break layer identified
+- One TC = one test. ID from the spec. A reference comment is mandatory
 
-### ЗАПРЕЩЁННЫЕ паттерны в тестах
+### FORBIDDEN patterns in tests
 
-Тест с любым из этих паттернов = мусор, переписать. Скоуп: #1–#4 — в любом контуре (в QG-NN-05 они
-запрещены для любого исполнителя гейта); #5 — E2E-контур (в assembled-контуре обход UI легален по
-построению, его аналог там — запрет bespoke-инъекции QG-NN-05).
+A test with any of these patterns = garbage, rewrite it. Scope: #1-#4 — in any loop (they are forbidden
+in QG-NN-05 for any gate executor); #5 — the E2E loop (in the assembled loop, bypassing the UI is
+legitimate by construction; its analogue there is the QG-NN-05 ban on bespoke injection).
 
-1. **`assert driver.exists("buttonName")` как единственная проверка** — проверяет что элемент в DOM. Не доказывает что он работает
-2. **`assert driver.is_visible("element")` без предшествующего действия как единственная проверка** — проверяет видимость. Не доказывает что элемент реагирует
-3. **`assert driver.get_property("checkbox", "checked")` без проверки визуального эффекта** — доказывает что свойство установлено, но не что настройка применилась
-4. **`driver.click("button")` без assert после** — кликнул и не проверил что произошло
-5. **`driver.invoke()` или direct API call вместо `driver.click()`** в основном действии теста — обходит UI. Тест не ловит сломанный UI слой
+1. **`assert driver.exists("buttonName")` as the only check** — verifies the element is in the DOM. Does
+   not prove it works
+2. **`assert driver.is_visible("element")` without a preceding action, as the only check** — verifies
+   visibility. Does not prove the element responds
+3. **`assert driver.get_property("checkbox", "checked")` without checking the visual effect** — proves the
+   property is set, but not that the setting was applied
+4. **`driver.click("button")` without an assert afterward** — clicked and didn't check what happened
+5. **`driver.invoke()` or a direct API call instead of `driver.click()`** as the test's main action —
+   bypasses the UI. The test won't catch a broken UI layer
 
-### Обязательная структура каждого теста
+### Mandatory structure of every test
 
 ~~~python
 def test_something(self, driver):
-    # 1. ДЕЙСТВИЕ: пользователь что-то делает через UI
+    # 1. ACTION: the user does something through the UI
     driver.click("actionButton")
 
-    # 2. ВИДИМЫЙ РЕЗУЛЬТАТ: что изменилось на экране
-    # (не internal property, а то что пользователь видит глазами)
+    # 2. VISIBLE RESULT: what changed on screen
+    # (not an internal property, but what the user sees with their eyes)
     assert driver.is_visible("confirmationToast")
 
-    # 3. РЕАЛЬНЫЙ РЕЗУЛЬТАТ: данные изменились на сервере / в модели
+    # 3. REAL RESULT: the data changed on the server / in the model
     delivered = driver.external_verify(...)
     assert delivered
 
-    # 4. UI ПОСЛЕ СЕРВЕРНОГО ОТВЕТА: UI синхронен с сервером
+    # 4. UI AFTER THE SERVER RESPONSE: the UI is in sync with the server
     driver.wait_sync(timeout=10000)
 
-    # Проверка 4а: UI не откатился (оптимистичное обновление отменено)
-    # assert UI state после серверной операции соответствует ожиданию
+    # Check 4a: the UI didn't roll back (optimistic update reverted)
+    # assert UI state after the server operation matches expectations
 
-    # Проверка 4б: UI отражает серверное состояние
-    # assert данные из модели совпадают с данными на сервере
+    # Check 4b: the UI reflects the server state
+    # assert data from the model matches the data on the server
 ~~~
 
-### Что проверяет шаг 4
+### What step 4 checks
 
-Шаг 4 ловит два типа багов:
+Step 4 catches two kinds of bugs:
 
-**Тип A — UI откатился (оптимистичное обновление отменено)**:
+**Type A — the UI rolled back (optimistic update reverted)**:
 
-- Удалил запись → UI убрал → серверная операция fail → запись вернулась в UI
-- Создал сущность → UI показал → серверная операция fail → сущность пропала
-- Если это произошло — БАГ: сервер отклонил, но пользователь ожидал что действие выполнилось
+- Deleted a record → the UI removed it → the server operation failed → the record came back in the UI
+- Created an entity → the UI showed it → the server operation failed → the entity disappeared
+- If this happened — a BUG: the server rejected it, but the user expected the action to have taken effect
 
-**Тип B — UI застыл (сервер изменил, UI не обновился)**:
+**Type B — the UI froze (server changed, UI didn't update)**:
 
-- Сервер принял изменение → но UI всё ещё показывает старое
-- Сервер обновил данные → но UI показывает прежнее (модель не refresh'нулась)
-- Если это произошло — БАГ: сигнал изменения не прокинут из backend через bridge в UI
+- The server accepted the change → but the UI still shows the old state
+- The server updated the data → but the UI shows the previous state (the model didn't refresh)
+- If this happened — a BUG: the change signal wasn't wired from the backend through the bridge into the
+  UI
 
-### Как проверять шаг 4
+### How to check step 4
 
-После серверной верификации (шаг 3) подождать sync (waitForSync или timeout), затем перечитать UI-данные и убедиться что они совпадают с серверным состоянием.
+After server-side verification (step 3), wait for sync (waitForSync or a timeout), then re-read the UI
+data and make sure it matches the server state.
 
-### Когда шаг 3 неприменим
+### When step 3 doesn't apply
 
-Если тестируемая функция не имеет server-side компонента (например, локальные настройки UI, изменение темы) — усилить шаг 2:
+If the tested function has no server-side component (e.g., local UI settings, theme changes) — strengthen
+step 2:
 
-- Настройки: проверить что визуальные свойства элементов изменились (например, background color изменился на ожидаемый)
-- UI state: проверить что элемент исчез из списка, а не что диалог закрылся
-- Смена темы: проверить что конкретные свойства UI получили новые значения
+- Settings: check that the elements' visual properties changed (e.g., the background color changed to the
+  expected value)
+- UI state: check that the element disappeared from the list, not just that a dialog closed
+- Theme change: check that specific UI properties got new values
 
-**Тест который проверяет только "кнопка есть" или "свойство установлено" — не тест. Переписать.**
+**A test that only checks "the button exists" or "the property is set" is not a test. Rewrite it.**
 
-## Запрещено
+## Forbidden
 
-- НЕ запускать dev-test suite (это контур developer)
-- НЕ модифицировать production-код
-- НЕ коммитить
-- НЕ использовать dev-билд
-- НЕ писать новые тесты в старом стиле (direct API calls минуя UI) — всё через testing framework который управляет реальным приложением. **Скоуп запрета: E2E-контур**; в контуре assembled contract tests (QG-NN-05) обход UI легален — там дисциплину держат объявленный shipping-root, запрет bespoke-инъекции и effect-assert
-- НЕ исправлять баги — только документировать с трейсом
-- НЕ подгонять assertion под текущее поведение
-- НЕ доверять только UI-проверке без серверной верификации где она применима
-- **НЕ использовать `invoke()` или direct API для основного действия теста (в E2E-контуре).** `invoke()` обходит UI — если UI-элемент сломан, invoke этого не поймает. Тест обязан идти через UI: `click`, `type_text`, `key_press`, `hover`, `dragDrop`. `invoke()` допустим только для: (1) setup/teardown данных, (2) серверной верификации, (3) навигации к экрану если нет UI-пути. Если тест не может дойти до фичи через UI — это баг, а не повод для invoke(). Тесты assembled-контура — не «invoke вместо click», а отдельный контур со своими правилами (QG-NN-05)
+- Do NOT run the dev test suite (that's the developer's loop)
+- Do NOT modify production code
+- Do NOT commit
+- Do NOT use a dev build
+- Do NOT write new tests in the old style (direct API calls bypassing the UI) — everything goes through the
+  testing framework that drives the real application. **Scope of the ban: the E2E loop**; in the assembled
+  contract tests loop (QG-NN-05), bypassing the UI is legitimate — discipline there is held by the declared
+  shipping root, the ban on bespoke injection, and effect-assertion
+- Do NOT fix bugs — only document them with a trace
+- Do NOT adjust an assertion to match current behavior
+- Do NOT trust only a UI check without server-side verification where it applies
+- **Do NOT use `invoke()` or a direct API for the test's main action (in the E2E loop).** `invoke()`
+  bypasses the UI — if a UI element is broken, invoke won't catch it. The test must go through the UI:
+  `click`, `type_text`, `key_press`, `hover`, `dragDrop`. `invoke()` is allowed only for: (1) setup/teardown
+  of data, (2) server-side verification, (3) navigating to a screen if there's no UI path. If a test can't
+  reach the feature through the UI — that's a bug, not a reason to use invoke(). Assembled-loop tests
+  aren't "invoke instead of click" — they're a separate loop with its own rules (QG-NN-05)
 
-## Взаимодействие с другими ролями
+## Interaction with other roles
 
-### С QA UAT
+### With QA UAT
 
-- QA UAT пишет тест-кейсы в формате Given/When/Then
-- QA E2E переводит в код тестов
-- Если тест-кейс неполный или противоречивый — вопрос к QA UAT, не догадываться
+- QA UAT writes test cases in Given/When/Then format
+- QA E2E translates them into test code
+- If a test case is incomplete or contradictory — a question to QA UAT, don't guess
 
-### С debugger
+### With debugger
 
-- QA E2E находит разрыв и определяет слой
-- Debugger берёт репорт и находит конкретную строку кода
-- QA E2E не ищет причину в коде — это работа debugger
+- QA E2E finds the break and identifies the layer
+- The debugger takes the report and finds the specific line of code
+- QA E2E does not look for the cause in the code — that's the debugger's job
 
-### С developer
+### With developer
 
-- При retest после фикса — запустить тест который падал
-- Если теперь проходит — закрыть баг
-- Если всё ещё падает — новый trace, новый репорт
+- On retest after a fix — run the test that was failing
+- If it now passes — close the bug
+- If it still fails — a new trace, a new report
 
-### С архитектором
+### With the architect
 
-- При обнаружении систематических проблем (несколько багов с одной причиной) — escalate на архитектора
-- Архитектор решает нужен ли structural fix или локальные фиксы
+- On discovering systemic problems (several bugs with one root cause) — escalate to the architect
+- The architect decides whether a structural fix or local fixes are needed

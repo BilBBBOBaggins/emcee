@@ -1,81 +1,81 @@
-# B2B SaaS — доменные паттерны
+# B2B SaaS — domain patterns
 
-Паттерны и правила которые применяются для B2B SaaS продуктов. Надстройка над [architecture/multi-tenant.md](../architecture/multi-tenant.md).
+Patterns and rules that apply to B2B SaaS products. A layer on top of [architecture/multi-tenant.md](../architecture/multi-tenant.md).
 
 ## Onboarding
 
-B2B onboarding — многоуровневый процесс, не просто регистрация.
+B2B onboarding is a multi-level process, not just registration.
 
-Типичная последовательность:
+Typical sequence:
 
-1. **Организация регистрируется** — email первого пользователя, название компании, базовая информация
-2. **Первый админ создаёт tenant** — верификация email, выбор tier или trial
-3. **Admin приглашает команду** — email invites, роли назначаются
-4. **Initial setup** — настройки tenant (branding, integrations, policies)
-5. **First value** — первая успешная операция (первый заказ, первая аналитика, первый отчёт)
+1. **The organization registers** — first user's email, company name, basic information
+2. **The first admin creates a tenant** — email verification, choosing a tier or trial
+3. **Admin invites the team** — email invites, roles assigned
+4. **Initial setup** — tenant settings (branding, integrations, policies)
+5. **First value** — first successful operation (first order, first analytics, first report)
 
-Каждый шаг измеряется метрикой. Drop-off на шаге — сигнал для улучшения UX.
+Every step is measured by a metric. Drop-off at a step is a signal for UX improvement.
 
-### Правила онбординга
+### Onboarding rules
 
-- **Минимум шагов до первой ценности** — не 15 форм перед показом продукта, а быстрый путь к "wow moment"
-- **Skip-friendly** — опциональные шаги можно пропустить и вернуться позже
-- **Progress visible** — пользователь видит где он находится в процессе
-- **Empty states helpful** — когда tenant пустой, UI показывает что делать, не blank screen
-- **Setup wizard отдельно от main UI** — не смешивать onboarding flow с повседневным использованием
+- **Minimum steps to first value** — not 15 forms before showing the product, but a fast path to the "wow moment"
+- **Skip-friendly** — optional steps can be skipped and returned to later
+- **Progress visible** — the user sees where they are in the process
+- **Empty states helpful** — when a tenant is empty, the UI shows what to do, not a blank screen
+- **Setup wizard separate from the main UI** — don't mix the onboarding flow with everyday use
 
-### Trial и activation
+### Trial and activation
 
-Для SaaS с trial периодом:
+For SaaS with a trial period:
 
-- Trial length — зависит от сложности продукта (7 дней для простых, 14-30 для сложных)
-- Clear expiration communication — за 3 дня до конца, в день окончания
-- Grace period — несколько дней после expiration на апгрейд без потери данных
-- Data retention policy — если не апгрейдили, сколько хранить данные
+- Trial length — depends on product complexity (7 days for simple, 14-30 for complex)
+- Clear expiration communication — 3 days before the end, on the day it ends
+- Grace period — a few days after expiration to upgrade without losing data
+- Data retention policy — if not upgraded, how long to keep the data
 
-## Authentication и SSO
+## Authentication and SSO
 
-### По tier'ам
+### By tier
 
 - **Starter/SMB tier** — email/password + MFA (TOTP)
-- **Professional** — добавить Google/Microsoft OAuth
-- **Enterprise** — SAML 2.0 / OIDC для SSO с их identity provider + SCIM для user provisioning
+- **Professional** — add Google/Microsoft OAuth
+- **Enterprise** — SAML 2.0 / OIDC for SSO with their identity provider + SCIM for user provisioning
 
-### MFA обязателен для админов
+### MFA mandatory for admins
 
-Admin role не может существовать без MFA. При попытке повышения роли до admin без MFA — принудительный setup.
+An admin role cannot exist without MFA. On an attempt to elevate a role to admin without MFA — forced setup.
 
 ### SSO specifics
 
-SAML/OIDC конфигурация per tenant:
+SAML/OIDC configuration per tenant:
 
-- Metadata URL или upload
+- Metadata URL or upload
 - Attribute mapping (name, email, roles)
-- Domain whitelist — только email'ы с этих доменов auto-provisioned через SSO
-- Just-in-time provisioning — user появляется в системе при первом SSO login
+- Domain whitelist — only emails from these domains are auto-provisioned via SSO
+- Just-in-time provisioning — the user appears in the system on first SSO login
 
-### SCIM для enterprise
+### SCIM for enterprise
 
-Автоматическое управление пользователями из external identity provider:
+Automatic user management from an external identity provider:
 
-- Provisioning — создание users при добавлении в SSO group
-- De-provisioning — deactivation users при удалении из SSO group
-- Attribute sync — имена, роли синхронизируются
-- SCIM endpoints в API под отдельной auth (bearer token от SCIM client)
+- Provisioning — creating users when added to an SSO group
+- De-provisioning — deactivating users when removed from an SSO group
+- Attribute sync — names, roles synchronized
+- SCIM endpoints in the API under separate auth (bearer token from the SCIM client)
 
-## Roles и permissions
+## Roles and permissions
 
-### Минимальный RBAC
+### Minimal RBAC
 
-Для большинства B2B SaaS минимум трёх ролей:
+Most B2B SaaS need a minimum of three roles:
 
-- **Admin** — управляет tenant'ом (users, billing, settings, all data access)
-- **Manager** — работает с content (create/edit/delete business entities), но не управляет tenant-level settings
-- **User** — базовое использование (view, create в рамках разрешённого)
+- **Admin** — manages the tenant (users, billing, settings, all data access)
+- **Manager** — works with content (create/edit/delete business entities), but does not manage tenant-level settings
+- **User** — basic use (view, create within what's permitted)
 
-### Права проверяются на API-уровне
+### Permissions are checked at the API level
 
-UI скрывает кнопки по ролям, но это не защита — только UX. Реальная проверка — в API handler'ах:
+The UI hides buttons by role, but that is not protection — only UX. The real check is in the API handlers:
 
 ~~~go
 func (h *Handler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
@@ -88,30 +88,30 @@ func (h *Handler) DeleteOrder(w http.ResponseWriter, r *http.Request) {
 }
 ~~~
 
-Никогда не доверять фронтенду. Никогда не проверять права только в UI.
+Never trust the frontend. Never check permissions only in the UI.
 
 ### Attribute-Based Access Control (ABAC)
 
-Для более сложных cases чем RBAC:
+For cases more complex than RBAC:
 
-- Права зависят от attributes: owner, team, region, tag
-- "User может редактировать только свои orders" — это ABAC, не RBAC
-- Реализация через policy engine (Casbin, OPA) или inline проверки
+- Permissions depend on attributes: owner, team, region, tag
+- "A user can only edit their own orders" — that's ABAC, not RBAC
+- Implemented via a policy engine (Casbin, OPA) or inline checks
 
 ### Custom roles
 
-Enterprise tier часто требует custom roles. Структура:
+Enterprise tier often requires custom roles. Structure:
 
-- Permissions — атомарные (`orders:create`, `orders:delete`, `users:invite`)
-- Roles — наборы permissions
+- Permissions — atomic (`orders:create`, `orders:delete`, `users:invite`)
+- Roles — sets of permissions
 - System roles — immutable (Admin, User)
-- Custom roles — tenant может создавать свои
+- Custom roles — a tenant can create its own
 
 ## Billing
 
 ### Subscription tiers
 
-Типичная структура:
+Typical structure:
 
 - **Free/Trial** — limited usage, time-bounded
 - **Starter** — small team, basic features, monthly subscription
@@ -120,75 +120,75 @@ Enterprise tier часто требует custom roles. Структура:
 
 ### Usage-based billing
 
-Где применимо (API calls, storage, compute):
+Where applicable (API calls, storage, compute):
 
 - Metered usage tracked per tenant
-- Monthly aggregation в invoice
-- Overage charges — если usage превысил plan limits
-- Transparent dashboard показывающий current usage vs limits
+- Monthly aggregation in the invoice
+- Overage charges — if usage exceeded plan limits
+- A transparent dashboard showing current usage vs. limits
 
-### Proration при апгрейдах
+### Proration on upgrades
 
-User апгрейдит mid-cycle:
+A user upgrades mid-cycle:
 
-- Старый plan pro-rated refund
-- Новый plan pro-rated charge
-- Единый invoice с обоими строками
+- Old plan pro-rated refund
+- New plan pro-rated charge
+- A single invoice with both line items
 
-Downgrade обычно — с начала следующего cycle (не refund).
+Downgrade is usually applied from the start of the next cycle (no refund).
 
 ### Payment methods
 
-- **Credit card** — для Starter и Professional, автоматическое списание
-- **Invoice (NET 30/60/90)** — для Enterprise, отправляется email, оплата переводом
-- **Bank transfer / ACH** — для Enterprise
-- **Custom** — какие-то enterprise клиенты имеют non-standard billing terms
+- **Credit card** — for Starter and Professional, automatic charge
+- **Invoice (NET 30/60/90)** — for Enterprise, sent by email, paid by wire transfer
+- **Bank transfer / ACH** — for Enterprise
+- **Custom** — some enterprise clients have non-standard billing terms
 
-### Dunning — обработка failed payments
+### Dunning — handling failed payments
 
-- Автоматические retry по расписанию (3 дня, 7 дней, 14 дней)
-- Email notifications о failed payment
-- Grace period до deactivation
-- Downgrade to free (если есть) или suspend service
-- Win-back flows для churned accounts
+- Automatic retries on a schedule (3 days, 7 days, 14 days)
+- Email notifications about failed payment
+- Grace period before deactivation
+- Downgrade to free (if available) or suspend service
+- Win-back flows for churned accounts
 
 ## Admin panel
 
-Два уровня админки:
+Two levels of admin:
 
 ### Tenant admin panel
 
-Для клиентских админов. Scope — только их tenant.
+For client admins. Scope — their tenant only.
 
 Views:
 
-- **Users** — список, invite, роли, deactivate
+- **Users** — list, invite, roles, deactivate
 - **Usage** — current period, history, trends
-- **Billing** — текущий plan, invoice history, payment methods, upgrade
+- **Billing** — current plan, invoice history, payment methods, upgrade
 - **Settings** — branding, integrations, security policies
-- **Audit log** — действия внутри их tenant
+- **Audit log** — actions within their tenant
 
-Не видят: других tenants, system-level данных.
+Not visible: other tenants, system-level data.
 
 ### Platform admin (internal)
 
-Для операторов платформы. Scope — все tenants.
+For platform operators. Scope — all tenants.
 
 Views:
 
-- **Tenants overview** — все tenants, их plans, usage, health
-- **Impersonation** — войти в tenant как admin для support (с audit log)
-- **Feature flags** — включение features для конкретных tenants
+- **Tenants overview** — all tenants, their plans, usage, health
+- **Impersonation** — log into a tenant as admin for support (with audit log)
+- **Feature flags** — enabling features for specific tenants
 - **System metrics** — infrastructure health, error rates
 - **Support queue** — tickets, escalations
 
-Отдельная auth от tenant auth. Сильный audit log — каждое impersonation логируется, уведомление tenant'у.
+Separate auth from tenant auth. A strong audit log — every impersonation is logged, the tenant is notified.
 
 ## Audit log
 
-Все значимые действия логируются.
+All significant actions are logged.
 
-### Что логируется
+### What gets logged
 
 - User lifecycle: create, invite, role change, deactivate, delete
 - Authentication: login, logout, failed attempts, MFA events
@@ -198,18 +198,18 @@ Views:
 - Settings changes: tenant configuration, billing info
 - Admin actions: impersonation, feature flag changes
 
-### Структура audit event
+### Audit event structure
 
 ~~~go
 type AuditEvent struct {
     ID         uuid.UUID
     Timestamp  time.Time
     TenantID   uuid.UUID
-    ActorID    uuid.UUID        // кто сделал
+    ActorID    uuid.UUID        // who did it
     ActorType  string           // user / system / api_key
     Action     string           // "order.deleted"
     Resource   string           // "order:abc-123"
-    Changes    map[string]any   // before/after для updates
+    Changes    map[string]any   // before/after for updates
     IP         string
     UserAgent  string
     Metadata   map[string]any
@@ -218,39 +218,39 @@ type AuditEvent struct {
 
 ### Read-only, append-only
 
-Audit log не редактируется и не удаляется. Storage:
+The audit log is not edited or deleted. Storage:
 
-- Отдельная таблица/БД с write-only permissions для app, read-only для audit viewer
-- Или append-only log (S3 с versioning, cloud-native audit service)
-- Export для compliance — возможность выгрузить за период
+- A separate table/DB with write-only permissions for the app, read-only for the audit viewer
+- Or an append-only log (S3 with versioning, cloud-native audit service)
+- Export for compliance — the ability to export a given period
 
 ### Retention
 
-Зависит от compliance requirements. Типично 1-7 лет. Для regulated industries — по нормативам.
+Depends on compliance requirements. Typically 1-7 years. For regulated industries — per the applicable regulations.
 
 ## Notifications
 
-### Каналы
+### Channels
 
-- **Email** — для важных событий (billing, security, invites)
-- **In-app** — для workflow-событий (task assigned, mention)
-- **SMS** — опционально, для critical security events (MFA, suspicious login)
-- **Webhooks** — для integration с клиентскими системами
-- **Slack/Teams** — для B2B often важнее чем email
+- **Email** — for important events (billing, security, invites)
+- **In-app** — for workflow events (task assigned, mention)
+- **SMS** — optional, for critical security events (MFA, suspicious login)
+- **Webhooks** — for integration with client systems
+- **Slack/Teams** — for B2B, often more important than email
 
 ### User preferences
 
-Каждый user управляет своими notification preferences:
+Every user manages their own notification preferences:
 
 - Per category (security, billing, workflow, marketing)
 - Per channel (email, in-app, SMS)
-- Digest vs immediate — некоторые предпочитают batched, некоторые real-time
-- Quiet hours — не шлём в нерабочее время (уважая timezone)
+- Digest vs. immediate — some prefer batched, some real-time
+- Quiet hours — don't send outside working hours (respecting timezone)
 
-### Unsubscribe обязателен
+### Unsubscribe mandatory
 
-Для marketing/promotional emails — unsubscribe link обязателен по закону (CAN-SPAM, GDPR).
-Для transactional emails (billing, security) — unsubscribe не требуется, но preferences должны позволять отключить что-то.
+For marketing/promotional emails — an unsubscribe link is legally required (CAN-SPAM, GDPR).
+For transactional emails (billing, security) — unsubscribe is not required, but preferences must allow turning something off.
 
 ## Customer success
 
@@ -258,119 +258,119 @@ Audit log не редактируется и не удаляется. Storage:
 
 Tracking:
 
-- **Feature usage** — какие features используются, кем, как часто
+- **Feature usage** — which features are used, by whom, how often
 - **User engagement** — DAU/MAU, session duration, return rate
-- **Adoption metrics** — % users активировавших key features
-- **Cohort analysis** — retention по когортам (по месяцу signup)
+- **Adoption metrics** — % of users who activated key features
+- **Cohort analysis** — retention by cohort (by signup month)
 
-Tools: Mixpanel, Amplitude, PostHog, или self-hosted equivalents.
+Tools: Mixpanel, Amplitude, PostHog, or self-hosted equivalents.
 
 ### Health scores
 
-Per account indicator "вероятность churn":
+A per-account "churn likelihood" indicator:
 
-- Usage trends (растёт/падает)
-- Feature adoption (используют mission-critical features или только basic)
-- Support tickets (частота и severity)
-- User engagement (все users активны или только один)
+- Usage trends (growing/declining)
+- Feature adoption (using mission-critical features or only basic ones)
+- Support tickets (frequency and severity)
+- User engagement (all users active or only one)
 - Renewal proximity (how close to contract end)
 
-Low health score — triggers outreach от customer success team.
+A low health score triggers outreach from the customer success team.
 
 ### Automated alerts
 
-Customer success получает alerts:
+Customer success receives alerts:
 
-- Account не logged in X days
-- Usage drop > 30% месяц к месяцу
+- Account not logged in for X days
+- Usage drop > 30% month over month
 - Multiple failed payments
-- Support ticket с severity "high"
-- User count увеличился (upsell opportunity)
+- A support ticket with "high" severity
+- User count increased (upsell opportunity)
 
 ## Support
 
 ### Ticket system
 
-- Email-to-ticket интеграция
-- In-app widget для создания tickets
-- Priority levels с response time SLA per tier
+- Email-to-ticket integration
+- In-app widget for creating tickets
+- Priority levels with response time SLA per tier
 - Escalation paths (L1 → L2 → Engineering)
 
 ### Response time SLA
 
-По tier'ам:
+By tier:
 
 - Free: best effort
 - Starter: 24h business hours
 - Professional: 8h business hours
-- Enterprise: 1h 24/7 for critical, с явным SLA в контракте
+- Enterprise: 1h 24/7 for critical, with an explicit SLA in the contract
 
 ### Knowledge base
 
-- Public help center с articles
-- Search по всему контенту
-- Video tutorials для complex workflows
-- Release notes с screenshots и примерами
+- Public help center with articles
+- Search across all content
+- Video tutorials for complex workflows
+- Release notes with screenshots and examples
 
 ### In-app chat
 
-Для paid tiers — live chat:
+For paid tiers — live chat:
 
 - Business hours coverage
-- После hours — async, response когда команда доступна
-- Integration с user context (kto на какой странице, какой tier)
+- After hours — async, response whenever the team is available
+- Integration with user context (who, on which page, which tier)
 
 ## Data export
 
-Пользователи имеют право экспортировать свои данные. Обязательно по GDPR, хорошая практика везде.
+Users have the right to export their data. Mandatory under GDPR, good practice everywhere.
 
-Форматы:
+Formats:
 
-- **CSV** — для табличных данных
-- **JSON** — для структурированных данных
-- **PDF** — для reports
-- **Полный export** — zip со всем в machine-readable формате
+- **CSV** — for tabular data
+- **JSON** — for structured data
+- **PDF** — for reports
+- **Full export** — a zip with everything in machine-readable format
 
-UI для экспорта:
+Export UI:
 
-- В settings → "Export data"
-- Выбор scope (specific data types или всё)
-- Email notification когда export готов (для больших exports async job)
-- Download link действует ограниченное время
+- In settings → "Export data"
+- Choice of scope (specific data types or everything)
+- Email notification when the export is ready (for large exports, an async job)
+- Download link valid for a limited time
 
-## Terms и contracts
+## Terms and contracts
 
-### Click-through для self-serve
+### Click-through for self-serve
 
-- Starter/Professional tier — user accepts ToS при signup
-- Text должен быть read-friendly, не юридический wall of text
-- Updates — email notification + re-acceptance при significant changes
+- Starter/Professional tier — the user accepts the ToS at signup
+- The text should be read-friendly, not a legal wall of text
+- Updates — email notification + re-acceptance on significant changes
 
-### MSA для enterprise
+### MSA for enterprise
 
-- Custom contracts с legal review
-- Signed through DocuSign или аналог
+- Custom contracts with legal review
+- Signed through DocuSign or equivalent
 - Effective dates, renewal terms, termination clauses
-- MSA отдельно от specific services (SOW)
+- MSA separate from specific services (SOW)
 
-### DPA для GDPR compliance
+### DPA for GDPR compliance
 
-Data Processing Addendum — отдельный документ:
+Data Processing Addendum — a separate document:
 
 - Data controller / processor relationship
 - Processing purposes
-- Sub-processors (третьи стороны к которым уходят данные)
-- Data transfer mechanisms (SCC для EU→US)
+- Sub-processors (third parties the data flows to)
+- Data transfer mechanisms (SCC for EU→US)
 - Security measures
 - Breach notification procedures
 
-Обязателен для EU клиентов, полезен везде.
+Mandatory for EU clients, useful everywhere.
 
 ### Change notifications
 
-При изменении условий ToS/Privacy Policy/Pricing:
+When ToS/Privacy Policy/Pricing terms change:
 
-- Email всем affected users
-- В email — summary изменений + ссылка на full document
-- Advance notice — обычно 30 дней для material changes
-- Возможность opt-out (для pricing changes — cancellation без penalty)
+- Email to all affected users
+- In the email — a summary of changes + a link to the full document
+- Advance notice — usually 30 days for material changes
+- An opt-out option (for pricing changes — cancellation without penalty)

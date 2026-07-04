@@ -1,360 +1,360 @@
-# Микросервисы — архитектурный паттерн
+# Microservices — architecture pattern
 
-Разделение приложения на независимо деплоящиеся сервисы с собственными данными и границами.
+Splitting an application into independently deployable services with their own data and boundaries.
 
-Симметричная альтернатива [modular-monolith.md](modular-monolith.md). Выбор между ними — одно из ключевых архитектурных решений проекта.
+Symmetric alternative to [modular-monolith.md](modular-monolith.md). The choice between them is one of a project's key architectural decisions.
 
-## Когда выбирать микросервисы
+## When to choose microservices
 
-Не превентивно. Только когда есть конкретные причины.
+Not preemptively. Only when there are concrete reasons.
 
-### Triggers для миграции в микросервисы
+### Triggers for migrating to microservices
 
 **Organizational**:
 
-- Несколько команд работают независимо, разные release cadence
-- Conway's law — структура организации не матчится с монолитом
-- Ownership границы понятнее в коде чем в документации
+- Several teams work independently, different release cadences
+- Conway's law — the organization's structure doesn't match the monolith
+- Ownership boundaries are clearer in code than in documentation
 
 **Scaling**:
 
-- Один компонент требует специфического scaling (memory-heavy, CPU-heavy, network-heavy)
-- Разные компоненты имеют разные latency requirements
-- Horizontal scaling нужен только для части системы
+- One component requires specific scaling (memory-heavy, CPU-heavy, network-heavy)
+- Different components have different latency requirements
+- Horizontal scaling is only needed for part of the system
 
 **Technology diversity**:
 
-- Разные компоненты требуют разных стеков (ML pipeline на Python, API на Go, real-time на Rust)
-- Интеграция с системами работающими только на определённых стеках
+- Different components require different stacks (ML pipeline in Python, API in Go, real-time in Rust)
+- Integration with systems that only run on specific stacks
 
 **Availability**:
 
-- Компоненты имеют разные SLA требования
-- Изоляция failures — failure одного не должна ронять другие
+- Components have different SLA requirements
+- Failure isolation — a failure in one shouldn't bring down the others
 
 **Compliance**:
 
-- Часть системы обрабатывает данные с особыми регуляторными требованиями (PCI, HIPAA, госданные)
-- Физическая изоляция инфраструктуры требуется по compliance
+- Part of the system processes data with special regulatory requirements (PCI, HIPAA, government data)
+- Physical infrastructure isolation is required by compliance
 
-### Когда НЕ выбирать микросервисы
+### When NOT to choose microservices
 
-- Команда до 10-15 разработчиков
-- MVP фаза, scope меняется быстро
-- Нет operational expertise для управления распределённой системой
-- Нет observability stack (tracing, metrics, logs aggregation)
-- Простота монолита побеждает гибкость микросервисов
+- Team of up to 10-15 developers
+- MVP phase, scope changes fast
+- No operational expertise to manage a distributed system
+- No observability stack (tracing, metrics, logs aggregation)
+- The simplicity of a monolith beats the flexibility of microservices
 
-Правило: **модульный монолит до появления конкретных triggers**. Не начинать с микросервисов "потому что modern architecture".
+Rule: **modular monolith until concrete triggers appear**. Don't start with microservices "because it's modern architecture".
 
-## Границы сервисов
+## Service boundaries
 
 ### Domain-driven boundaries
 
-Сервис = Bounded Context в терминах DDD:
+A service = a Bounded Context in DDD terms:
 
-- Собственный ubiquitous language (термины домена)
-- Собственная data model
-- Независимый жизненный цикл эволюции
-- Минимальные dependencies с другими контекстами
+- Its own ubiquitous language (domain terms)
+- Its own data model
+- An independent evolution lifecycle
+- Minimal dependencies on other contexts
 
-Не "сервис на каждую сущность" (это anti-pattern — слишком chatty коммуникация). Сервис покрывает целостную business capability.
+Not "a service per entity" (that's an anti-pattern — too chatty a communication). A service covers a cohesive business capability.
 
-### Определение границ
+### Defining boundaries
 
-Процесс:
+Process:
 
-1. **Event storming** с domain experts — выявление business events, commands, actors
-2. Группировка events в **aggregates** — то что изменяется вместе
-3. Выделение **bounded contexts** — связанные aggregates с общим языком
-4. Каждый bounded context — кандидат на отдельный сервис
+1. **Event storming** with domain experts — surfacing business events, commands, actors
+2. Grouping events into **aggregates** — what changes together
+3. Extracting **bounded contexts** — related aggregates with a common language
+4. Each bounded context — a candidate for a separate service
 
-### Проверка правильности границ
+### Verifying boundary correctness
 
-- Transaction scope — транзакции внутри одного сервиса, не cross-service
-- Data ownership — нет shared tables между сервисами
-- Temporal coupling — изменение одного не требует синхронного изменения другого
-- Autonomy — команда может deploy сервис независимо
+- Transaction scope — transactions within one service, not cross-service
+- Data ownership — no shared tables between services
+- Temporal coupling — changing one doesn't require synchronously changing another
+- Autonomy — a team can deploy a service independently
 
-Если эти свойства нарушаются — границы неправильные, пересмотреть.
+If these properties are violated — the boundaries are wrong, reconsider them.
 
-## Коммуникация между сервисами
+## Communication between services
 
-### Синхронные вызовы
+### Synchronous calls
 
-REST API (JSON over HTTP) или gRPC (бинарный протокол с schema).
+REST API (JSON over HTTP) or gRPC (binary protocol with schema).
 
-**REST** — default выбор:
+**REST** — the default choice:
 
-- Простота
+- Simplicity
 - Universal tooling
-- Debuggable (читаемый JSON)
+- Debuggable (readable JSON)
 - HTTP ecosystem (load balancers, caches)
 
-**gRPC** когда:
+**gRPC** when:
 
-- Performance критичен (binary protocol, HTTP/2)
-- Нужны streaming RPCs
-- Сильная типизация через protobuf
-- Internal communication (не browser-facing)
+- Performance is critical (binary protocol, HTTP/2)
+- Streaming RPCs are needed
+- Strong typing via protobuf
+- Internal communication (not browser-facing)
 
-### Асинхронные события
+### Asynchronous events
 
 Message broker (Kafka, RabbitMQ, NATS, Redis Streams).
 
-Предпочтительный способ для:
+Preferred approach for:
 
-- Событий которые многие сервисы хотят знать (fan-out)
-- Долгих workflow (сага pattern)
-- Decoupling producers от consumers
-- Handling bursts и backpressure
+- Events that many services want to know about (fan-out)
+- Long workflows (saga pattern)
+- Decoupling producers from consumers
+- Handling bursts and backpressure
 
-### Anti-patterns коммуникации
+### Communication anti-patterns
 
-**Chatty APIs** — вызов A→B→C→D для одной операции. Latency складывается, failure probability умножается. Решение: агрегировать данные в одном вызове или дублировать read-only reference data.
+**Chatty APIs** — calling A→B→C→D for a single operation. Latency piles up, failure probability multiplies. Solution: aggregate data in one call, or duplicate read-only reference data.
 
-**Distributed monolith** — сервисы коммуницируют синхронно настолько часто, что фактически это монолит с сетью посередине. Хуже монолита: latency, complexity, failures. Решение: или пересмотреть границы, или вернуться к монолиту.
+**Distributed monolith** — services communicate synchronously so often that it's effectively a monolith with a network in the middle. Worse than a monolith: latency, complexity, failures. Solution: either reconsider the boundaries, or go back to a monolith.
 
-**Shared database** — два сервиса пишут в одну БД. Нарушает независимость deployments, создаёт скрытые coupling. Решение: database per service.
+**Shared database** — two services write to the same DB. Violates deployment independence, creates hidden coupling. Solution: database per service.
 
 ## Database per service
 
-Каждый сервис — свои данные. Никаких shared tables между сервисами.
+Each service — its own data. No shared tables between services.
 
-### Правила
+### Rules
 
-- Сервис A не читает таблицы сервиса B напрямую. Только через API сервиса B
-- Схема БД — internal implementation detail сервиса, может меняться без уведомления других
-- Cross-service JOINs — запрещены. Если нужны — либо агрегация на application level, либо event-driven replication
+- Service A doesn't read service B's tables directly. Only through service B's API
+- The DB schema is an internal implementation detail of the service, can change without notifying others
+- Cross-service JOINs — forbidden. If needed — either application-level aggregation or event-driven replication
 
 ### Data consistency
 
-Без cross-service transactions. Варианты:
+No cross-service transactions. Options:
 
-**Eventual consistency** через события:
+**Eventual consistency** via events:
 
-- Сервис A меняет своё состояние
-- Публикует событие
-- Сервис B подписан, обновляет своё состояние
-- Между изменениями есть временной window где состояния расходятся — это OK для большинства случаев
+- Service A changes its state
+- Publishes an event
+- Service B is subscribed, updates its state
+- There's a time window between the changes where states diverge — this is OK for most cases
 
-**Saga pattern** для multi-step workflow:
+**Saga pattern** for multi-step workflows:
 
-- Разбить transaction на шаги
-- Каждый шаг — локальная transaction в одном сервисе
-- Compensating actions для rollback
-- Orchestrated (central coordinator) или choreographed (через события)
+- Break the transaction into steps
+- Each step — a local transaction in one service
+- Compensating actions for rollback
+- Orchestrated (central coordinator) or choreographed (via events)
 
-**2-phase commit** — запрещён. Не масштабируется, блокирует, создаёт distributed locks.
+**2-phase commit** — forbidden. Doesn't scale, blocks, creates distributed locks.
 
 ## API versioning
 
-Сервисы эволюционируют независимо, consumers — на разных версиях API одновременно.
+Services evolve independently, consumers are on different API versions simultaneously.
 
 ### Backward compatibility
 
-- Adding fields to response — safe (старые clients игнорируют)
+- Adding fields to response — safe (old clients ignore them)
 - Adding endpoints — safe
 - Adding optional parameters — safe
 - Removing fields — breaking change
 - Changing field types — breaking change
 - Changing semantics — breaking change
 
-При breaking change — новая версия API с параллельной поддержкой старой.
+On a breaking change — a new API version with parallel support for the old one.
 
 ### Versioning strategies
 
-**URL versioning** — `/v1/users`, `/v2/users`. Простой, explicit.
+**URL versioning** — `/v1/users`, `/v2/users`. Simple, explicit.
 
-**Header versioning** — `Accept: application/vnd.api.v2+json`. Чище URL, но harder для debugging.
+**Header versioning** — `Accept: application/vnd.api.v2+json`. Cleaner URL, but harder to debug.
 
-**Content negotiation** — один endpoint, разные response schemas по Accept header. Максимальная гибкость, максимальная сложность.
+**Content negotiation** — one endpoint, different response schemas by Accept header. Maximum flexibility, maximum complexity.
 
-Для большинства проектов — URL versioning.
+For most projects — URL versioning.
 
 ### Deprecation process
 
-- Объявление deprecation в docs + headers
-- Период параллельной поддержки (минимум 6 месяцев)
-- Alerts consumers использующим deprecated
-- Ограничение new features только в новой версии
-- Final sunset с advance notice
+- Announce deprecation in docs + headers
+- Period of parallel support (minimum 6 months)
+- Alerts to consumers using the deprecated version
+- Restrict new features to the new version only
+- Final sunset with advance notice
 
 ## Service discovery
 
-Как сервис A находит сервис B в runtime.
+How service A finds service B at runtime.
 
 ### DNS-based
 
-Простой случай:
+The simple case:
 
-- Каждый сервис — DNS имя в private zone
-- Load balancer перед replicas
-- Kubernetes делает это из коробки (Services)
+- Each service — a DNS name in a private zone
+- Load balancer in front of replicas
+- Kubernetes does this out of the box (Services)
 
 ### Service mesh
 
-Для более сложных сценариев (Istio, Linkerd, Consul Connect):
+For more complex scenarios (Istio, Linkerd, Consul Connect):
 
-- Автоматический service discovery
+- Automatic service discovery
 - Traffic management (retries, timeouts, circuit breaking)
-- Mutual TLS между сервисами
+- Mutual TLS between services
 - Observability (automatic tracing)
 
-Overhead есть (sidecar proxy на каждый pod), но operational benefits огромны.
+There's overhead (sidecar proxy on every pod), but the operational benefits are huge.
 
 ### Client-side discovery
 
-Client сам ищет сервис через registry (Consul, Eureka):
+The client itself looks up the service through a registry (Consul, Eureka):
 
 - Gives control over load balancing
-- Больше code complexity
+- More code complexity
 
-Менее распространено в современных архитектурах — service mesh покрывает это лучше.
+Less common in modern architectures — service mesh covers this better.
 
 ## Observability
 
-Критична для микросервисов. Без неё невозможно отладить распределённую систему.
+Critical for microservices. Without it, debugging a distributed system is impossible.
 
-### Три pillar'а
+### Three pillars
 
 **Logs** (structured):
 
-- Каждый лог содержит `trace_id` для корреляции между сервисами
-- Structured format (JSON) для query в log aggregator
-- Централизованный collection (ELK, Loki, Datadog)
+- Every log contains a `trace_id` for correlation across services
+- Structured format (JSON) for querying in the log aggregator
+- Centralized collection (ELK, Loki, Datadog)
 
 **Metrics**:
 
-- RED (Rate, Errors, Duration) для каждого endpoint
-- USE (Utilization, Saturation, Errors) для ресурсов
+- RED (Rate, Errors, Duration) for each endpoint
+- USE (Utilization, Saturation, Errors) for resources
 - Custom business metrics
-- Prometheus + Grafana или SaaS
+- Prometheus + Grafana or a SaaS
 
 **Traces**:
 
-- Distributed tracing (OpenTelemetry) — каждый запрос создаёт trace, spans в каждом сервисе
+- Distributed tracing (OpenTelemetry) — each request creates a trace, spans in each service
 - Jaeger, Zipkin, Tempo — visualization
-- Critical для понимания latency и failures в распределённой системе
+- Critical for understanding latency and failures in a distributed system
 
 ### Correlation
 
-Каждый запрос от пользователя → `trace_id` → прокидывается через все сервисы через HTTP headers или message metadata.
+Every request from a user → `trace_id` → propagated through all services via HTTP headers or message metadata.
 
-В логах и traces этот `trace_id` виден — можно быстро найти все events связанные с конкретным запросом пользователя.
+This `trace_id` is visible in logs and traces — you can quickly find all events related to a specific user request.
 
 ## Resilience patterns
 
 ### Timeouts
 
-Каждый cross-service вызов имеет timeout. Без него — cascade failure, сервис ждёт мёртвого dependency.
+Every cross-service call has a timeout. Without one — cascade failure, a service waits on a dead dependency.
 
-Типичные timeouts: 1-5 секунд для internal calls, больше для специальных случаев.
+Typical timeouts: 1-5 seconds for internal calls, longer for special cases.
 
 ### Retries
 
-Automatic retry для transient failures (5xx, timeouts):
+Automatic retry for transient failures (5xx, timeouts):
 
-- Exponential backoff с jitter
-- Максимум 2-3 попытки
-- Idempotency — убедиться что операция безопасна для retry
+- Exponential backoff with jitter
+- Maximum 2-3 attempts
+- Idempotency — make sure the operation is safe to retry
 
 ### Circuit breaker
 
-Когда dependency падает — не продолжать бомбить её запросами:
+When a dependency goes down — don't keep bombarding it with requests:
 
-- После N failures за период — "open" circuit
-- Health check периодически пробует
-- После успехов — "closed" обратно
+- After N failures over a period — "open" the circuit
+- A health check periodically probes it
+- After successes — "closed" again
 
 Libraries: resilience4j (Java), Polly (.NET), gobreaker (Go), tenacity (Python).
 
 ### Bulkheads
 
-Изоляция ресурсов — один медленный dependency не должен истощить thread pool всего сервиса:
+Resource isolation — one slow dependency shouldn't exhaust the whole service's thread pool:
 
-- Отдельные thread pools для разных dependencies
+- Separate thread pools for different dependencies
 - Separate connection pools
-- Resource limits в K8s (CPU, memory)
+- Resource limits in K8s (CPU, memory)
 
 ### Graceful degradation
 
-Когда dependency недоступен — работать в ограниченном режиме:
+When a dependency is unavailable — operate in a limited mode:
 
-- Cache last known value
-- Fallback на другой source
-- Feature flag отключает функциональность
-- User-visible degraded mode, не полный отказ
+- Cache the last known value
+- Fall back to another source
+- A feature flag disables the functionality
+- User-visible degraded mode, not a complete outage
 
 ## Deployment
 
 ### Container-based
 
-Стандарт — Docker containers, orchestrated через Kubernetes или аналог.
+Standard — Docker containers, orchestrated via Kubernetes or an equivalent.
 
-- Каждый сервис — отдельный image
+- Each service — a separate image
 - CI/CD pipeline per service
 - Independent deploys
 
 ### CI/CD considerations
 
-- Каждый сервис — свой pipeline
-- Contract tests перед deploy — не сломать consumers
-- Canary deployment для rollout (5% → 25% → 100%)
-- Automatic rollback при regression
+- Each service — its own pipeline
+- Contract tests before deploy — don't break consumers
+- Canary deployment for rollout (5% → 25% → 100%)
+- Automatic rollback on regression
 
 ### Infrastructure as Code
 
-Инфраструктура описана в коде (Terraform, Pulumi, Crossplane). Не "click-ops" в облачной консоли.
+Infrastructure described in code (Terraform, Pulumi, Crossplane). Not "click-ops" in the cloud console.
 
 ## Data consistency
 
-Compensated actions для multi-service operations.
+Compensating actions for multi-service operations.
 
-### Пример саги
+### Saga example
 
-Booking сервис хочет создать резерв:
+A booking service wants to create a reservation:
 
-1. Payment service — charge card
-2. Inventory service — reserve item
+1. Payment service — charge the card
+2. Inventory service — reserve the item
 3. Notification service — send confirmation
 
-Если шаг 3 fails:
+If step 3 fails:
 
 - Notification — retry
-- Нет полного rollback шагов 1 и 2
+- No full rollback of steps 1 and 2
 
-Если шаг 2 fails:
+If step 2 fails:
 
-- Payment service — refund charge (compensating action)
+- Payment service — refund the charge (compensating action)
 
-Если шаг 1 fails:
+If step 1 fails:
 
 - Stop, user notified
 
 ### Choreography vs orchestration
 
-**Choreography** — сервисы подписаны на события друг друга, каждый знает что делать:
+**Choreography** — services subscribe to each other's events, each knows what to do:
 
-- Простая имплементация
-- Плохо масштабируется — сложно отследить full workflow
-- Логика размазана
+- Simple implementation
+- Scales poorly — hard to track the full workflow
+- Logic is spread out
 
-**Orchestration** — central coordinator управляет workflow:
+**Orchestration** — a central coordinator manages the workflow:
 
-- Clear view of full process
-- Coordinator — potential bottleneck/SPOF
+- Clear view of the full process
+- The coordinator — a potential bottleneck/SPOF
 - Tools: Temporal, AWS Step Functions, Camunda
 
-Для сложных workflows — orchestration. Для простых — choreography.
+For complex workflows — orchestration. For simple ones — choreography.
 
-## Monitoring и alerting
+## Monitoring and alerting
 
-Отдельно от observability (которая для debugging). Alerting — proactive detection проблем.
+Separate from observability (which is for debugging). Alerting — proactive detection of problems.
 
-### Что мониторить
+### What to monitor
 
-- **Availability** — сервис отвечает (health checks)
+- **Availability** — the service responds (health checks)
 - **Latency** — p95, p99 response times
 - **Error rate** — 5xx errors per minute
 - **Resource usage** — CPU, memory, disk
@@ -362,43 +362,43 @@ Booking сервис хочет создать резерв:
 
 ### Alert fatigue
 
-Слишком много alerts — их игнорируют. Правила:
+Too many alerts — they get ignored. Rules:
 
-- Alert только на actionable issues
+- Alert only on actionable issues
 - Severity levels (page vs email vs ignore)
-- Alert aggregation — не 100 alerts одновременно
-- Runbook для каждого alert — что делать когда срабатывает
+- Alert aggregation — not 100 alerts at once
+- A runbook for each alert — what to do when it fires
 
-## Migration от монолита
+## Migration from the monolith
 
 Strangler fig pattern:
 
-1. Выбрать bounded context который можно вынести
-2. Создать новый сервис с API идентичным внутренним вызовам из монолита
-3. Постепенно перенаправлять трафик с внутренних вызовов на API нового сервиса
-4. Когда все трафик на сервисе — удалить код из монолита
-5. Повторить с следующим контекстом
+1. Pick a bounded context that can be extracted
+2. Create a new service with an API identical to the internal calls from the monolith
+3. Gradually redirect traffic from the internal calls to the new service's API
+4. When all traffic is on the service — remove the code from the monolith
+5. Repeat with the next context
 
-Не "big bang rewrite" — почти всегда проваливается. Постепенная миграция работает.
+Not a "big bang rewrite" — that almost always fails. Gradual migration works.
 
 ## Common pitfalls
 
 ### Premature microservicization
 
-Команда прочитала блог-пост и начала пилить монолит на 20 сервисов. Результат: complexity, slow iteration, operational hell. Решение: модульный монолит сначала, микросервисы когда есть triggers.
+A team read a blog post and started splitting a monolith into 20 services. Result: complexity, slow iteration, operational hell. Solution: modular monolith first, microservices when there are triggers.
 
 ### Shared libraries hell
 
-Общие libraries используются в многих сервисах. Update library → нужно redeploy все сервисы → теряется independence. Решение: минимизировать shared libraries, версионировать их, accept что разные сервисы на разных версиях.
+Common libraries are used across many services. Update the library → need to redeploy all services → independence is lost. Solution: minimize shared libraries, version them, accept that different services run on different versions.
 
 ### Distributed transactions
 
-Попытка воспроизвести ACID transactions across services. Не работает. Решение: eventual consistency, sagas.
+Trying to reproduce ACID transactions across services. Doesn't work. Solution: eventual consistency, sagas.
 
 ### Synchronous chains
 
-A→B→C→D для каждого запроса. Latency складывается. Failure в любом ломает всё. Решение: async events или агрегация данных.
+A→B→C→D for every request. Latency piles up. A failure anywhere breaks everything. Solution: async events or data aggregation.
 
 ### Missing observability
 
-Когда что-то идёт не так в распределённой системе — impossible дебажить без tracing, structured logs, metrics. Решение: observability infrastructure до первого сервиса в production.
+When something goes wrong in a distributed system — impossible to debug without tracing, structured logs, metrics. Solution: observability infrastructure before the first service goes to production.

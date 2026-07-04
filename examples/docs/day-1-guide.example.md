@@ -1,64 +1,64 @@
-# День 1 — Пригласить участника по email
+# Day 1 — Invite a teammate by email
 
-**Цель дня:** сквозная фича «пригласить участника в команду по email» — от API до UI, с тестами.
+**Goal for the day:** an end-to-end "invite a teammate to the team by email" feature — from API to UI, with tests.
 
-**Предусловие:** проект инициализирован (Go API + Next.js), миграции применяются, `make test` зелёный.
+**Precondition:** the project is initialized (Go API + Next.js), migrations apply, `make test` is green.
 
-Команды запуска ролей (расшифровка цифр — в [CLAUDE.md](../CLAUDE.example.md)):
+Commands for entering roles (the digit key is in [CLAUDE.md](../CLAUDE.example.md)):
 
-- `1 1 1` — developer берёт Задачу 1 (бэкенд).
-- `1 1 2` — developer берёт Задачу 2 (фронтенд).
-- `0 1 1` — reviewer ревьюит Задачу 1.
-- `3 1 2` — BA пишет сценарии для фичи Задачи 2 → файл `scenarios-1-2-…` (назван по фиче, которую описывает; см. конвенцию `<DT>` в [core/task-protocol.md](../../core/task-protocol.md)).
-- `4 1 2` — QA UAT превращает сценарии в тест-кейсы → `test-cases-1-2-…`.
-- `2 1 2` — QA E2E пишет E2E по тест-кейсам.
+- `1 1 1` — developer takes Task 1 (backend).
+- `1 1 2` — developer takes Task 2 (frontend).
+- `0 1 1` — reviewer reviews Task 1.
+- `3 1 2` — BA writes scenarios for the Task 2 feature → file `scenarios-1-2-…` (named after the feature it describes; see the `<DT>` convention in [core/task-protocol.md](../../core/task-protocol.md)).
+- `4 1 2` — QA UAT turns the scenarios into test cases → `test-cases-1-2-…`.
+- `2 1 2` — QA E2E writes E2E tests from the test cases.
 
 ---
 
-## Задача 1 — Backend: эндпоинт POST /api/v1/invites
+## Task 1 — Backend: POST /api/v1/invites endpoint
 
-Создать эндпоинт, который заводит приглашение и кладёт его в очередь на отправку письма. Tenant определяется из контекста аутентификации (см. [domain/b2b-saas.md](../../domain/b2b-saas.md), [architecture/multi-tenant.md](../../architecture/multi-tenant.md)).
+Create an endpoint that opens an invite and queues it for the invitation email. The tenant is determined from the auth context (see [domain/b2b-saas.md](../../domain/b2b-saas.md), [architecture/multi-tenant.md](../../architecture/multi-tenant.md)).
 
-**Затронутые файлы:**
+**Affected files:**
 
-- `internal/domain/invite.go` (новый) — сущность `Invite`, статусы.
-- `internal/service/invite_service.go` (новый) — бизнес-логика создания инвайта.
-- `internal/transport/invite_handler.go` (новый) — HTTP-обработчик.
-- `internal/repository/queries/invite.sql` (новый) — sqlc-запросы.
-- `internal/transport/router.go` (правка) — регистрация маршрута.
-- тесты рядом с каждым файлом.
+- `internal/domain/invite.go` (new) — the `Invite` entity, statuses.
+- `internal/service/invite_service.go` (new) — invite-creation business logic.
+- `internal/transport/invite_handler.go` (new) — HTTP handler.
+- `internal/repository/queries/invite.sql` (new) — sqlc queries.
+- `internal/transport/router.go` (edit) — route registration.
+- tests next to each file.
 
-### Промпт для Claude Code
+### Prompt for Claude Code
 
 ~~~
-Реализуй POST /api/v1/invites в Go-проекте по правилам stack/go.md и core/.
+Implement POST /api/v1/invites in the Go project per the rules in stack/go.md and core/.
 
-Контракт:
-- Вход: JSON {"email": string}. Tenant берётся из ctx (middleware уже кладёт tenant_id), НЕ из тела запроса.
-- Валидация: email по RFC; пустой/невалидный → 400 с {"error":"invalid email"}.
-- Если активный инвайт на этот email в этом tenant уже есть → 409 {"error":"invite already pending"}.
-- Успех: создать запись Invite{id, tenant_id, email, status="pending", created_at}, вернуть 201 с телом инвайта.
-- Side effect: положить задачу на отправку письма в очередь через InviteService.enqueueEmail (интерфейс, реальная отправка — заглушка-логгер в этой задаче).
+Contract:
+- Input: JSON {"email": string}. The tenant comes from ctx (middleware already sets tenant_id), NOT from the request body.
+- Validation: email per RFC; empty/invalid → 400 with {"error":"invalid email"}.
+- If an active invite for this email in this tenant already exists → 409 {"error":"invite already pending"}.
+- Success: create an Invite{id, tenant_id, email, status="pending", created_at} record, return 201 with the invite body.
+- Side effect: enqueue an email-sending job via InviteService.enqueueEmail (an interface; the real send is a logger stub in this task).
 
-Требования:
-- Слои: transport → service → repository, обратных импортов нет (core/code-quality.md).
-- Ошибки обёрнуты через %w, типизированы (ValidationError, ConflictError).
-- sqlc для запросов, никакого inline SQL, prepared statements.
-- Unit-тесты на service (валидация, дубль, happy path) и handler (коды ответов). Table-driven.
-- Без реальной сети в тестах, таймауты/очередь — через интерфейс с моком.
-- LOC-лимиты и «без warnings» (golangci-lint) — core/quality-gates.md.
+Requirements:
+- Layers: transport → service → repository, no reverse imports (core/code-quality.md).
+- Errors wrapped via %w, typed (ValidationError, ConflictError).
+- sqlc for queries, no inline SQL, prepared statements.
+- Unit tests on the service (validation, duplicate, happy path) and the handler (response codes). Table-driven.
+- No real network in tests, timeouts/queue via an interface with a mock.
+- LOC limits and "no warnings" (golangci-lint) — core/quality-gates.md.
 ~~~
 
-### После выполнения
+### After completion
 
 ~~~bash
 make build && make test 2>&1 | tee /tmp/day1-task1.log
 golangci-lint run ./internal/...
 ~~~
 
-Ожидается: сборка clean, все тесты зелёные, линтер без замечаний. Новые тесты: `TestInviteService_*`, `TestInviteHandler_*`.
+Expected: a clean build, all tests green, no linter complaints. New tests: `TestInviteService_*`, `TestInviteHandler_*`.
 
-### Коммит
+### Commit
 
 ~~~bash
 git add internal/domain/invite.go internal/service/invite_service.go \
@@ -70,50 +70,50 @@ git commit -m "feat(invites): POST /api/v1/invites — create pending invite, en
 
 ---
 
-## Задача 2 — Frontend: модалка «Пригласить участника»
+## Task 2 — Frontend: "Invite teammate" modal
 
-Форма приглашения на странице команды: кнопка открывает модалку, ввод email, отправка вызывает API из Задачи 1, обратная связь пользователю.
+An invite form on the team page: a button opens the modal, email input, submitting calls the API from Task 1, feedback to the user.
 
-**Затронутые файлы:**
+**Affected files:**
 
-- `components/features/InviteTeammateModal.tsx` (новый)
-- `components/features/InviteButton.tsx` (новый)
-- `lib/api/invites.ts` (новый) — типизированный клиент.
-- `app/teams/[teamId]/page.tsx` (правка) — встроить кнопку.
-- тесты рядом.
+- `components/features/InviteTeammateModal.tsx` (new)
+- `components/features/InviteButton.tsx` (new)
+- `lib/api/invites.ts` (new) — typed client.
+- `app/teams/[teamId]/page.tsx` (edit) — wire in the button.
+- tests alongside.
 
-### Промпт для Claude Code
+### Prompt for Claude Code
 
 ~~~
-Реализуй UI «Пригласить участника» по правилам stack/react-nextjs.md и core/.
+Implement the "Invite teammate" UI per the rules in stack/react-nextjs.md and core/.
 
-Поведение:
-- Кнопка "Invite teammate" (objectName/testid: inviteButton) на странице команды открывает модалку (testid: inviteModal).
-- В модалке: поле email (testid: inviteEmailInput), кнопка Send (testid: inviteSubmit), кнопка Cancel (testid: inviteCancel).
-- Кнопка Send неактивна пока email пуст или невалиден (клиентская валидация Zod).
-- Send → POST /api/v1/invites через lib/api/invites.ts (TanStack Query useMutation).
-  - 201 → toast (testid: inviteToast) "Invitation sent to <email>", модалка закрывается, список инвайтов инвалидируется.
-  - 409 → инлайн-ошибка под полем (testid: inviteError) "This person already has a pending invite".
-  - 400/прочее → инлайн-ошибка "Could not send invite, try again".
-- Во время запроса Send показывает спиннер и неактивна (без двойной отправки).
+Behavior:
+- The "Invite teammate" button (objectName/testid: inviteButton) on the team page opens a modal (testid: inviteModal).
+- In the modal: an email field (testid: inviteEmailInput), a Send button (testid: inviteSubmit), a Cancel button (testid: inviteCancel).
+- The Send button is disabled while the email is empty or invalid (client-side Zod validation).
+- Send → POST /api/v1/invites via lib/api/invites.ts (TanStack Query useMutation).
+  - 201 → toast (testid: inviteToast) "Invitation sent to <email>", modal closes, the invite list is invalidated.
+  - 409 → inline error under the field (testid: inviteError) "This person already has a pending invite".
+  - 400/other → inline error "Could not send invite, try again".
+- While the request is in flight, Send shows a spinner and is disabled (no double submit).
 
-Требования:
-- Server/Client Components по правилам; модалка — Client Component.
-- Форма: React Hook Form + Zod, схема — source of truth типов.
-- Никаких внутренних свойств в UI-тексте; пользователь видит только тексты выше.
-- Тесты (Vitest + Testing Library): неактивная кнопка при пустом/невалидном email, успешная отправка вызывает мутацию, 409 показывает инлайн-ошибку. getByRole/getByLabelText, не testid где есть роль.
+Requirements:
+- Server/Client Components per the rules; the modal is a Client Component.
+- Form: React Hook Form + Zod, the schema is the source of truth for types.
+- No internal properties in UI text; the user sees only the texts above.
+- Tests (Vitest + Testing Library): disabled button on empty/invalid email, a successful submit triggers the mutation, 409 shows an inline error. getByRole/getByLabelText, not testid where a role exists.
 ~~~
 
-### После выполнения
+### After completion
 
 ~~~bash
 npm run build && npm run test -- --run 2>&1 | tee /tmp/day1-task2.log
 npm run lint && npx tsc --noEmit
 ~~~
 
-Ожидается: typecheck без ошибок, линтер чист, тесты зелёные.
+Expected: typecheck without errors, linter clean, tests green.
 
-### Коммит
+### Commit
 
 ~~~bash
 git add components/features/InviteTeammateModal.tsx components/features/InviteButton.tsx \
@@ -124,30 +124,31 @@ git commit -m "feat(invites): invite teammate modal wired to POST /api/v1/invite
 
 ---
 
-## Задача 3 — BA: сценарии фичи «пригласить»
+## Task 3 — BA: scenarios for the "invite" feature
 
-`3 1 2`. BA читает код Задач 1–2 и пишет пользовательские сценарии по формату [roles/ba.md](../../roles/ba.md).
+`3 1 2`. The BA reads the code from Tasks 1–2 and writes user scenarios per the format in [roles/ba.md](../../roles/ba.md).
 
-- **Вход:** код инвайт-фичи (handler, service, модалка).
-- **Выход:** `docs/scenarios-1-2-invite-teammate.md` (пример: [scenarios-1-2-invite-teammate.example.md](scenarios-1-2-invite-teammate.example.md)).
-- **Референс для сравнения:** Slack / Notion (приглашение в workspace).
+- **Input:** the invite-feature code (handler, service, modal).
+- **Output:** `docs/scenarios-1-2-invite-teammate.md` (example: [scenarios-1-2-invite-teammate.example.md](scenarios-1-2-invite-teammate.example.md)).
+- **Reference for comparison:** Slack / Notion (workspace invitations).
 
-### Промпт для Claude Code
+### Prompt for Claude Code
 
 ~~~
-Прочитай код инвайт-фичи Задач 1–2: internal/transport/invite_handler.go,
-internal/service/invite_service.go, components/features/InviteTeammateModal.tsx. Напиши пользовательские сценарии фичи «пригласить
-коллегу» по формату roles/ba.md: главный сценарий + альтернативные (дубликат email, невалидный
-email, отмена), каждый — с ожидаемым ВИДИМЫМ пользователю результатом. Сравни с приглашением в
-workspace у Slack/Notion; чего у нас нет — отдельным списком gaps.
-Результат: docs/scenarios-1-2-invite-teammate.md.
+Read the invite-feature code from Tasks 1–2: internal/transport/invite_handler.go,
+internal/service/invite_service.go, components/features/InviteTeammateModal.tsx. Write user
+scenarios for the "invite a teammate" feature per the format in roles/ba.md: the main scenario +
+alternatives (duplicate email, invalid email, cancel), each ending in the user-VISIBLE expected
+result. Compare with Slack/Notion's workspace invitation; list what we're missing as a separate
+gaps list.
+Result: docs/scenarios-1-2-invite-teammate.md.
 ~~~
 
-### После выполнения
+### After completion
 
-Вычитать глазами: каждый сценарий заканчивается видимым пользователю результатом, не внутренним состоянием.
+Eyeball review: every scenario ends in a user-visible result, not internal state.
 
-### Коммит
+### Commit
 
 ~~~bash
 git add docs/scenarios-1-2-invite-teammate.md
@@ -156,28 +157,28 @@ git commit -m "docs(invites): user scenarios for invite teammate feature"
 
 ---
 
-## Задача 4 — QA UAT: тест-кейсы
+## Task 4 — QA UAT: test cases
 
-`4 1 2`. QA UAT читает `scenarios-1-2-…` и код (за UI-селекторами), пишет формальные тест-кейсы по [roles/qa-uat.md](../../roles/qa-uat.md).
+`4 1 2`. QA UAT reads `scenarios-1-2-…` and the code (behind the UI selectors), writes formal test cases per [roles/qa-uat.md](../../roles/qa-uat.md).
 
-- **Вход:** `docs/scenarios-1-2-invite-teammate.md` + код.
-- **Выход:** `docs/test-cases-1-2-invite-teammate.md` (пример: [test-cases-1-2-invite-teammate.example.md](test-cases-1-2-invite-teammate.example.md)).
+- **Input:** `docs/scenarios-1-2-invite-teammate.md` + code.
+- **Output:** `docs/test-cases-1-2-invite-teammate.md` (example: [test-cases-1-2-invite-teammate.example.md](test-cases-1-2-invite-teammate.example.md)).
 
-### Промпт для Claude Code
+### Prompt for Claude Code
 
 ~~~
-Прочитай docs/scenarios-1-2-invite-teammate.md и код фичи (за UI-селекторами:
-components/features/InviteTeammateModal.tsx). Преврати сценарии в формальные тест-кейсы
-Given/When/Then по roles/qa-uat.md: ожидаемый результат — только видимое пользователю;
-добавь негативные, стресс- и concurrency-кейсы (двойной сабмит, гонка на один email).
-Результат: docs/test-cases-1-2-invite-teammate.md.
+Read docs/scenarios-1-2-invite-teammate.md and the feature code (behind the UI selectors:
+components/features/InviteTeammateModal.tsx). Turn the scenarios into formal Given/When/Then test
+cases per roles/qa-uat.md: the expected result is only what the user sees; add negative, stress,
+and concurrency cases (double submit, a race on the same email).
+Result: docs/test-cases-1-2-invite-teammate.md.
 ~~~
 
-### После выполнения
+### After completion
 
-Вычитать глазами: ни один Then не ссылается на внутреннее состояние (БД, стор) — только на видимое в UI.
+Eyeball review: no Then references internal state (DB, store) — only what's visible in the UI.
 
-### Коммит
+### Commit
 
 ~~~bash
 git add docs/test-cases-1-2-invite-teammate.md
@@ -186,34 +187,36 @@ git commit -m "docs(invites): UAT test cases for invite teammate feature"
 
 ---
 
-## Задача 5 — QA E2E: автотесты
+## Task 5 — QA E2E: automated tests
 
-`2 1 2`. QA E2E переводит тест-кейсы из `test-cases-1-2-…` в E2E по [roles/qa-e2e.md](../../roles/qa-e2e.md): действие через UI → видимый результат → серверная верификация (инвайт реально создан) → UI после ответа сервера.
+`2 1 2`. QA E2E turns the test cases from `test-cases-1-2-…` into E2E tests per [roles/qa-e2e.md](../../roles/qa-e2e.md): action through the UI → visible result → server-side verification (the invite really was created) → UI after the server responds.
 
-- **Вход:** `docs/test-cases-1-2-invite-teammate.md`.
-- **Выход:** E2E-тесты в контуре `build-qa/` (см. [core/quality-gates.md](../../core/quality-gates.md) — разделение контуров).
+- **Input:** `docs/test-cases-1-2-invite-teammate.md`.
+- **Output:** E2E tests in the `build-qa/` circuit (see [core/quality-gates.md](../../core/quality-gates.md) — circuit separation).
 
-### Промпт для Claude Code
+### Prompt for Claude Code
 
 ~~~
-Прочитай docs/test-cases-1-2-invite-teammate.md. Реализуй кейсы как E2E (Playwright) в контуре
-build-qa/: каждое действие — через UI собранного приложения, проверка — видимый результат +
-серверная верификация (инвайт реально создан) + UI после ответа сервера.
-Гейт QG-NN-05 (core/quality-gates.md): прогон идёт через объявленный shipping-root приложения —
-никакой bespoke-инъекции обвязки (зависимостей, outcome-ручек, триггеров), которую поставка даёт сама;
-ассерт — наблюдаемый ЭФФЕКТ фичи «пригласить» (инвайт реально создан и виден), не presence.
-В отчёте: по каждому атомарному acceptance-критерию frozen scope — assembled-путь + @qg:<scope-id>.
+Read docs/test-cases-1-2-invite-teammate.md. Implement the cases as E2E (Playwright) in the
+build-qa/ circuit: every action goes through the UI of the built app, verification is a visible
+result + server-side verification (the invite really was created) + UI after the server responds.
+Gate QG-NN-05 (core/quality-gates.md): the run goes through the app's declared shipping root — no
+bespoke injection of wiring (dependencies, outcome hooks, triggers) that shipping already provides
+on its own; assert the OBSERVABLE EFFECT of the "invite" feature (the invite really was created and
+is visible), not mere presence.
+In the report: for every atomic acceptance criterion of the frozen scope — the assembled path +
+@qg:<scope-id>.
 ~~~
 
-### После выполнения
+### After completion
 
 ~~~bash
 cd build-qa && npx playwright test 2>&1 | tee /tmp/day1-task5.log
 ~~~
 
-Ожидается: все E2E зелёные на собранном приложении.
+Expected: all E2E tests green on the assembled app.
 
-### Коммит
+### Commit
 
 ~~~bash
 git add build-qa/

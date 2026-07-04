@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""regimen-doctor — гейт готовности регламента в ТВОЁМ проекте (read-only).
+"""regimen-doctor — the regimen readiness gate for YOUR project (read-only).
 
-Запускается в корне сгенерированного проекта в любой момент после правок:
-проверяет то, что генератор не мог знать в момент генерации (потому что зависит от
-твоих последующих правок) — незаполненные {{...}}, висячие ссылки, рассинхрон ролей,
-валидность settings.json, executable-хуки, заполненность build/test-команд.
+Run at the root of a generated project any time after edits: checks what the generator
+couldn't have known at generation time (because it depends on your subsequent edits) —
+unfilled {{...}}, dangling links, role drift, settings.json validity, executable hooks,
+whether build/test commands are filled in.
 
-  python3 regimen-doctor.py            # проверить текущий каталог
+  python3 regimen-doctor.py            # check the current directory
   python3 regimen-doctor.py --dir ../proj
 
-Exit 0 = регламент зелёный; exit 1 = есть 🔴 (чинить до первой реальной задачи).
-Это НЕ selftest.py пакета (тот проверяет сам пакет) — этот проверяет твой проект.
-Ничего не меняет: только читает и сообщает.
+Exit 0 = regimen is green; exit 1 = there's a 🔴 (fix before the first real task).
+This is NOT the package's selftest.py (that checks the package itself) — this checks your project.
+Changes nothing: only reads and reports.
 """
 import argparse
 import json
@@ -21,14 +21,14 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-# Общие примитивы (находка #4 аудита 2026-06-29; консолидация C1 аудита 2026-07-03):
-# обход .md, чтение, висячие ссылки, плейсхолдеры, sandbox-режимы.
+# Shared primitives (finding #4 of the 2026-06-29 audit; consolidation C1 of the 2026-07-03 audit):
+# .md traversal, reading, dangling links, placeholders, sandbox modes.
 from _pack_lib import md_files, dangling, count_placeholders, read, SANDBOX_MODE_RE, SKIP_DIRS
 
 
 def check_placeholders(root):
-    """Незаполненные {{...}} в оставленных .md (семантика — count_placeholders _pack_lib,
-    та же, что в отчёте new-project.py: генератор и доктор не должны расходиться списками)."""
+    """Unfilled {{...}} in the remaining .md files (semantics — _pack_lib's count_placeholders,
+    the same as in new-project.py's report: the generator and the doctor must not diverge on lists)."""
     hits = []
     for p in md_files(root):
         n = count_placeholders(read(p))
@@ -38,9 +38,9 @@ def check_placeholders(root):
 
 
 def check_dead_links(root):
-    """Висячие локальные ссылки [text](path). Обход, фильтрация и предикат резолва — общий
-    примитив _pack_lib.dangling (тот же, что в selftest.py); генераторные фрагменты
-    (CODEX-DELTA-HEADER — ссылки от корня-точки-материализации) он пропускает сам."""
+    """Dangling local links [text](path). Traversal, filtering and the resolution predicate — the
+    shared _pack_lib.dangling primitive (same as in selftest.py); it skips generator fragments
+    (CODEX-DELTA-HEADER — links from the root of the materialization point) on its own."""
     return [f"{rel}:{ln}  [{txt}]({t})" for rel, ln, txt, t in dangling(root)]
 
 
@@ -48,15 +48,15 @@ CANON_DIRS = {"core", "roles", "architecture", "stack", "domain"}
 
 
 def check_harness_canon_refs(root):
-    """Пути-каноны в обвязке рантайма резолвятся (эмпирика живого апгрейда 2026-06:
-    субагенты, скопированные с пакетными путями `core/*.md` при docs-nested раскладке, =
-    13 битых канонов, молча). check_dead_links это НЕ ловит: указатели в обвязке — проза
-    в бэктиках, не markdown-ссылки. Сканируем .claude/**/*.md и .codex/**/*.toml:
-    lowercase-токен вида `dir/…/file.md` с канон-сегментом (CANON_DIRS) должен
-    существовать от корня проекта или от файла. Два сознательных сужения: (1) только
-    lowercase — шаблоны `docs/day-D-guide.md`/`<N>`/`{{...}}` отсекаются регистром/
-    чарклассом; (2) только канон-неймспейсы — пути-артефакты, которые агент СОЗДАСТ
-    (day-guides, scratchpad/panel/*), легитимно не существуют до рантайма."""
+    """Canon paths in the runtime wiring resolve (empirically found during the 2026-06 live
+    upgrade: subagents copied with package paths `core/*.md` under a docs-nested layout =
+    13 broken canons, silently). check_dead_links does NOT catch this: pointers in the wiring are
+    prose in backticks, not markdown links. We scan .claude/**/*.md and .codex/**/*.toml:
+    a lowercase token like `dir/…/file.md` with a canon segment (CANON_DIRS) must
+    exist from the project root or from the file. Two deliberate narrowings: (1) lowercase
+    only — templates `docs/day-D-guide.md`/`<N>`/`{{...}}` are cut off by case/character
+    class; (2) canon namespaces only — artifact paths that the agent WILL CREATE
+    (day-guides, scratchpad/panel/*) legitimately don't exist before runtime."""
     files = []
     for base, ext in ((".claude", ".md"), (".codex", ".toml")):
         d = os.path.join(root, base)
@@ -77,29 +77,29 @@ def check_harness_canon_refs(root):
 
 
 def check_roles_sync(root):
-    """sync-roles.py --check, если roles.json + sync-roles.py есть в проекте."""
+    """sync-roles.py --check, if roles.json + sync-roles.py are present in the project."""
     sr = os.path.join(root, "sync-roles.py")
     if not (os.path.exists(sr) and os.path.exists(os.path.join(root, "roles.json"))):
-        return None  # не применимо
+        return None  # not applicable
     r = subprocess.run([sys.executable, sr, "--check"], cwd=root,
                        capture_output=True, text=True)
     return (r.returncode == 0, (r.stdout + r.stderr).strip().splitlines()[-1:] or [""])
 
 
 def check_settings_json(root):
-    """settings.json — строгий валидный JSON (Claude Code отвергнет иначе)."""
+    """settings.json — must be strictly valid JSON (Claude Code will otherwise reject it)."""
     p = os.path.join(root, ".claude", "settings.json")
     if not os.path.exists(p):
         return None
     try:
         json.loads(read(p))
-        return (True, "валиден")
+        return (True, "valid")
     except json.JSONDecodeError as e:
-        return (False, f"невалидный JSON: {e}")
+        return (False, f"invalid JSON: {e}")
 
 
 def check_hooks_executable(root):
-    """Хуки, на которые ссылается settings.json, должны быть +x."""
+    """Hooks referenced by settings.json must be +x."""
     hd = os.path.join(root, ".claude", "hooks")
     if not os.path.isdir(hd):
         return None
@@ -109,9 +109,9 @@ def check_hooks_executable(root):
 
 
 def check_build_test_cmds(root):
-    """build/test-команды во входном файле регламента не должны остаться
-    плейсхолдерами — без них quality-gates неисполнимы. Вход per-harness
-    (ADR-012): на Claude Code — CLAUDE.md, на Codex — AGENTS.md."""
+    """build/test commands in the regimen entry file must not remain
+    placeholders — without them the quality gates aren't runnable. Entry is per-harness
+    (ADR-012): CLAUDE.md on Claude Code, AGENTS.md on Codex."""
     p = next((os.path.join(root, n) for n in ("CLAUDE.md", "AGENTS.md")
               if os.path.exists(os.path.join(root, n))), None)
     if p is None:
@@ -123,7 +123,7 @@ def check_build_test_cmds(root):
 
 
 def detect_harness(root):
-    """Какие рантайм-оверлеи присутствуют в проекте (claude-code / codex)."""
+    """Which runtime overlays are present in the project (claude-code / codex)."""
     h = []
     if os.path.isdir(os.path.join(root, ".claude")):
         h.append("claude-code")
@@ -133,9 +133,9 @@ def detect_harness(root):
 
 
 def check_claude_hooks_state(root):
-    """СОСТОЯНИЕ хуков Claude Code, не наличие (P5, ADR-010/011): активны (settings.json
-    с секцией hooks) vs дормантны (только .example) → во втором случае mechanical-гейты
-    деградируют в accountability. Возвращает (level, msg) или None."""
+    """The STATE of Claude Code hooks, not their presence (P5, ADR-010/011): active (settings.json
+    with a hooks section) vs. dormant (.example only) → in the latter case mechanical gates
+    degrade to accountability. Returns (level, msg) or None."""
     cl = os.path.join(root, ".claude")
     if not os.path.isdir(cl):
         return None
@@ -145,29 +145,29 @@ def check_claude_hooks_state(root):
         try:
             data = json.loads(read(sj))
         except json.JSONDecodeError:
-            return ("red", "Claude Code: settings.json невалидный JSON — харнесс отвергнет файл")
+            return ("red", "Claude Code: settings.json is invalid JSON — the harness will reject the file")
         if data.get("hooks"):
-            return ("green", "Claude Code: хуки-гейты АКТИВНЫ (settings.json → секция hooks)")
-        return ("warn", "Claude Code: settings.json без секции hooks → mechanical-гейты в accountability")
+            return ("green", "Claude Code: hook gates are ACTIVE (settings.json → hooks section)")
+        return ("warn", "Claude Code: settings.json has no hooks section → mechanical gates degrade to accountability")
     if os.path.exists(ex):
-        return ("warn", "Claude Code: хуки НЕ включены (settings.json.example не переименован) → "
-                        "mechanical-гейты деградируют в accountability. Включить: "
+        return ("warn", "Claude Code: hooks are NOT enabled (settings.json.example wasn't renamed) → "
+                        "mechanical gates degrade to accountability. Enable: "
                         "mv .claude/settings.json.example .claude/settings.json")
     return None
 
 
 def check_codex_overlay_state(root):
-    """СОСТОЯНИЕ codex-оверлея, не наличие (P5): вход, агент-профили с sandbox_mode, и
-    ЧЕСТНЫЙ класс энфорсмента (KL-7/G2 — хуки и docs-only тиры = accountability, не аппаратно).
-    Возвращает list[(level, msg)] или None."""
+    """The STATE of the codex overlay, not its presence (P5): entry, agent profiles with sandbox_mode,
+    and the HONEST enforcement class (KL-7/G2 — hooks and docs-only tiers = accountability, not
+    hardware-enforced). Returns list[(level, msg)] or None."""
     has_codex = os.path.exists(os.path.join(root, "AGENTS.md")) or os.path.isdir(os.path.join(root, ".codex"))
     if not has_codex:
         return None
     out = []
     if os.path.exists(os.path.join(root, "AGENTS.md")):
-        out.append(("green", "Codex: вход AGENTS.md на месте (авточтение Codex)"))
+        out.append(("green", "Codex: entry AGENTS.md is in place (Codex auto-reads it)"))
     else:
-        out.append(("red", "Codex: .codex/ есть, но AGENTS.md нет — Codex не получит авто-контекст"))
+        out.append(("red", "Codex: .codex/ is present, but AGENTS.md is missing — Codex won't get auto-context"))
     adir = os.path.join(root, ".codex", "agents")
     rj = os.path.join(root, "roles.json")
     if os.path.isdir(adir) and os.path.exists(rj):
@@ -176,62 +176,62 @@ def check_codex_overlay_state(root):
         except (json.JSONDecodeError, KeyError):
             roles = []
         miss, badmode = [], []
-        for r in roles:  # полнота маппинга: каждая роль roles.json имеет .toml
+        for r in roles:  # mapping completeness: every role in roles.json has a .toml
             if not os.path.exists(os.path.join(adir, f"{r.get('agent','')}.toml")):
                 miss.append(r.get("agent", "?"))
-        # sandbox_mode валидируем у ВСЕХ .toml в каталоге (вкл. dispatch-агентов вне roles.json:
-        # architect/auditor/red-team/blue-team/arbiter) — паритет с claude-стороной
+        # validate sandbox_mode on ALL .toml files in the directory (incl. dispatch agents outside
+        # roles.json: architect/auditor/red-team/blue-team/arbiter) — parity with the claude side
         tomls = sorted(fn for fn in os.listdir(adir) if fn.endswith(".toml"))
         for fn in tomls:
             if not SANDBOX_MODE_RE.search(read(os.path.join(adir, fn))):
                 badmode.append(fn[:-5])
         if miss:
-            out.append(("red", f"Codex: агент-профили отсутствуют для ролей: {miss}"))
+            out.append(("red", f"Codex: agent profiles are missing for roles: {miss}"))
         elif badmode:
-            out.append(("red", f"Codex: агент-профили без валидного sandbox_mode: {badmode}"))
+            out.append(("red", f"Codex: agent profiles without a valid sandbox_mode: {badmode}"))
         else:
-            out.append(("green", f"Codex: агент-профили .codex/agents/*.toml на месте, sandbox_mode задан "
-                                 f"({len(tomls)} профилей: read-only/workspace-write — аппаратно)"))
+            out.append(("green", f"Codex: agent profiles .codex/agents/*.toml are in place, sandbox_mode is set "
+                                 f"({len(tomls)} profiles: read-only/workspace-write — hardware-enforced)"))
     elif os.path.isdir(adir):
-        out.append(("green", "Codex: агент-профили .codex/agents/ присутствуют"))
-    # Честный класс энфорсмента (не «файл есть», а «что он реально даёт»):
-    out.append(("warn", "Codex: хуки-гейты = accountability (KL-7 — в headless `codex exec` не "
-                        "срабатывают; жёсткий гейт → CI/pre-commit). Тиры docs-only/scratchpad-only — "
-                        "тоже проза (G2 — cwd всегда писибелен). Аппаратны только read-only/full-write. "
-                        "Полная матрица — core/portability.md."))
+        out.append(("green", "Codex: agent profiles .codex/agents/ are present"))
+    # Honest enforcement class (not "the file exists", but "what it actually provides"):
+    out.append(("warn", "Codex: hook gates = accountability (KL-7 — don't fire in headless "
+                        "`codex exec`; a hard gate → CI/pre-commit). The docs-only/scratchpad-only "
+                        "tiers are also prose (G2 — cwd is always writable). Only read-only/full-write "
+                        "are hardware-enforced. Full matrix — core/portability.md."))
     return out
 
 
 def check_stack_file(root):
-    """Стек-файл: на нём висят слоты QG-NN-02 «Чистая сборка», coverage-команда (§Тесты) и
-    static-adjunct QG-NN-05. Правило event-driven (roles/architect.md §Kickoff): файл появляется
-    в момент выбора стека — на kickoff или после арх-анализа; отложенный стек легитимен
-    (генератор с backend=none его и не кладёт). Два состояния различаем по build/test-командам
-    входного файла: команды-плейсхолдеры = стек ещё не выбран (мягкое напоминание про
-    event-правило); команды заполнены = стек де-факто выбран, файла нет = дыра «ничей файл».
-    warn, не red: проект может сознательно держать стек во входном файле, но тогда слоты
-    закрываются там же. Ищем stack/ и docs/stack/ (docs-nested раскладка)."""
+    """The stack file: it carries the QG-NN-02 "Clean build" slots, the coverage command (§Tests) and
+    the QG-NN-05 static adjunct. Event-driven rule (roles/architect.md §Kickoff): the file appears
+    the moment the stack is chosen — at kickoff or after arch analysis; a deliberately deferred stack
+    is legitimate (the generator with backend=none doesn't create it either). We distinguish two
+    states by the entry file's build/test commands: placeholder commands = the stack isn't chosen yet
+    (a soft reminder of the event rule); commands filled in = the stack is de facto chosen, no file =
+    an "orphan file" hole. warn, not red: a project may deliberately keep the stack in the entry file,
+    but then the slots are closed out there too. We look for stack/ and docs/stack/ (docs-nested layout)."""
     d = next((p for p in (os.path.join(root, "stack"), os.path.join(root, "docs", "stack"))
               if os.path.isdir(p)), None)
     files = [] if d is None else sorted(
         fn for fn in os.listdir(d) if fn.endswith(".md") and fn != "_TEMPLATE.md")
     if not files:
         cmds = check_build_test_cmds(root)
-        undecided = cmds is not None and not cmds[0]  # команды входа — ещё плейсхолдеры
+        undecided = cmds is not None and not cmds[0]  # entry commands are still placeholders
         if undecided:
-            return ("warn", "стек ещё не выбран (build/test-команды входа — плейсхолдеры) — "
-                            "легитимно на фазе арх-анализа; в момент выбора стека задача, "
-                            "фиксирующая выбор, обязана завести stack/<стек>.md "
-                            "(event-правило, roles/architect.md §Kickoff)")
-        return ("warn", "стек де-факто выбран (команды входа заполнены), а stack/<стек>.md не "
-                        "заведён — слоты «Чистая сборка» (QG-NN-02), coverage (§Тесты) и "
-                        "static-adjunct (QG-NN-05) без канона. Владелец — architect "
-                        "(event-правило kickoff/день-0), не пользователь")
+            return ("warn", "the stack isn't chosen yet (entry build/test commands are placeholders) — "
+                            "legitimate during the arch-analysis phase; the moment the stack is chosen, "
+                            "the task that fixes the choice must create stack/<stack>.md "
+                            "(event rule, roles/architect.md §Kickoff)")
+        return ("warn", "the stack is de facto chosen (entry commands are filled in), but stack/<stack>.md "
+                        "hasn't been created — the \"Clean build\" (QG-NN-02), coverage (§Tests) and "
+                        "static-adjunct (QG-NN-05) slots have no canon. Owner is the architect "
+                        "(event rule, kickoff/day-0), not the user")
     todo = [fn for fn in files if "TODO:" in read(os.path.join(d, fn))]
     if todo:
-        return ("warn", f"stack-файл(ы) со скелетными TODO: {', '.join(todo)} — дозаполнить "
-                        f"(владелец — architect/день-0, из фактов проекта)")
-    return ("green", f"stack-файл заполнен ({', '.join(files)})")
+        return ("warn", f"stack file(s) with skeleton TODOs: {', '.join(todo)} — finish filling in "
+                        f"(owner is the architect/day-0, from project facts)")
+    return ("green", f"stack file is filled in ({', '.join(files)})")
 
 
 QG_SCOPE_HEAD = re.compile(r"^##\s+Frozen scope\b", re.M)
@@ -240,13 +240,13 @@ QG_ANNOT = re.compile(r"@qg:([A-Za-z0-9][A-Za-z0-9_.-]*)")
 
 
 def check_qg_evidence(root):
-    """QG-NN-05 durable evidence (core/quality-gates.md §Достижимость, ADR-015): каждый
-    scope-id из секции «## Frozen scope» PROJECT-STATE обязан иметь checked-in аннотацию
-    `@qg:<scope-id>` где-то в проекте (assembled-тест или генерируемый манифест).
-    Пункт с пометкой «waiver» в строке — вне сверки (waiver под запись).
-    Проверяется НАЛИЧИЕ evidence (машинная опора гейта); качество — reviewer/spot-check.
-    Возвращает (ok, missing, total) | ("format", None, None) — секция есть, но ни один
-    пункт не парсится (формат-дрейф) | None — секции нет / ещё плейсхолдеры."""
+    """QG-NN-05 durable evidence (core/quality-gates.md §Reachability, ADR-015): every
+    scope-id from PROJECT-STATE's "## Frozen scope" section must have a checked-in annotation
+    `@qg:<scope-id>` somewhere in the project (an assembled test or a generated manifest).
+    An item marked "waiver" in the line is outside the check (waiver on record).
+    Checks for the PRESENCE of evidence (the gate's machine backing); quality is reviewer/spot-check.
+    Returns (ok, missing, total) | ("format", None, None) — the section exists but not a single
+    item parses (format drift) | None — no section / still placeholders."""
     p = os.path.join(root, "docs", "PROJECT-STATE.md")
     if not os.path.exists(p):
         return None
@@ -259,7 +259,7 @@ def check_qg_evidence(root):
     if nxt:
         sect = sect[:nxt.start()]
     if "{{" in sect:
-        return None  # секция ещё стаб — срез не заморожен
+        return None  # the section is still a stub — the slice isn't frozen
     want, items = [], 0
     for line in sect.splitlines():
         if re.match(r"^\s*[-*]\s", line):
@@ -268,7 +268,7 @@ def check_qg_evidence(root):
         if im and "waiver" not in line.lower():
             want.append(im.group(1))
     if not want:
-        return ("format", None, None) if items > 1 else None  # 1 пункт = строка shipping-root
+        return ("format", None, None) if items > 1 else None  # 1 item = the shipping-root line
     found = set()
     for dp, _, fns in os.walk(root):
         if any(os.sep + d in dp + os.sep for d in SKIP_DIRS):
@@ -276,7 +276,7 @@ def check_qg_evidence(root):
         for fn in fns:
             fp = os.path.join(dp, fn)
             if os.path.abspath(fp) == os.path.abspath(p):
-                continue  # PROJECT-STATE хранит ссылку, не evidence
+                continue  # PROJECT-STATE holds a reference, not evidence
             try:
                 if os.path.getsize(fp) > 2_000_000:
                     continue
@@ -290,8 +290,8 @@ def check_qg_evidence(root):
 
 
 def check_state_size(root, limit=200):
-    """PROJECT-STATE — горячий снимок, не журнал. Мягко предупреждаем (🟡, не 🔴),
-    если разросся > limit строк: обычно значит, что в него дописывали вместо прунинга."""
+    """PROJECT-STATE is a live snapshot, not a journal. We warn softly (🟡, not 🔴)
+    if it's grown past limit lines: usually means it got appended to instead of pruned."""
     p = os.path.join(root, "docs", "PROJECT-STATE.md")
     if not os.path.exists(p):
         return None
@@ -299,11 +299,11 @@ def check_state_size(root, limit=200):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Гейт готовности регламента (read-only).")
-    ap.add_argument("--dir", default=".", help="корень проекта (по умолчанию текущий)")
+    ap = argparse.ArgumentParser(description="Regimen readiness gate (read-only).")
+    ap.add_argument("--dir", default=".", help="project root (default: current)")
     ap.add_argument("--qg", action="store_true",
-                    help="строгий QG-NN-05: отсутствие @qg-evidence по frozen scope = 🔴 "
-                         "(done-гейт среза; для CI/pre-commit/exit)")
+                    help="strict QG-NN-05: missing @qg-evidence for the frozen scope = 🔴 "
+                         "(a slice's done-gate; for CI/pre-commit/exit)")
     args = ap.parse_args()
     root = os.path.abspath(args.dir)
 
@@ -311,34 +311,34 @@ def main():
 
     ph = check_placeholders(root)
     if ph:
-        red.append("Незаполненные {{...}} плейсхолдеры:\n" +
+        red.append("Unfilled {{...}} placeholders:\n" +
                    "\n".join(f"       {n:3}  {rel}" for rel, n in ph) +
-                   "\n       (перечислить: grep -rn '{{' . --include='*.md')")
+                   "\n       (list them: grep -rn '{{' . --include='*.md')")
     else:
-        green.append("плейсхолдеры {{...}} заполнены")
+        green.append("{{...}} placeholders are filled in")
 
     dead = check_dead_links(root)
     if dead:
-        red.append("Висячие локальные ссылки:\n" + "\n".join(f"       {d}" for d in dead))
+        red.append("Dangling local links:\n" + "\n".join(f"       {d}" for d in dead))
     else:
-        green.append("висячих ссылок нет")
+        green.append("no dangling links")
 
     refs = check_harness_canon_refs(root)
     if refs:
-        red.append("Пути-каноны в обвязке НЕ резолвятся (раскладка проекта ≠ пакетной? "
-                   "перепиши пути в обвязке — roles/upgrader.md шаг 4):\n" +
+        red.append("Canon paths in the wiring do NOT resolve (project layout ≠ the package's? "
+                   "rewrite the paths in the wiring — roles/upgrader.md step 4):\n" +
                    "\n".join(f"       {r}" for r in refs))
     else:
-        green.append("пути-каноны обвязки резолвятся")
+        green.append("wiring canon paths resolve")
 
     for label, res, ok_msg in [
-        ("Карта ролей (sync-roles --check)", check_roles_sync(root), "роли в синхроне"),
-        (".claude/settings.json", check_settings_json(root), "settings.json валиден"),
-        (".claude/hooks executable", check_hooks_executable(root), "хуки executable"),
-        ("build/test-команды во входном файле", check_build_test_cmds(root), "build/test-команды заданы"),
+        ("Role map (sync-roles --check)", check_roles_sync(root), "roles in sync"),
+        (".claude/settings.json", check_settings_json(root), "settings.json valid"),
+        (".claude/hooks executable", check_hooks_executable(root), "hooks executable"),
+        ("build/test commands in the entry file", check_build_test_cmds(root), "build/test commands set"),
     ]:
         if res is None:
-            continue  # не применимо к этому проекту
+            continue  # not applicable to this project
         ok, detail = res
         if ok:
             green.append(ok_msg)
@@ -348,10 +348,10 @@ def main():
             elif isinstance(detail, str) is False:
                 detail = str(detail)
             if label.startswith(".claude/hooks"):
-                detail = f"не executable: {detail} (chmod +x .claude/hooks/*.sh)"
+                detail = f"not executable: {detail} (chmod +x .claude/hooks/*.sh)"
             red.append(f"{label}: {detail}")
 
-    # --- P5: состояние обвязки рантайма (не наличие) ---
+    # --- P5: STATE of the runtime wiring (not presence) ---
     bucket = {"green": green, "warn": warn, "red": red}
     cs = check_claude_hooks_state(root)
     if cs is not None:
@@ -368,31 +368,31 @@ def main():
     if qg is not None:
         ok, missing, total = qg
         if ok == "format":
-            warn.append("QG-NN-05: секция «Frozen scope» в PROJECT-STATE есть, но ни один пункт "
-                        "не парсится — формат: «- `SCOPE-ID` — критерий» "
-                        "(core/quality-gates.md §Достижимость)")
+            warn.append("QG-NN-05: PROJECT-STATE's \"Frozen scope\" section exists, but not a "
+                        "single item parses — format: \"- `SCOPE-ID` — criterion\" "
+                        "(core/quality-gates.md §Reachability)")
         elif ok:
-            green.append(f"QG-NN-05: @qg-evidence на месте ({total} scope-id ↔ аннотации)")
+            green.append(f"QG-NN-05: @qg-evidence is in place ({total} scope-id ↔ annotations)")
         else:
-            msg = (f"QG-NN-05: критерии frozen scope БЕЗ @qg-evidence: {', '.join(missing)} "
-                   f"({len(missing)}/{total}) — срез не done, пока evidence не checked-in "
-                   f"(core/quality-gates.md §Достижимость, ADR-015)")
+            msg = (f"QG-NN-05: frozen-scope criteria WITHOUT @qg-evidence: {', '.join(missing)} "
+                   f"({len(missing)}/{total}) — the slice isn't done until evidence is checked in "
+                   f"(core/quality-gates.md §Reachability, ADR-015)")
             (red if args.qg else warn).append(msg)
 
     ss = check_state_size(root)
     if ss is not None:
         n, limit = ss
         if n <= limit:
-            green.append(f"PROJECT-STATE компактен ({n} строк)")
+            green.append(f"PROJECT-STATE is compact ({n} lines)")
         else:
-            warn.append(f"PROJECT-STATE.md разросся ({n} строк > {limit}) — это снимок, не журнал: "
-                        f"прунь решённое/устаревшее (история в git, прунинг обратим). "
-                        f"См. roles/architect.md → «Обновление PROJECT-STATE».")
+            warn.append(f"PROJECT-STATE.md has grown ({n} lines > {limit}) — this is a snapshot, not a "
+                        f"journal: prune what's resolved/stale (history is in git, pruning is reversible). "
+                        f"See roles/architect.md → \"Updating PROJECT-STATE\".")
 
     harnesses = detect_harness(root)
-    hlabel = ", ".join(harnesses) if harnesses else "прозовый режим (обвязки нет)"
+    hlabel = ", ".join(harnesses) if harnesses else "prose mode (no wiring)"
     print(f"\nregimen-doctor — {root}")
-    print(f"  обвязка рантайма: {hlabel}\n")
+    print(f"  runtime wiring: {hlabel}\n")
     for g in green:
         print(f"  🟢 {g}")
     for w in warn:
@@ -401,12 +401,12 @@ def main():
         print(f"  🔴 {r}")
 
     if red:
-        print(f"\n  {len(red)} 🔴 — почини до первой реальной задачи.\n")
+        print(f"\n  {len(red)} 🔴 — fix before the first real task.\n")
         return 1
     if warn:
-        print(f"\n  Регламент зелёный ({len(warn)} 🟡 — мягкое, не блокирует). Можно брать первую задачу.\n")
+        print(f"\n  Regimen is green ({len(warn)} 🟡 — soft, non-blocking). You can take the first task.\n")
         return 0
-    print("\n  Регламент зелёный. Можно брать первую задачу.\n")
+    print("\n  Regimen is green. You can take the first task.\n")
     return 0
 
 

@@ -1,14 +1,14 @@
-# Three-tier with Bridge — архитектурный паттерн
+# Three-tier with Bridge — architectural pattern
 
-Специальный случай layered architecture для desktop/mobile приложений с native code + declarative UI. Middle layer (bridge) адаптирует нативный мир к декларативному.
+A special case of layered architecture for desktop/mobile applications with native code + declarative UI. The middle layer (bridge) adapts the native world to the declarative one.
 
-**Когда применять**: Qt + QML, WPF + XAML с MVVM, Flutter с platform channels, Tauri (Rust + JS frontend), React Native bridge, Jetpack Compose с native state.
+**When to apply**: Qt + QML, WPF + XAML with MVVM, Flutter with platform channels, Tauri (Rust + JS frontend), React Native bridge, Jetpack Compose with native state.
 
-**Когда НЕ применять**: fullstack web apps (там backend/API/frontend — другая структура), pure backend services, CLI tools.
+**When NOT to apply**: fullstack web apps (there backend/API/frontend have a different structure), pure backend services, CLI tools.
 
-## Структура
+## Structure
 
-Три слоя с конкретными responsibilities:
+Three layers with specific responsibilities:
 
 ~~~
 ┌─────────────────────────────────────┐
@@ -34,39 +34,39 @@
 └─────────────────────────────────────┘
 ~~~
 
-Зависимости строго однонаправленные:
+Dependencies are strictly one-directional:
 
 - UI → Bridge → Core
-- Core никогда не знает про Bridge или UI
-- Bridge никогда не знает про UI
+- Core never knows about Bridge or UI
+- Bridge never knows about UI
 
-## Почему три слоя (не два)
+## Why three layers (not two)
 
-Прямой call из UI в Core technically возможен, но проблемный:
+A direct call from UI to Core is technically possible, but problematic:
 
-### Типы данных не совпадают
+### Data types don't match
 
-Core оперирует native types (std::string, std::vector, custom classes). UI работает с типами которые понимает его framework (QVariant для Qt, observable collections для XAML).
+Core operates on native types (std::string, std::vector, custom classes). UI works with types its framework understands (QVariant for Qt, observable collections for XAML).
 
-Bridge конвертирует между ними.
+Bridge converts between them.
 
-### Threading model отличается
+### Threading model differs
 
-Core часто работает в worker threads (network IO, heavy computation). UI строго single-threaded (main/UI thread).
+Core often runs in worker threads (network IO, heavy computation). UI is strictly single-threaded (main/UI thread).
 
-Bridge обеспечивает thread-safe коммуникацию — events/signals пересекают границу правильно.
+Bridge ensures thread-safe communication — events/signals cross the boundary correctly.
 
 ### Object lifecycle
 
-UI framework управляет lifecycle своих objects (QML auto-deletes children, React components mount/unmount). Core управляет своим lifecycle.
+The UI framework manages the lifecycle of its objects (QML auto-deletes children, React components mount/unmount). Core manages its own lifecycle.
 
-Bridge — стабильная точка которая переживает UI reconstruction.
+Bridge is a stable point that survives UI reconstruction.
 
 ### Testability
 
-Core тестируется без UI framework. UI можно тестировать с mock Bridge.
+Core is tested without the UI framework. UI can be tested with a mock Bridge.
 
-Без bridge — Core tightly coupled к UI framework, тестирование сложнее.
+Without a bridge — Core is tightly coupled to the UI framework, testing is harder.
 
 ## Core layer
 
@@ -78,54 +78,54 @@ Core тестируется без UI framework. UI можно тестиров�
 - External integrations (API, protocols)
 - No UI dependencies
 
-### Зависимости Core
+### Core dependencies
 
-В зависимости от framework — допустимы некоторые base libraries из UI framework:
+Depending on the framework — some base libraries from the UI framework are acceptable:
 
-**Qt пример**:
+**Qt example**:
 
-- ✅ QtCore (QString, QByteArray, QThread, QJsonDocument) — базовые типы
-- ✅ QtNetwork — для network operations
+- ✅ QtCore (QString, QByteArray, QThread, QJsonDocument) — base types
+- ✅ QtNetwork — for network operations
 - ❌ QtQuick, QtWidgets — UI-specific
 - ❌ Qt Quick Controls — widgets
 
-**WPF пример**:
+**WPF example**:
 
 - ✅ .NET Standard libraries — base types
 - ❌ PresentationCore, PresentationFramework — UI-specific
 
-**Flutter пример**:
+**Flutter example**:
 
 - ✅ dart:core, dart:io — base libraries
 - ❌ package:flutter/material.dart, package:flutter/widgets.dart — UI-specific
 
-### Правила Core
+### Core rules
 
-- Все сетевые операции — асинхронные (threads, isolates, tasks)
-- Return types typed errors (std::expected, Result<T>, Either<L, R>)
-- Не блокировать main thread
+- All network operations are asynchronous (threads, isolates, tasks)
+- Return types are typed errors (std::expected, Result<T>, Either<L, R>)
+- Don't block the main thread
 - No global state (dependencies injected)
-- Testable в isolation (без bridge, без UI)
+- Testable in isolation (without bridge, without UI)
 
 ## Bridge layer
 
 ### Responsibilities
 
-- Proxy данных Core → UI в UI-понятном формате
+- Proxy data Core → UI in a UI-understandable format
 - Pass user actions UI → Core
 - Thread marshalling (worker thread ↔ UI thread)
 - Object lifecycle management
 
-### Реализация по frameworks
+### Implementation by framework
 
 **Qt + QML**:
 
-Bridge — классы наследующие QObject с:
+Bridge — classes inheriting QObject with:
 
-- `Q_PROPERTY` для bindings
-- `Q_INVOKABLE` для методов вызываемых из QML
-- Signals для notification UI об изменениях
-- `QAbstractListModel` subclasses для list views
+- `Q_PROPERTY` for bindings
+- `Q_INVOKABLE` for methods callable from QML
+- Signals for notifying UI of changes
+- `QAbstractListModel` subclasses for list views
 
 ~~~cpp
 class UserListModel : public QAbstractListModel {
@@ -150,47 +150,47 @@ private:
 Bridge — ViewModel classes:
 
 - `INotifyPropertyChanged` interface
-- `ICommand` для user actions
-- `ObservableCollection<T>` для lists
+- `ICommand` for user actions
+- `ObservableCollection<T>` for lists
 
 **Flutter + platform code**:
 
 Bridge — platform channels + state management (Provider, Riverpod, Bloc):
 
-- Method channels для async calls
-- Event channels для streaming updates
-- State management объекты как bridge
+- Method channels for async calls
+- Event channels for streaming updates
+- State management objects as bridge
 
 **Tauri**:
 
 Bridge — Rust commands + invoke handler:
 
-- `#[tauri::command]` функции
-- Event emitters для async updates
-- State management через `tauri::State`
+- `#[tauri::command]` functions
+- Event emitters for async updates
+- State management through `tauri::State`
 
-### Правила Bridge
+### Bridge rules
 
-- **Тонкий слой** — только proxying данных, никакой business логики
-- Не дублировать state — bridge держит view-specific state, Core держит source of truth
-- Signals/events передаются по значению, не по reference — thread safety
-- Lifecycle — bridge переживает Core operations (weak refs back to Core for async callbacks)
+- **Thin layer** — only proxying data, no business logic
+- Don't duplicate state — bridge holds view-specific state, Core holds the source of truth
+- Signals/events passed by value, not by reference — thread safety
+- Lifecycle — bridge outlives Core operations (weak refs back to Core for async callbacks)
 
-### Anti-patterns Bridge
+### Bridge anti-patterns
 
-**Business logic в Bridge**:
+**Business logic in Bridge**:
 
 ~~~cpp
-// BAD — validation в bridge model
+// BAD — validation in bridge model
 class UserFormModel {
     Q_INVOKABLE bool submit() {
-        if (email.empty()) return false;  // ← business rule в bridge
+        if (email.empty()) return false;  // ← business rule in bridge
         if (!email.contains('@')) return false;
         return service->createUser(email, name);
     }
 };
 
-// GOOD — validation в core, bridge просто proxies
+// GOOD — validation in core, bridge just proxies
 class UserFormModel {
     Q_INVOKABLE void submit() {
         auto result = service->createUser(email, name);  // core validates
@@ -199,10 +199,10 @@ class UserFormModel {
 };
 ~~~
 
-**Прямое SQL в Bridge**:
+**Direct SQL in Bridge**:
 
 ~~~cpp
-// BAD — bridge обращается к БД
+// BAD — bridge talks to the DB
 class MessageListModel {
     void refresh() {
         auto messages = db.query("SELECT * FROM messages");  // ← bypassing core
@@ -210,7 +210,7 @@ class MessageListModel {
     }
 };
 
-// GOOD — bridge использует core service
+// GOOD — bridge uses a core service
 class MessageListModel {
     void refresh() {
         service->fetchMessages([this](auto messages) {  // core handles
@@ -230,17 +230,17 @@ class MessageListModel {
 - Accessibility
 - Localization rendering
 
-### Правила UI
+### UI rules
 
-- **No business logic** — UI описывает что показать, не что делать
+- **No business logic** — UI describes what to show, not what to do
 - **All strings through i18n** — `qsTr()`, localized strings
 - **All colors/spacing through theme** — no hardcoded values
-- **No raw data access** — UI binds to bridge models, не к Core
-- **Lazy loading** для длинных списков
+- **No raw data access** — UI binds to bridge models, not to Core
+- **Lazy loading** for long lists
 
-### Binding к Bridge
+### Binding to Bridge
 
-UI "биндится" к properties bridge объектов. Изменение bridge property → UI обновляется автоматически.
+UI "binds" to properties of bridge objects. Changing a bridge property → UI updates automatically.
 
 **Qt/QML**:
 
@@ -289,13 +289,13 @@ Consumer<UserListProvider>(
 
 ## Threading
 
-### Проблема
+### The problem
 
-Core выполняет тяжёлые operations в worker threads. UI обновляется только в main/UI thread. Bridge должен пересекать границу.
+Core performs heavy operations in worker threads. UI updates only on the main/UI thread. Bridge must cross the boundary.
 
-### Решение
+### The solution
 
-**Qt подход** — Queued connections:
+**Qt approach** — Queued connections:
 
 ~~~cpp
 connect(worker, &Worker::finished,
@@ -303,9 +303,9 @@ connect(worker, &Worker::finished,
         Qt::QueuedConnection);
 ~~~
 
-Queued connection — signal из worker thread поставлен в event queue main thread, обработан там.
+Queued connection — the signal from the worker thread is placed on the main thread's event queue, handled there.
 
-**Dispatcher подход (WPF, Flutter)**:
+**Dispatcher approach (WPF, Flutter)**:
 
 ~~~cpp
 // Worker thread
@@ -316,28 +316,28 @@ Application::Current->Dispatcher->Invoke([=]() {
 });
 ~~~
 
-**Async/await подход**:
+**Async/await approach**:
 
 ~~~cs
 // ViewModel method
 async Task LoadUsersAsync() {
     var users = await Task.Run(() => service.FetchUsers());  // worker
-    // After await — обратно на UI thread automatically
+    // After await — automatically back on the UI thread
     Users = new ObservableCollection<User>(users);
 }
 ~~~
 
-### Правила
+### Rules
 
-- Heavy computation — в worker thread
-- UI updates — always main thread
-- Data passing между threads — immutable value types или thread-safe containers
+- Heavy computation — in a worker thread
+- UI updates — always the main thread
+- Data passing between threads — immutable value types or thread-safe containers
 
 ## Testing
 
 ### Core — unit tests
 
-Pure unit tests без UI framework. Mock для external dependencies.
+Pure unit tests without the UI framework. Mocks for external dependencies.
 
 ~~~cpp
 TEST(UserServiceTest, CreatesUser) {
@@ -352,57 +352,57 @@ TEST(UserServiceTest, CreatesUser) {
 
 ### Bridge — integration tests
 
-Tests что bridge правильно проксирует данные. Mock Core, проверка что signals emitted, properties updated.
+Tests that the bridge correctly proxies data. Mock Core, verify signals emitted, properties updated.
 
 ### UI — QML tests / widget tests / ui tests
 
-Tests declarative UI:
+Tests for declarative UI:
 
-- Компонент показывает правильное содержимое из bindings
+- The component shows the right content from bindings
 - User actions trigger expected bridge methods
-- Visual states правильно отражают model states
+- Visual states correctly reflect model states
 
-### E2E — полный стек
+### E2E — full stack
 
-Real Core, real bridge, real UI, automated tool driving. См. [autonomous-testing.md](autonomous-testing.md).
+Real Core, real bridge, real UI, automated tool driving. See [autonomous-testing.md](autonomous-testing.md).
 
 ## Common issues
 
 ### Signal spam
 
-Bridge emits слишком много signals → UI constantly re-renders.
+Bridge emits too many signals → UI constantly re-renders.
 
-Решение: batch updates, throttle signals, emit только при реальном изменении.
+Solution: batch updates, throttle signals, emit only on actual change.
 
-### Memory leaks через reference cycles
+### Memory leaks through reference cycles
 
-Bridge держит reference to Core, Core держит reference to Bridge callback — cycle.
+Bridge holds a reference to Core, Core holds a reference to a Bridge callback — a cycle.
 
-Решение: weak references для back-pointers, explicit lifecycle management.
+Solution: weak references for back-pointers, explicit lifecycle management.
 
 ### Threading violations
 
-UI update из worker thread → crash или undefined behavior.
+UI update from a worker thread → crash or undefined behavior.
 
-Решение: strict threading model с compile-time или runtime checks. Testing under thread sanitizers.
+Solution: a strict threading model with compile-time or runtime checks. Testing under thread sanitizers.
 
-### Business logic leaking в UI
+### Business logic leaking into UI
 
-Если bridge — anemic proxy, разработчик склонен писать logic в UI:
+If bridge is an anemic proxy, developers tend to write logic in UI:
 
 ~~~qml
 Button {
-    enabled: userModel.balance > 0 && userModel.isActive  // ← бизнес-правило в UI
+    enabled: userModel.balance > 0 && userModel.isActive  // ← business rule in UI
 }
 ~~~
 
-Решение: expose computed properties из bridge:
+Solution: expose computed properties from the bridge:
 
 ~~~cpp
 Q_PROPERTY(bool canPlaceOrder READ canPlaceOrder NOTIFY canPlaceOrderChanged)
 
 bool canPlaceOrder() const {
-    return m_user.balance > 0 && m_user.isActive;  // в core или bridge
+    return m_user.balance > 0 && m_user.isActive;  // in core or bridge
 }
 ~~~
 
@@ -412,28 +412,28 @@ Button {
 }
 ~~~
 
-### Partial class split для больших bridges
+### Partial class split for large bridges
 
-Bridge-класс разрастается (> 250 LOC header, > 700 LOC impl). Signs of God Object.
+The bridge class grows (> 250 LOC header, > 700 LOC impl). Signs of a God Object.
 
-Решение: split impl на несколько .cpp files по functional groups:
+Solution: split the impl across several .cpp files by functional groups:
 
 ~~~
-AppController.h  (один header)
-AppController.cpp               (базовые методы)
+AppController.h  (one header)
+AppController.cpp               (base methods)
 AppController_Startup.cpp       (startup logic)
 AppController_Navigation.cpp    (navigation methods)
 AppController_Sync.cpp          (sync operations)
 ~~~
 
-Каждый .cpp — отдельная responsibility. Header один. Класс логически cohesive но физически split для maintainability.
+Each .cpp is a separate responsibility. One header. The class is logically cohesive but physically split for maintainability.
 
-## Эволюция паттерна
+## Evolution of the pattern
 
-В сложных приложениях three-tier может эволюционировать:
+In complex applications, three-tier can evolve:
 
-- Добавление слоя abstractions (interfaces между Core и Bridge) для полной testability
-- Выделение shared infrastructure в отдельный модуль
-- Разделение Core на sub-layers (domain, application, infrastructure) — см. [layered-architecture.md](layered-architecture.md)
+- Adding a layer of abstractions (interfaces between Core and Bridge) for full testability
+- Extracting shared infrastructure into a separate module
+- Splitting Core into sub-layers (domain, application, infrastructure) — see [layered-architecture.md](layered-architecture.md)
 
-Базовый three-tier достаточен для большинства desktop/mobile приложений. Complex evolution — когда приложение переросло базовую структуру.
+The base three-tier is sufficient for most desktop/mobile applications. Complex evolution — when the application has outgrown the base structure.

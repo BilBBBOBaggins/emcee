@@ -1,151 +1,177 @@
-# Протокол получения и выполнения задач
+# Task intake and execution protocol
 
-Как агент принимает задачи, входит в контекст, отдаёт результат.
+How the agent receives tasks, enters context, delivers the result.
 
-## Система коротких команд
+## System of short commands
 
-Пользователь задаёт задачу через короткие цифровые команды. Расшифровка во **входном файле регламента** (на Claude Code — `CLAUDE.md`, на Codex — `AGENTS.md`; авточитается рантаймом в начале сессии) главного проекта.
+The user gives a task via short numeric commands. Decoded in the **regimen entry file** (on Claude Code —
+`CLAUDE.md`, on Codex — `AGENTS.md`; auto-read by the runtime at session start) of the main project.
 
-Общие паттерны:
+Common patterns:
 
-- **`/kickoff`** = старт проекта (дней/роадмапа ещё нет): архитектор в kickoff-режиме
-  ([roles/architect.md](../roles/architect.md) → «Kickoff», полный нарратив — [pipeline.md](pipeline.md)).
-- **Одно число `N`** = архитектор (lead) входит в день N. Читает весь проект, выводит статус, ждёт запросов.
-- **Два числа `R D`** = роль R входит в контекст дня D без привязки к задаче. Планирование, review, обсуждение.
-- **Три числа `R D T`** = роль R берёт задачу T из гайда дня D. Основной рабочий режим.
+- **`/kickoff`** = project start (no days/roadmap yet): architect in kickoff mode
+  ([roles/architect.md](../roles/architect.md) → "Kickoff", full narrative — [pipeline.md](pipeline.md)).
+- **Single number `N`** = architect (lead) enters day N. Reads the whole project, gives status, waits for requests.
+- **Two numbers `R D`** = role R enters day D's context without being tied to a task. Planning, review, discussion.
+- **Three numbers `R D T`** = role R takes task T from day D's guide. Main working mode.
 
-**Двусмысленность `0`:** одно число `0` = архитектор@день0 (lead); три числа `0 D T` = роль с цифрой 0
-(по `roles.json`). Различает количество чисел: одно → архитектор-lead; три → роль. Старт «с нуля» — это
-`/kickoff`, не `0`.
+**Ambiguity of `0`:** single number `0` = architect@day0 (lead); three numbers `0 D T` = role with digit 0
+(per `roles.json`). Distinguished by the count of numbers: one → architect-lead; three → role. Starting
+"from scratch" is `/kickoff`, not `0`.
 
-Если сообщение не похоже на команду — это прямой промпт, выполнять как написано.
+If the message doesn't look like a command — it's a direct prompt, execute it as written.
 
-## Канонические имена артефактов
+## Canonical artifact names
 
-Весь пайплайн ролей читает и пишет файлы по фиксированным именам. Имена определены **здесь** — роли ссылаются на эту секцию, а не вводят свои пути. `<D>` — номер дня, `<T>` — номер задачи, `<DT>` = `<D>-<T>` (например `41-1`), `<slug>` — короткий ярлык.
+The whole role pipeline reads and writes files under fixed names. Names are defined **here** — roles
+reference this section rather than introducing their own paths. `<D>` — day number, `<T>` — task number,
+`<DT>` = `<D>-<T>` (e.g. `41-1`), `<slug>` — short label.
 
-| Артефакт | Имя / путь | Автор → потребитель |
+| Artifact | Name / path | Author → consumer |
 |----------|-----------|---------------------|
-| Гайд дня | `docs/day-<D>-guide.md` | **architect** (разбивает следующий срез из PROJECT-STATE / specs) → developer, reviewer, qa-e2e |
-| Статус проекта | `docs/PROJECT-STATE.md` | architect → все |
-| Discovery-заметки | `docs/discovery/<YYYY-MM-DD>-<topic>.md` | SA → команда |
-| Спецификация фичи | `docs/specs/<feature>.md` | SA/architect → developer, qa |
-| ADR | `docs/adr/<NNN>-<slug>.md` | architect → все |
-| Пользовательские сценарии | `docs/scenarios-<DT>-<slug>.md` | BA/SA → qa-uat |
-| Тест-кейсы | `docs/test-cases-<DT>-<slug>.md` | qa-uat → qa-e2e |
+| Day guide | `docs/day-<D>-guide.md` | **architect** (breaks down the next slice from PROJECT-STATE / specs) → developer, reviewer, qa-e2e |
+| Project status | `docs/PROJECT-STATE.md` | architect → everyone |
+| Discovery notes | `docs/discovery/<YYYY-MM-DD>-<topic>.md` | SA → team |
+| Feature spec | `docs/specs/<feature>.md` | SA/architect → developer, qa |
+| ADR | `docs/adr/<NNN>-<slug>.md` | architect → everyone |
+| User scenarios | `docs/scenarios-<DT>-<slug>.md` | BA/SA → qa-uat |
+| Test cases | `docs/test-cases-<DT>-<slug>.md` | qa-uat → qa-e2e |
 
-Рабочие примеры каждого артефакта — в `examples/docs/` репозитория emcee (в сам проект не копируются). Если переименовываешь конвенцию под проект — меняешь её в этой таблице, роли подхватят.
+Worked examples of each artifact — in `examples/docs/` of the emcee repo (not copied into the project
+itself). If you rename the convention for the project — change it in this table, roles will pick it up.
 
-Карта цифр ролей (какая цифра = какая роль) — единственный источник в **`roles.json`**. Таблицы во всех runtime-таргетах генерируются из него (на Claude Code — `CLAUDE.md` «Маппинг ролей» + `.claude/commands/role.md`; на Codex — `AGENTS.md`): правишь `roles.json` → `python3 sync-roles.py` (а `--check` ловит дрейф по всем таргетам). Файлы ролей дублируют свою цифру в секции «Формат вызова» только как пример.
+The role digit map (which digit = which role) — the single source is **`roles.json`**. Tables in every
+runtime target are generated from it (on Claude Code — `CLAUDE.md` "Role map" + `.claude/commands/role.md`;
+on Codex — `AGENTS.md`): edit `roles.json` → `python3 sync-roles.py` (and `--check` catches drift across all
+targets). Role files repeat their digit in the "Invocation format" section only as an example.
 
-## Вход в сессию
+## Entering a session
 
-Порядок чтения при получении задачи `R D T`:
+Reading order when receiving task `R D T`:
 
-1. Файл роли: `roles/{{role-file}}.md` — кто ты и как работаешь
-2. Главный входной файл регламента — архитектура проекта, стек, команды
-3. Гайд дня: `docs/day-<D>-guide.md` (имена артефактов — секция «Канонические имена артефактов» выше; формат — `examples/docs/day-1-guide.example.md` в emcee) — найти "Задача T"
-4. Файлы кода явно указанные в задаче — только они
-5. Применимые модули из `stack/`, `architecture/`, `domain/` — по ссылкам из входного файла регламента, только если задача требует
+1. Role file: `roles/{{role-file}}.md` — who you are and how you work
+2. Main regimen entry file — project architecture, stack, commands
+3. Day guide: `docs/day-<D>-guide.md` (artifact names — "Canonical artifact names" section above; format —
+   `examples/docs/day-1-guide.example.md` in emcee) — find "Task T"
+4. Code files explicitly named in the task — those only
+5. Applicable modules from `stack/`, `architecture/`, `domain/` — via links from the regimen entry file,
+   only if the task requires it
 
-Не читать всё подряд "для понимания". Не читать результаты других задач. Не читать черновики и архивы.
+Don't read everything "to understand". Don't read other tasks' results. Don't read drafts and archives.
 
-**Constitution preflight (до имплементации).** Прочитав задачу, выпиши короткий блок: какие
-non-negotiable из [constitution.md](constitution.md) применимы к этой задаче и есть ли планируемые
-отступления. Планируется отступление от non-negotiable → СТОП, согласовать с пользователем **до**
-кода (см. «Протокол при неоднозначности» ниже). Молча отступать нельзя. **Объём блока — по
-depth-тиру задачи** ([constitution.md](constitution.md) §Depth-тиры — канон: Inline-тир preflight
-не требует вовсе; здесь описана полная форма для задачи-фичи).
+**Constitution preflight (before implementation).** After reading the task, write a short block: which
+non-negotiables from [constitution.md](constitution.md) apply to this task and whether any deviations are
+planned. A deviation from a non-negotiable is planned → STOP, align with the user **before**
+coding (see "Protocol for ambiguity" below). Silent deviation is not allowed. **The block's size scales
+by the task's depth tier** ([constitution.md](constitution.md) §Depth tiers — canon: the Inline tier
+requires no preflight at all; the full form here is for a feature-sized task).
 
-## Выход из задачи
+## Exiting a task
 
-Полнота выхода — тоже по depth-тиру ([constitution.md](constitution.md) §Depth-тиры: Inline-тир —
-micro-exit одной строкой). Полная форма для задачи-фичи — в таком порядке:
+Exit completeness also scales by depth tier ([constitution.md](constitution.md) §Depth tiers: Inline tier —
+a one-line micro-exit). The full form for a feature-sized task, in this order:
 
-1. Финальный прогон тестов согласно [quality-gates.md](quality-gates.md) с сохранением логов в файл
-2. Проверка что статический контроль clean — компиляция / typecheck / линтер без warnings (что применимо к стеку, см. `stack/`)
-3. **Constitution exit** — блок сверки с [constitution.md](constitution.md): статус mechanical-гейтов (тесты/clean build/LOC/TODO) + accountability (scope, слои, закомментированный код, секреты) + отступления. Отступление, найденное только сейчас = задача **НЕ done**, пока не исправлено или пользователь явно не принял риск.
-4. Структурированный отчёт — что сделано, что проверено, что не сделано и почему
-5. Если роль даёт команду коммита — вывести готовую команду для копирования пользователем
-6. Не коммитить самостоятельно
+1. Final test run per [quality-gates.md](quality-gates.md), saving logs to a file
+2. Check that static checks are clean — compilation / typecheck / linter with no warnings (whatever applies to the stack, see `stack/`)
+3. **Constitution exit** — a check block against [constitution.md](constitution.md): status of mechanical
+   gates (tests/clean build/LOC/TODO) + accountability (scope, layers, commented-out code, secrets) +
+   deviations. A deviation found only now = the task is **NOT done** until it's fixed or the user explicitly
+   accepts the risk.
+4. Structured report — what was done, what was checked, what wasn't done and why
+5. If the role issues a commit command, print the ready-to-copy command for the user
+6. Don't commit yourself
 
-## Формат отчёта
+## Report format
 
-Конкретный формат варьируется по ролям (детали в `roles/*.md`), но минимум включает:
+The exact format varies by role (details in `roles/*.md`), but at minimum includes:
 
-- Что сделано: **список фактически изменённых файлов (полные пути)** + краткое описание
-- Что проверено: какие тесты прошли, какие логи проверены
-- Что не сделано: если есть отложенные части — явно перечислить с причиной
-- Вердикт: задача выполнена / требует доработки / заблокирована
+- What was done: **a list of actually changed files (full paths)** + a brief description
+- What was checked: which tests passed, which logs were reviewed
+- What wasn't done: if parts were deferred — list them explicitly with the reason
+- Verdict: task done / needs rework / blocked
 
-Отчёт короткий. Длинные объяснения не нужны — пользователь может прочитать код.
+The report is short. Long explanations aren't needed — the user can read the code.
 
-**Exit-отчёт как handoff-вход.** При цепочечном вызове ролей (developer → reviewer, любая роль → architect-статус) exit-отчёт предыдущей роли — **обязательный вход следующей**, в первую очередь список изменённых файлов: hardware-scoped роли (reviewer read-only, architect docs-only) **не добывают diff/метрики сами**. На рантайме с авто-диспетчером отчёт прокидывается субагенту; на solo-режиме его **передаёт пользователь/оркестратор** как контекст следующего вызова (не магия dispatch). Роль, не получившая нужный вход, **явно помечает пробел** («[список изменённых файлов не передан]», «[метрики не получены]»), а не имитирует полноту.
+**Exit report as handoff input.** In a chained role invocation (developer → reviewer, any role →
+architect-status), the previous role's exit report is a **required input** for the next one, primarily the
+list of changed files: hardware-scoped roles (reviewer read-only, architect docs-only) **don't gather the
+diff/metrics themselves**. On a runtime with an auto-dispatcher the report is passed to the subagent; in
+solo mode it's **passed by the user/orchestrator** as context for the next call (not dispatch magic). A
+role that didn't receive the needed input **explicitly flags the gap** ("[list of changed files not
+passed]", "[metrics not received]") rather than faking completeness.
 
-**Авторитетный change-set (где у диспетчера есть Bash).** Диспетчер (`/role` исполняется в main-сессии с Bash) перед запуском reviewer считает реальный `git diff --name-only` и подаёт его как **авторитетный** список — он приоритетнее самодекларации developer'а (та может опустить файл) и обзора дерева через `Glob` (тот видит существование, не факт изменения). Это закрывает change-attribution-пробел read-only-reviewer'а **без выдачи ему Bash**. Без Bash-диспетчера (прозовый режим) — floor: самодекларация + `Glob`-обзор + дисклеймер.
+**Authoritative change set (where the dispatcher has Bash).** The dispatcher (`/role` running in the main
+session with Bash) computes the real `git diff --name-only` before launching the reviewer and supplies it
+as the **authoritative** list — it takes priority over the developer's self-declaration (which may omit a
+file) and over a tree survey via `Glob` (which sees existence, not the fact of change). This closes the
+read-only reviewer's change-attribution gap **without granting it Bash**. Without a Bash dispatcher (prose
+mode) — the floor: self-declaration + `Glob` survey + disclaimer.
 
-## Команды коммита
+## Commit commands
 
-Агент никогда не коммитит. Но если роль ответственна за финализацию задачи (ревьювер, lead), агент в конце отчёта выводит готовую команду коммита из гайда задачи в виде:
+The agent never commits. But if a role is responsible for finalizing a task (reviewer, lead), the agent
+prints a ready-to-run commit command from the task guide at the end of the report, as:
 
 ~~~
-git add <список файлов>
-git commit -m "<сообщение из гайда>"
+git add <file list>
+git commit -m "<message from the guide>"
 ~~~
 
-Пользователь копирует и выполняет вручную.
+The user copies and runs it manually.
 
-### Формат сообщения коммита
+### Commit message format
 
-Сообщение — `<тип>(<scope>): <что изменилось>`, в повелительном наклонении. Тип: `feat` / `fix` /
-`docs` / `refactor` / `test` / `chore` / `perf`. Пример из гайда дня:
-`feat(invites): POST /api/v1/invites — создать pending-инвайт, поставить письмо в очередь`.
+The message is `<type>(<scope>): <what changed>`, in the imperative mood. Type: `feat` / `fix` /
+`docs` / `refactor` / `test` / `chore` / `perf`. Example from a day guide:
+`feat(invites): POST /api/v1/invites — create a pending invite, queue the email`.
 
-Зачем формально: git — это **searchable холодная память** проекта (история «что и когда»), а не свалка.
-Осмысленные сообщения делают `git log --oneline`, `git log --grep`, `git log <путь>` реально полезными —
-тогда историю НЕ нужно держать «горячей» в PROJECT-STATE. Три слоя памяти проекта: **горячий снимок**
-(`docs/PROJECT-STATE.md`, перезаписывается) + **курируемое «почему»** (`docs/adr/`, ограниченный набор
-несущих решений) + **searchable git** (запрос по нужде, не грузится целиком). Тысяча коммитов контекст не
-переполняет — её никогда не читают целиком, только точечно (`--since` / `--grep` / `<путь>` / `shortlog`).
+Why this is formal: git is the project's **searchable cold memory** (the history of "what and when"), not a
+dumping ground. Meaningful messages make `git log --oneline`, `git log --grep`, `git log <path>` genuinely
+useful — then history does NOT need to be kept "hot" in PROJECT-STATE. Three layers of project memory:
+**hot snapshot** (`docs/PROJECT-STATE.md`, overwritten) + **curated "why"** (`docs/adr/`, a bounded set of
+load-bearing decisions) + **searchable git** (queried as needed, never loaded whole). A thousand commits
+don't overflow context — it's never read in full, only pointwise (`--since` / `--grep` / `<path>` / `shortlog`).
 
-## Протокол при неоднозначности
+## Protocol for ambiguity
 
-Если в процессе работы возникает неоднозначность которую нельзя решить минимальной интерпретацией промпта:
+If ambiguity arises during work that cannot be resolved by a minimal interpretation of the prompt:
 
-1. Остановить работу
-2. Сформулировать вопрос пользователю максимально конкретно
-3. Если возможны несколько разумных ответов — перечислить их
-4. Дождаться ответа прежде чем продолжать
+1. Stop work
+2. Formulate the question to the user as specifically as possible
+3. If several reasonable answers are possible — list them
+4. Wait for the answer before continuing
 
-Не додумывать, не делать "на всякий случай", не выбирать самый вероятный вариант без подтверждения.
+Don't second-guess, don't do things "just in case", don't pick the most likely option without confirmation.
 
-## Опрос пользователя: раскрытие vs схождение — [ADR-013](../docs/adr/013-feature-discovery-trigger.md) D2
+## User Q&A: divergence vs convergence — [ADR-013](../docs/adr/013-feature-discovery-trigger.md) D2
 
-Когда агент опрашивает пользователя (discovery, уточнение, подтверждение дизайна), различай **две фазы**
-— от них зависит **форма** вопроса:
+When the agent questions the user (discovery, clarification, design confirmation), distinguish **two
+phases** — the **form** of the question depends on them:
 
-- **Раскрытие** — выявление ещё неизвестного (что за фича, какие сценарии, какие границы). Множество
-  вариантов **не выявлено**. Форма: **открытый вопрос** (по одному, не вываливать пачкой), Socratic-
-  опрос (структура — в [roles/sa.md](../roles/sa.md) §Discovery process). Пиклист здесь **вреден** — он
-  требует знать варианты заранее, а в раскрытии их ещё нет; закрытое меню загоняет в ложные рамки.
-- **Схождение / approve** — выбор между **уже выявленными** опциями или подтверждение готового дизайна.
-  Множество вариантов известно и обоснованно полно. Форма: нативный `AskUserQuestion` (пик из вариантов
-  + авто-`Other`, multiSelect где уместно) — строго лучше free-text: пользователь не пишет в чат, выбор
-  явный. `origin: harness:claude-code` — на другом рантайме эквивалент проводки (см.
-  [portability.md](portability.md)).
+- **Divergence** — surfacing what's still unknown (what the feature is, what scenarios, what the
+  boundaries are). The set of options is **not yet identified**. Form: **an open question** (one at a
+  time, not dumped in a batch), Socratic questioning (structure — in [roles/sa.md](../roles/sa.md)
+  §Discovery process). A picklist here is **harmful** — it requires knowing the options in advance, and in
+  divergence they don't exist yet; a closed menu forces false framing.
+- **Convergence / approve** — choosing among **already-identified** options or confirming a finished
+  design. The set of options is known and justifiably complete. Form: native `AskUserQuestion` (pick from
+  options + auto-`Other`, multiSelect where appropriate) — strictly better than free text: the user
+  doesn't type into the chat, the choice is explicit. `origin: harness:claude-code` — on another runtime,
+  the equivalent wiring (see [portability.md](portability.md)).
 
-**Tie-breaker:** не уверен, раскрытие это или схождение, ИЛИ не можешь обосновать, что множество
-вариантов полно → считай это **раскрытием** (открытый вопрос). `Other` в `AskUserQuestion` — escape-
-hatch на случай неучтённого, **не** замена фазы раскрытия: если ответы стабильно уходят в `Other` —
-ты опросил пиклистом то, что надо было раскрывать открыто.
+**Tie-breaker:** not sure whether it's divergence or convergence, OR can't justify that the set of
+options is complete → treat it as **divergence** (open question). `Other` in `AskUserQuestion` is an
+escape hatch for the unaccounted-for case, **not** a substitute for the divergence phase: if answers
+consistently land in `Other` — you picklisted something that should have been surfaced openly.
 
-## Параллельные подзадачи
+## Parallel subtasks
 
-Если задача естественно распараллеливается (чтение независимых модулей, генерация нескольких файлов без взаимозависимостей) — использовать subagent'ов.
+If a task naturally parallelizes (reading independent modules, generating several files with no
+interdependencies) — use subagents.
 
-Правила:
+Rules:
 
-- Явно сказать пользователю что запускаешь параллельные операции
-- Каждая параллельная задача имеет чёткое ТЗ и не пересекается с другими
-- Результаты от subagent'ов собираются в общий контекст основным агентом
-- Не параллелить то что имеет зависимости — последовательность важнее скорости
+- Explicitly tell the user that parallel operations are being launched
+- Each parallel task has a clear brief and doesn't overlap with the others
+- Results from subagents are collected into shared context by the main agent
+- Don't parallelize what has dependencies — sequencing matters more than speed

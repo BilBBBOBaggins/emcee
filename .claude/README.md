@@ -1,80 +1,80 @@
-# .claude/ — опциональная исполняемая обвязка
+# .claude/ — optional executable wiring
 
-Эта папка превращает **прозовые** роли и числовые команды пакета в реальные механизмы Claude Code. Она **опциональна**.
+This folder turns the package's **prose** roles and numeric commands into real Claude Code mechanisms. It is **optional**.
 
-Пакет по умолчанию работает в прозовом режиме: один Claude Code читает `roles/<роль>.md` и становится этой ролью — это сознательный выбор, простой и рабочий для solo/small team. Обвязка ниже — аддитивный апгрейд для тех, кто хочет, чтобы правила не держались на одной дисциплине агента. Ничего из прозовой модели она не ломает.
+By default the package runs in prose mode: a single Claude Code reads `roles/<role>.md` and becomes that role — a deliberate choice, simple and workable for a solo/small team. The wiring below is an additive upgrade for those who want the rules to not rest on agent discipline alone. It breaks nothing in the prose model.
 
-## Что внутри
+## What's inside
 
-### `agents/` — роли как настоящие субагенты
+### `agents/` — roles as real subagents
 
-Каждый файл оборачивает роль во frontmatter (`name`, `description`, `tools`), делая её диспатчабельным субагентом. Ключевая выгода — **tool-scoping превращает прозовые запреты в аппаратные**:
+Each file wraps a role in frontmatter (`name`, `description`, `tools`), making it a dispatchable subagent. The key benefit — **tool-scoping turns prose prohibitions into hardware ones**:
 
-| Субагент | tools | Что это enforce-ит |
+| Subagent | tools | What it enforces |
 |----------|-------|--------------------|
-| `reviewer` | Read, Grep, Glob | «НЕ менять код, НЕ запускать тесты» — физически невозможно |
-| `ba`, `qa-uat`, `sa` | + Write | пишут только документы, не трогают код |
-| `architect` | + Write, Task | документы (ADR/spec) + параллельное чтение через Task; без Edit/Bash на проде |
-| `developer`, `qa-e2e`, `debugger`, `devops` | + Edit, Write, Bash | пишут код/тесты/конфиги |
-| `red-team`, `blue-team` | Read, Grep, Glob, Bash, Write | адверсивная панель: пишут разбор/защиту в `scratchpad/panel/`, Bash — чтобы привлечь codex |
-| `arbiter` | Read, Grep, Glob, Bash, Write | адверсивная панель: судит и пишет вердикт; Bash — **только узкий codex-фактчек спорного эмпирического пункта** (`core/adversarial-panel.md` §«Арбитр codex НЕ отдаёт вердикт»), НЕ для приговора «чей довод сильнее» |
+| `reviewer` | Read, Grep, Glob | "do NOT change code, do NOT run tests" — physically impossible |
+| `ba`, `qa-uat`, `sa` | + Write | write only documents, don't touch code |
+| `architect` | + Write, Task | documents (ADR/spec) + parallel reading via Task; no Edit/Bash on production |
+| `developer`, `qa-e2e`, `debugger`, `devops` | + Edit, Write, Bash | write code/tests/configs |
+| `red-team`, `blue-team` | Read, Grep, Glob, Bash, Write | adversarial panel: write the attack/defense to `scratchpad/panel/`, Bash — to bring in codex |
+| `arbiter` | Read, Grep, Glob, Bash, Write | adversarial panel: judges and writes the verdict; Bash — **only for a narrow codex fact-check of a disputed empirical point** (`core/adversarial-panel.md` §"The arbiter's codex does NOT hand down the verdict"), NOT for ruling on "whose argument is stronger" |
 
-Тело ролей пайплайна короткое и ссылается на канонический `roles/<роль>.md`. Тело `red-team`/`blue-team`/`arbiter` — самодостаточный системный промпт (источник метода — [../core/adversarial-panel.md](../core/adversarial-panel.md)).
+The body of pipeline roles is short and points to the canonical `roles/<role>.md`. The body of `red-team`/`blue-team`/`arbiter` is a self-contained system prompt (the method's source is [../core/adversarial-panel.md](../core/adversarial-panel.md)).
 
-### Адверсивная панель
+### Adversarial panel
 
-`red-team` → `blue-team` → `arbiter` — состязательный разбор нетривиального арх-решения до коммита. Red обязательно привлекает **codex** как вторую независимую модель; arbiter выносит обязывающий вердикт; на финале codex вычитывает синтез v2 на внутренние противоречия. Полный метод и процесс прогона — [../core/adversarial-panel.md](../core/adversarial-panel.md). Эти агенты диспатчатся не числом, а оркестратором панели (командой `/panel` или вручную по `core/adversarial-panel.md`).
+`red-team` → `blue-team` → `arbiter` — an adversarial review of a non-trivial architectural decision before commit. Red is required to bring in **codex** as a second, independent model; the arbiter hands down a binding verdict; at the end codex reviews the v2 synthesis for internal contradictions. Full method and run process — [../core/adversarial-panel.md](../core/adversarial-panel.md). These agents are dispatched not by a digit but by the panel orchestrator (the `/panel` command, or manually per `core/adversarial-panel.md`).
 
-### `skills/` — авто-подтяг знания (Agent Skills)
+### `skills/` — auto-pulled knowledge (Agent Skills)
 
-Тонкий слой над **знанием** (не над действиями). Каждый скилл — папка `skills/<имя>/SKILL.md` с
-frontmatter (`name` + `description`) и коротким телом. Описание всегда видно агенту (~100 токенов),
-а тело подтягивается **только когда агент сам сочтёт скилл релевантным задаче** (progressive
-disclosure). Так нужное знание «будится» надёжнее, чем ссылка в простыне CLAUDE.md.
+A thin layer over **knowledge** (not over actions). Each skill is a folder `skills/<name>/SKILL.md` with
+frontmatter (`name` + `description`) and a short body. The description is always visible to the agent (~100 tokens),
+and the body is pulled in **only when the agent itself judges the skill relevant to the task** (progressive
+disclosure). This way the needed knowledge is "woken up" more reliably than a link in a wall-of-text CLAUDE.md.
 
-**Аддитивно и без дублей:** скилл — это триггер, который указывает на **канонический файл**
-(`core/*.md`, `stack/*.md`, `architecture/*.md`, `domain/*.md`), а не копирует его. Источник истины
-один. Удалишь `skills/` — прозовый режим (ссылки «По ситуации» в CLAUDE.md) продолжит работать.
+**Additive and dedup-free:** a skill is a trigger that points to the **canonical file**
+(`core/*.md`, `stack/*.md`, `architecture/*.md`, `domain/*.md`), not a copy of it. There is one
+source of truth. Delete `skills/` — prose mode (the "Situational" links in CLAUDE.md) keeps working.
 
-**Стандарт авторинга — [../core/skills.md](../core/skills.md):** скилл = роутер-указатель (Purpose /
-When-to-use / **When-NOT** / decision-tree если нужно / pointer), quality-bar «когда вообще заводить»
-(частый ∨ дорогой провал ∨ повторяющиеся ревью-комменты; НЕ для one-off / vague / policy-prose),
-good/bad триггеры. Содержимое скилла harness-нейтрально; механизм discovery — per-harness (P4).
+**Authoring standard — [../core/skills.md](../core/skills.md):** a skill = router-pointer (Purpose /
+When-to-use / **When-NOT** / decision-tree if needed / pointer), a quality bar for "when to even create one"
+(frequent ∨ expensive failure ∨ recurring review comments; NOT for one-off / vague / policy-prose),
+good/bad triggers. Skill content is harness-neutral; the discovery mechanism is per-harness (P4).
 
-- **Универсальные (в пакете):** `debugging`, `code-quality`, `memory`, `spec-driven` → `core/*.md`.
-- **Под выбор проекта (эмитит генератор):** по одному скиллу на каждый выбранный `stack` /
-  `architecture` / `domain`, указывает на скопированный канонический файл. **Стек-скиллы несут
-  `paths:`-glob** (напр. `**/*.go`) — надёжная path-scoped активация на матчащих файлах, плюс
-  `description` как фолбэк (model-decided ~50% надёжен сам по себе). Arch/domain — на `description`
-  (не мапятся на тип файла). `paths:` свежий (Claude Code v2.1.84+) и местами багует — поэтому
-  держим оба триггера.
+- **Universal (in the package):** `debugging`, `code-quality`, `memory`, `spec-driven` → `core/*.md`.
+- **Per project choice (emitted by the generator):** one skill per chosen `stack` /
+  `architecture` / `domain`, pointing to the copied canonical file. **Stack skills carry a
+  `paths:` glob** (e.g. `**/*.go`) — reliable path-scoped activation on matching files, plus
+  `description` as a fallback (model-decided is ~50% reliable on its own). Arch/domain rely on `description`
+  (they don't map to a file type). `paths:` is recent (Claude Code v2.1.84+) and buggy in places — hence
+  keeping both triggers.
 
-**Что НЕ скилл (сознательно):**
-- **Роли** — остаются субагентами (`agents/`) + числовые команды `R D T`. Отдельный примитив.
-- **Адверсивная панель** — остаётся **явной** (`/panel`): она дорогая и high-stakes, тут нужен
-  осознанный гейт пользователя, а не авто-запуск по догадке агента.
-- **principles / task-protocol / quality-gates** — читаются КАЖДУЮ сессию, живут в CLAUDE.md
-  «Обязательно читать», а не в условных скиллах.
+**What is deliberately NOT a skill:**
+- **Roles** — remain subagents (`agents/`) + numeric commands `R D T`. A separate primitive.
+- **The adversarial panel** — remains **explicit** (`/panel`): it is expensive and high-stakes, needing
+  a deliberate user gate, not an auto-run on the agent's guess.
+- **principles / task-protocol / quality-gates** — read EVERY session, living in CLAUDE.md's
+  "Required reading", not in conditional skills.
 
-### `commands/role.md` — числовая команда как slash-команда
+### `commands/role.md` — numeric command as a slash command
 
-`/role 1 5 24` парсит `$ARGUMENTS`, резолвит цифру по таблице из `CLAUDE.md`, открывает гайд дня и запускает нужного субагента. Делает грамматику `R D T` вызываемой, а не заклинанием в чате.
+`/role 1 5 24` parses `$ARGUMENTS`, resolves the digit against the table in `CLAUDE.md`, opens the day guide, and launches the right subagent. It makes the `R D T` grammar invocable, not a chat incantation.
 
-### `commands/panel.md` — запуск адверсивной панели
+### `commands/panel.md` — launching the adversarial panel
 
-`/panel <решение или вопрос>` прогоняет панель из `core/adversarial-panel.md`: фиксирует v1 → `red-team` (+ codex) → `blue-team` → `arbiter` → синтез v2 → финальная вычитка codex → ADR. Каждый раунд показывается пользователю.
+`/panel <decision or question>` runs the panel from `core/adversarial-panel.md`: fixes v1 → `red-team` (+ codex) → `blue-team` → `arbiter` → v2 synthesis → final codex review → ADR. Each round is shown to the user.
 
-### `hooks/check-loc.sh` + `settings.json.example` — гейты как хуки
+### `hooks/check-loc.sh` + `settings.json.example` — gates as hooks
 
-`check-loc.sh` — PostToolUse-хук: после каждого Edit/Write проверяет, что **отредактированный файл** (`tool_input.file_path` из stdin, не весь diff) не превысил LOC-лимит из [core/quality-gates.md](../core/quality-gates.md).
+`check-loc.sh` — a PostToolUse hook: after every Edit/Write it checks that the **edited file** (`tool_input.file_path` from stdin, not the whole diff) hasn't exceeded the LOC limit from [core/quality-gates.md](../core/quality-gates.md).
 
-`checkpoint-precompact.sh` — PreCompact-хук: перед компакцией контекста пишет recovery-чекпойнт (время, триггер, путь к транскрипту) в `docs/checkpoints.md`, чтобы не терять состояние при сжатии (см. [core/memory.md](../core/memory.md)).
+`checkpoint-precompact.sh` — a PreCompact hook: before context compaction it writes a recovery checkpoint (time, trigger, transcript path) to `docs/checkpoints.md`, so state isn't lost on compaction (see [core/memory.md](../core/memory.md)).
 
-Оба включаются переименованием `settings.json.example` → `settings.json` (там уже прописаны `PostToolUse` и `PreCompact`).
+Both are enabled by renaming `settings.json.example` → `settings.json` (it already has `PostToolUse` and `PreCompact` wired in).
 
-`settings.json` — строгий JSON: **без комментариев и лишних ключей** (Claude Code отвергнет файл с неизвестными полями). Поэтому `settings.json.example` — чистый валидный JSON, его можно переименовать как есть.
+`settings.json` is strict JSON: **no comments and no extra keys** (Claude Code will reject a file with unknown fields). That's why `settings.json.example` is clean, valid JSON — it can be renamed as-is.
 
-`check-no-todo.sh` — **opt-in** Stop-хук конституции (CQ-NN-01): блокирует завершение, если в добавленном коде есть comment-like TODO/FIXME (узкий контракт: только added lines + новые файлы, кодовые расширения, исключены vendor/build, не ловит произвольный строковый литерал `"TODO"`). Намеренно НЕ в дефолтном `settings.json.example` (Stop-гейт интрузивнее) — включи вручную:
+`check-no-todo.sh` — an **opt-in** constitution Stop hook (CQ-NN-01): blocks completion if the added code contains a comment-like TODO/FIXME (a narrow contract: only added lines + new files, code file extensions, vendor/build excluded, doesn't catch an arbitrary string literal `"TODO"`). Deliberately NOT in the default `settings.json.example` (a Stop gate is more intrusive) — enable it manually:
 
 ~~~json
 "Stop": [
@@ -83,17 +83,17 @@ good/bad триггеры. Содержимое скилла harness-нейтр�
 ]
 ~~~
 
-Опционально — Stop-хук, блокирующий завершение пока тесты не зелёные (конституция QG-NN-01). Добавь в тот же `Stop`-массив (подставив свою test-команду):
+Optional — a Stop hook that blocks completion until tests are green (constitution QG-NN-01). Add to the same `Stop` array (plugging in your own test command):
 
 ~~~json
 { "hooks": [ { "type": "command",
-  "command": "<test-команда> || (echo 'тесты не зелёные (core/quality-gates.md)' >&2; exit 2)" } ] }
+  "command": "<test-command> || (echo 'tests not green (core/quality-gates.md)' >&2; exit 2)" } ] }
 ~~~
 
-## Как включить
+## How to enable
 
-1. Скопируй `.claude/` в корень проекта (рядом с `CLAUDE.md`).
-2. Субагенты и `/role` подхватятся автоматически.
-3. Для хуков: `mv .claude/settings.json.example .claude/settings.json`; при желании добавь Stop-хук (выше) и подстрой LOC-лимиты под таблицу из `core/quality-gates.md`.
+1. Copy `.claude/` into the project root (next to `CLAUDE.md`).
+2. Subagents and `/role` are picked up automatically.
+3. For hooks: `mv .claude/settings.json.example .claude/settings.json`; optionally add the Stop hook (above) and adjust the LOC limits to match the table in `core/quality-gates.md`.
 
-Не хочешь обвязку — просто не копируй `.claude/`. Прозовый режим (числа → `roles/*.md` вручную) работает без неё.
+Don't want the wiring — just don't copy `.claude/`. Prose mode (digits → `roles/*.md` manually) works without it.

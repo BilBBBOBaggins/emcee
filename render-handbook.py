@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-render-handbook.py — собирает self-contained HTML-справочник пакета из markdown-источников.
+render-handbook.py — assembles a self-contained HTML handbook for the package from markdown sources.
 
-Один навигируемый .html (встроенный CSS, сайдбар, внутренние .md-ссылки → якоря разделов).
-Источник истины — сами .md; HTML регенерируется, в гит не коммитится (см. .gitignore).
+One navigable .html (inline CSS, a sidebar, internal .md links → section anchors).
+The .md files themselves are the source of truth; the HTML is regenerated, not committed to git (see .gitignore).
 
-По умолчанию собирает ДВЕ страницы: handbook.html (полный справочник) + quickstart.html
-(отдельная онбординг-страница из QUICKSTART.md, кросс-ссылки ведут вглубь handbook.html).
+By default assembles TWO pages: handbook.html (the full handbook) + quickstart.html
+(a separate onboarding page from QUICKSTART.md, cross-links go deeper into handbook.html).
 
   python3 render-handbook.py                 # -> handbook.html + quickstart.html
-  python3 render-handbook.py --quickstart    # только quickstart.html
-  python3 render-handbook.py --out path.html # свой путь для справочника
-  python3 render-handbook.py --check         # rc=1, если какой-то файл из оглавления отсутствует
+  python3 render-handbook.py --quickstart    # only quickstart.html
+  python3 render-handbook.py --out path.html # custom path for the handbook
+  python3 render-handbook.py --check         # rc=1 if some file from the table of contents is missing
 
-Требует python-markdown (`pip install markdown`). Порядок разделов — ORDER ниже.
+Requires python-markdown (`pip install markdown`). Section order — ORDER below.
 
-Диаграмма пайплайна (`docs/pipeline-diagram.svg`) встраивается в обе страницы как data-URI
-<img> (см. pipeline_figure ниже). SVG — источник истины. Однастраничный PDF из него
-(`docs/pipeline-diagram.pdf`, gitignored) пересобирается headless-браузером, напр.:
+The pipeline diagram (`docs/pipeline-diagram.svg`) is embedded in both pages as a data-URI
+<img> (see pipeline_figure below). The SVG is the source of truth. A single-page PDF from it
+(`docs/pipeline-diagram.pdf`, gitignored) is rebuilt with a headless browser, e.g.:
 
   printf '%s' '<!doctype html><style>@page{size:300mm 237mm;margin:0}html,body{margin:0}\
 img{width:300mm;height:auto;display:block}</style><img src="pipeline-diagram.svg">' > /tmp/p.html
@@ -30,75 +30,75 @@ import argparse, base64, glob, html, os, re, sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
-# Векторная диаграмма пайплайна (источник истины — docs/pipeline-diagram.svg).
-# Встраиваем как data-URI <img>: страница остаётся self-contained, а внутренний
-# <style> SVG изолирован (рендерится как изображение → не течёт в CSS документа).
+# Vector pipeline diagram (source of truth — docs/pipeline-diagram.svg).
+# Embedded as a data-URI <img>: the page stays self-contained, and the SVG's internal
+# <style> is isolated (rendered as an image → doesn't leak into the document's CSS).
 DIAGRAM_SVG = os.path.join(BASE, "docs", "pipeline-diagram.svg")
 
 
 def pipeline_figure() -> str:
-    """<figure> с диаграммой пайплайна или '' если файла нет."""
+    """<figure> with the pipeline diagram, or '' if the file is missing."""
     if not os.path.exists(DIAGRAM_SVG):
-        print(f"⚠ нет диаграммы: {DIAGRAM_SVG}", file=sys.stderr)
+        print(f"⚠ no diagram: {DIAGRAM_SVG}", file=sys.stderr)
         return ""
     raw = open(DIAGRAM_SVG, "rb").read()
     b64 = base64.b64encode(raw).decode("ascii")
     return (
         '<figure class="diagram">'
-        f'<img alt="Пайплайн emcee: kickoff, онгоинг по дням, прохождение задачи через роли" '
+        f'<img alt="emcee pipeline: kickoff, ongoing by day, a task passing through the roles" '
         f'src="data:image/svg+xml;base64,{b64}">'
-        '<figcaption>Пайплайн целиком: KICKOFF (один раз) → онгоинг по дням (цикл R D T) → '
-        'как одна задача проходит через роли. Источник: '
+        '<figcaption>The whole pipeline: KICKOFF (once) → ongoing by day (the R D T cycle) → '
+        'how a single task passes through the roles. Source: '
         '<code>docs/pipeline-diagram.svg</code>.</figcaption>'
         '</figure>'
     )
 
-# Курируемый порядок чтения справочника: (относительный путь, заголовок в сайдбаре).
+# Curated reading order for the handbook: (relative path, sidebar title).
 ORDER = [
-    ("README.md", "Обзор пакета"),
-    ("QUICKSTART.md", "Быстрый старт"),
-    ("core/pipeline.md", "Пайплайн: как работать"),
-    ("core/principles.md", "Принципы работы агента"),
-    ("core/task-protocol.md", "Протокол задач"),
-    ("core/quality-gates.md", "Гейты качества"),
-    ("core/constitution.md", "Конституция (non-negotiable)"),
-    ("core/code-quality.md", "Качество кода"),
-    ("core/debugging.md", "Дебаг"),
-    ("core/memory.md", "Память между сессиями"),
+    ("README.md", "Package overview"),
+    ("QUICKSTART.md", "Quickstart"),
+    ("core/pipeline.md", "Pipeline: how to work"),
+    ("core/principles.md", "Agent working principles"),
+    ("core/task-protocol.md", "Task protocol"),
+    ("core/quality-gates.md", "Quality gates"),
+    ("core/constitution.md", "Constitution (non-negotiable)"),
+    ("core/code-quality.md", "Code quality"),
+    ("core/debugging.md", "Debugging"),
+    ("core/memory.md", "Memory across sessions"),
     ("core/spec-driven.md", "Spec-driven (C+)"),
-    ("core/adversarial-panel.md", "Адверсивная панель"),
-    ("core/second-model.md", "Вторая модель (codex)"),
-    ("core/portability.md", "Граница переносимости"),
-    ("roles/architect.md", "Роль: Архитектор"),
-    ("roles/sa.md", "Роль: System Analyst"),
-    ("roles/ba.md", "Роль: Business Analyst"),
-    ("roles/developer.md", "Роль: Developer"),
-    ("roles/reviewer.md", "Роль: Reviewer"),
-    ("roles/qa-e2e.md", "Роль: QA E2E"),
-    ("roles/qa-uat.md", "Роль: QA UAT"),
-    ("roles/debugger.md", "Роль: Debugger"),
-    ("roles/devops.md", "Роль: DevOps"),
-    ("roles/designer.md", "Роль: Designer (дормант)"),
-    ("roles/auditor.md", "Роль: Auditor (дормант)"),
-    ("roles/upgrader.md", "Роль: Upgrader (дормант)"),
-    (".claude/README.md", "Обвязка .claude/"),
-    ("docs/adr/001-scope-process-overlay.md", "ADR-001: Охват"),
+    ("core/adversarial-panel.md", "Adversarial panel"),
+    ("core/second-model.md", "Second model (codex)"),
+    ("core/portability.md", "Portability boundary"),
+    ("roles/architect.md", "Role: Architect"),
+    ("roles/sa.md", "Role: System Analyst"),
+    ("roles/ba.md", "Role: Business Analyst"),
+    ("roles/developer.md", "Role: Developer"),
+    ("roles/reviewer.md", "Role: Reviewer"),
+    ("roles/qa-e2e.md", "Role: QA E2E"),
+    ("roles/qa-uat.md", "Role: QA UAT"),
+    ("roles/debugger.md", "Role: Debugger"),
+    ("roles/devops.md", "Role: DevOps"),
+    ("roles/designer.md", "Role: Designer (dormant)"),
+    ("roles/auditor.md", "Role: Auditor (dormant)"),
+    ("roles/upgrader.md", "Role: Upgrader (dormant)"),
+    (".claude/README.md", ".claude/ wiring"),
+    ("docs/adr/001-scope-process-overlay.md", "ADR-001: Scope"),
     ("docs/adr/002-spec-driven-cplus.md", "ADR-002: Spec-driven C+"),
-    ("docs/adr/003-first-km-intake.md", "ADR-003: Первый километр"),
-    ("docs/adr/004-second-model-designer.md", "ADR-004: Вторая модель + Designer"),
-    ("docs/adr/005-auditor-role.md", "ADR-005: Роль Auditor"),
-    ("docs/adr/006-regimen-upgrade.md", "ADR-006: Обновление регламента"),
-    ("docs/adr/007-kickoff-pipeline.md", "ADR-007: Kickoff + пайплайн"),
-    ("docs/adr/008-project-state-snapshot.md", "ADR-008: PROJECT-STATE — снимок"),
-    ("docs/adr/009-portability-boundary.md", "ADR-009: Граница переносимости"),
-    ("docs/adr/010-multimodel-core-overlays.md", "ADR-010: Мультимодель — ядро + оверлеи"),
-    ("docs/adr/011-process-layer-and-multimodel-build.md", "ADR-011: Process-слой + сборка мультимодели"),
-    ("docs/adr/012-entry-file-per-harness.md", "ADR-012: Входной файл per-harness"),
-    ("docs/adr/013-feature-discovery-trigger.md", "ADR-013: Триггер feature-discovery"),
-    ("docs/adr/014-prompt-canon-consistency-fixes.md", "ADR-014: Фиксы консистентности промпт-канона"),
-    ("docs/adr/015-assembled-reachability-gate.md", "ADR-015: Достижимость фичи в сборе (QG-NN-05)"),
+    ("docs/adr/003-first-km-intake.md", "ADR-003: First kilometer"),
+    ("docs/adr/004-second-model-designer.md", "ADR-004: Second model + Designer"),
+    ("docs/adr/005-auditor-role.md", "ADR-005: Auditor role"),
+    ("docs/adr/006-regimen-upgrade.md", "ADR-006: Regimen upgrade"),
+    ("docs/adr/007-kickoff-pipeline.md", "ADR-007: Kickoff + pipeline"),
+    ("docs/adr/008-project-state-snapshot.md", "ADR-008: PROJECT-STATE — a snapshot"),
+    ("docs/adr/009-portability-boundary.md", "ADR-009: Portability boundary"),
+    ("docs/adr/010-multimodel-core-overlays.md", "ADR-010: Multi-model — core + overlays"),
+    ("docs/adr/011-process-layer-and-multimodel-build.md", "ADR-011: Process layer + multi-model build"),
+    ("docs/adr/012-entry-file-per-harness.md", "ADR-012: Per-harness entry file"),
+    ("docs/adr/013-feature-discovery-trigger.md", "ADR-013: Feature-discovery trigger"),
+    ("docs/adr/014-prompt-canon-consistency-fixes.md", "ADR-014: Prompt-canon consistency fixes"),
+    ("docs/adr/015-assembled-reachability-gate.md", "ADR-015: Assembled feature reachability (QG-NN-05)"),
     ("docs/adr/016-panel-second-model-mandatory-when-available.md",
-     "ADR-016: Вторая модель панели — обязательна при доступности"),
+     "ADR-016: Second model for the panel — mandatory when available"),
 ]
 
 
@@ -107,15 +107,15 @@ def anchor_for(relpath: str) -> str:
 
 
 def slugify_unicode(value: str, separator: str = "-") -> str:
-    """GitHub-совместимый slug (юникод): lower, убрать пунктуацию (вкл. «—»),
-    каждый пробел -> separator (без схлопывания). Так заголовки QUICKSTART.md
-    получают id, совпадающие с его внутренними ссылками вида #б--новый-проект."""
+    """GitHub-compatible slug (unicode): lowercase, strip punctuation (incl. "—"),
+    each space -> separator (no collapsing). This way QUICKSTART.md headings
+    get ids that match its internal links like #b--new-project."""
     v = value.strip().lower()
     v = re.sub(r"[^\w\s-]", "", v, flags=re.UNICODE)
     return re.sub(r"\s", separator, v)
 
 
-# basename(.md) -> anchor, чтобы внутренние ссылки вида [..](../core/x.md) вели на раздел справочника
+# basename(.md) -> anchor, so internal links like [..](../core/x.md) lead to the handbook section
 BASENAME_TO_ANCHOR = {os.path.basename(p): anchor_for(p) for p, _ in ORDER}
 
 CSS = """
@@ -159,7 +159,7 @@ figure.diagram figcaption { margin-top:10px; font-size:13px; color:var(--muted);
 
 
 def rewrite_links(html_text: str) -> str:
-    """Внутренние .md-ссылки (по basename) -> якоря разделов справочника."""
+    """Internal .md links (by basename) -> handbook section anchors."""
     def repl(m):
         href = m.group(1)
         if href.startswith(("http://", "https://", "mailto:", "#")):
@@ -176,34 +176,34 @@ def build(out_path: str) -> int:
     try:
         import markdown
     except ImportError:
-        print("✗ нужен python-markdown: pip install markdown", file=sys.stderr)
+        print("✗ needs python-markdown: pip install markdown", file=sys.stderr)
         return 1
 
     sections, nav = [], []
     for relpath, title in ORDER:
         full = os.path.join(BASE, relpath)
         if not os.path.exists(full):
-            print(f"⚠ пропуск (нет файла): {relpath}", file=sys.stderr)
+            print(f"⚠ skipping (no file): {relpath}", file=sys.stderr)
             continue
         md = markdown.Markdown(extensions=["extra", "toc", "sane_lists"])
         body = rewrite_links(md.convert(open(full, encoding="utf-8").read()))
         anc = anchor_for(relpath)
         if relpath == "core/pipeline.md":
-            # диаграмма — сразу после заголовка раздела (первого <h1>/<h2>);
-            # функция-замена, чтобы не интерпретировать \-эскейпы в figure-HTML
+            # the diagram goes right after the section heading (the first <h1>/<h2>);
+            # a replacement function so \-escapes in the figure HTML aren't interpreted
             fig = pipeline_figure()
             body = re.sub(r"(</h[12]>)", lambda m: m.group(1) + "\n" + fig, body, count=1)
         sections.append(f'<section id="{anc}">\n{body}\n</section>')
         nav.append((relpath, anc, title))
 
-    # сайдбар: группируем по верхнему каталогу
+    # sidebar: group by top-level directory
     groups: dict[str, list] = {}
     for relpath, anc, title in nav:
-        top = relpath.split("/")[0] if "/" in relpath else "Пакет"
+        top = relpath.split("/")[0] if "/" in relpath else "Package"
         groups.setdefault(top, []).append((anc, title))
     nav_html = ['<div class="top">📘 emcee</div>']
-    GROUP_LABEL = {"Пакет": "", "core": "core/ — ядро", "roles": "roles/ — роли",
-                   ".claude": "обвязка", "docs": "решения (ADR)"}
+    GROUP_LABEL = {"Package": "", "core": "core/ — the core", "roles": "roles/ — roles",
+                   ".claude": "wiring", "docs": "decisions (ADR)"}
     for top, items in groups.items():
         label = GROUP_LABEL.get(top, top)
         if label:
@@ -212,9 +212,9 @@ def build(out_path: str) -> int:
             nav_html.append(f'<a href="#{anc}">{html.escape(title)}</a>')
 
     doc = f"""<!doctype html>
-<html lang="ru"><head><meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>emcee — справочник</title>
+<title>emcee — handbook</title>
 <style>{CSS}</style></head>
 <body><div id="layout">
 <nav id="side">{''.join(nav_html)}</nav>
@@ -222,13 +222,13 @@ def build(out_path: str) -> int:
 </div></body></html>"""
 
     open(out_path, "w", encoding="utf-8").write(doc)
-    print(f"✓ справочник собран: {out_path}  ({len(nav)} разделов, {len(doc)//1024} KB)")
+    print(f"✓ handbook assembled: {out_path}  ({len(nav)} sections, {len(doc)//1024} KB)")
     return 0
 
 
 def rewrite_links_standalone(html_text: str) -> str:
-    """Для отдельной страницы: внутренние #-якоря оставить (работают внутри страницы);
-    кросс-файловые .md-ссылки -> вглубь handbook.html#<раздел> (если такой раздел есть)."""
+    """For the standalone page: keep internal #-anchors (work within the page);
+    cross-file .md links -> deeper into handbook.html#<section> (if such a section exists)."""
     def repl(m):
         href = m.group(1)
         if href.startswith(("http://", "https://", "mailto:", "#")):
@@ -245,43 +245,43 @@ def build_quickstart(out_path: str) -> int:
     try:
         import markdown
     except ImportError:
-        print("✗ нужен python-markdown: pip install markdown", file=sys.stderr)
+        print("✗ needs python-markdown: pip install markdown", file=sys.stderr)
         return 1
     src = os.path.join(BASE, "QUICKSTART.md")
     if not os.path.exists(src):
-        print("✗ нет QUICKSTART.md", file=sys.stderr)
+        print("✗ no QUICKSTART.md", file=sys.stderr)
         return 1
     md = markdown.Markdown(extensions=["extra", "toc", "sane_lists"],
                            extension_configs={"toc": {"slugify": slugify_unicode}})
     body = rewrite_links_standalone(md.convert(open(src, encoding="utf-8").read()))
     doc = f"""<!doctype html>
-<html lang="ru"><head><meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>emcee — quickstart</title>
 <style>{CSS}</style></head>
 <body><main>
-<p style="margin:0 0 8px"><a href="handbook.html">📘 Полный справочник</a></p>
+<p style="margin:0 0 8px"><a href="handbook.html">📘 Full handbook</a></p>
 {pipeline_figure()}
 {body}
 </main></body></html>"""
     open(out_path, "w", encoding="utf-8").write(doc)
-    print(f"✓ quickstart собран: {out_path}  ({len(doc)//1024} KB)")
+    print(f"✓ quickstart assembled: {out_path}  ({len(doc)//1024} KB)")
     return 0
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="HTML-справочник пакета из markdown")
+    ap = argparse.ArgumentParser(description="HTML handbook for the package, from markdown")
     ap.add_argument("--out", default=os.path.join(BASE, "handbook.html"))
-    ap.add_argument("--check", action="store_true", help="rc=1 если файл из ORDER отсутствует")
-    ap.add_argument("--quickstart", action="store_true", help="собрать только quickstart.html")
+    ap.add_argument("--check", action="store_true", help="rc=1 if a file from ORDER is missing")
+    ap.add_argument("--quickstart", action="store_true", help="build only quickstart.html")
     a = ap.parse_args()
 
     if a.check:
         missing = [p for p, _ in ORDER if not os.path.exists(os.path.join(BASE, p))]
         if missing:
-            print(f"✗ отсутствуют файлы оглавления: {missing}", file=sys.stderr)
+            print(f"✗ missing table-of-contents files: {missing}", file=sys.stderr)
             return 1
-        # обратный tripwire: каждый ADR на диске обязан быть в ORDER (иначе тихо выпадет из справочника)
+        # reverse tripwire: every ADR on disk must be in ORDER (otherwise it silently drops out of the handbook)
         in_order = {p for p, _ in ORDER}
         orphan_adr = sorted(
             os.path.relpath(p, BASE)
@@ -289,15 +289,15 @@ def main() -> int:
             if os.path.relpath(p, BASE) not in in_order
         )
         if orphan_adr:
-            print(f"✗ ADR на диске, но вне ORDER (выпадут из справочника): {orphan_adr}", file=sys.stderr)
+            print(f"✗ ADR on disk but outside ORDER (will drop out of the handbook): {orphan_adr}", file=sys.stderr)
             return 1
-        print(f"✓ все {len(ORDER)} файлов оглавления на месте; ADR-каталог покрыт")
+        print(f"✓ all {len(ORDER)} table-of-contents files are in place; the ADR directory is covered")
         return 0
 
     qs_out = os.path.join(os.path.dirname(a.out) or BASE, "quickstart.html")
     if a.quickstart:
         return build_quickstart(qs_out)
-    # дефолт: обе страницы (справочник + отдельный quickstart)
+    # default: both pages (handbook + separate quickstart)
     rc = build(a.out)
     return rc or build_quickstart(qs_out)
 

@@ -1,18 +1,18 @@
-# Event-Driven Architecture — архитектурный паттерн
+# Event-Driven Architecture — architectural pattern
 
-Компоненты общаются через события, не через прямые вызовы. Используется для decoupling, async workflows, scalability.
+Components communicate through events, not direct calls. Used for decoupling, async workflows, scalability.
 
-Применимо для: систем с asynchronous workflows, интеграций между модулями/сервисами, real-time обновлений, audit требований.
+Applicable to: systems with asynchronous workflows, integrations between modules/services, real-time updates, audit requirements.
 
-## Базовый принцип
+## Basic principle
 
-Вместо:
+Instead of:
 
 ~~~
 ServiceA.doSomething() → ServiceB.handleIt() → ServiceC.notify()
 ~~~
 
-(синхронная цепочка вызовов — tight coupling)
+(synchronous call chain — tight coupling)
 
 ~~~
 ServiceA publishes event X
@@ -23,30 +23,30 @@ Event bus
     └→ ServiceD subscribed to X, handles
 ~~~
 
-(async, decoupled — publisher не знает consumers)
+(async, decoupled — publisher doesn't know consumers)
 
-## Когда применять
+## When to apply
 
-### Хорошо подходит
+### Good fit
 
-- **Workflow с несколькими reactions на одно событие** — user signed up triggers: send email, create workspace, start trial, notify admin
-- **Audit trail** — каждое изменение — событие, storage всех событий = audit log
-- **Integration между системами** — published events consumed любыми заинтересованными системами
+- **Workflow with multiple reactions to one event** — user signed up triggers: send email, create workspace, start trial, notify admin
+- **Audit trail** — every change is an event, storage of all events = audit log
+- **Integration between systems** — published events consumed by any interested systems
 - **Real-time updates** — events broadcast to UI clients
-- **Temporal decoupling** — publisher и consumer могут работать в разное время (queue buffers events)
+- **Temporal decoupling** — publisher and consumer can operate at different times (queue buffers events)
 
-### Плохо подходит
+### Poor fit
 
-- **Simple request-response** — если нужен synchronous ответ, events добавляют complexity
-- **Strong consistency требования** — events → eventual consistency, не ACID
-- **Малые проекты с одной командой** — overhead setup может не окупиться
-- **Low-latency operations** — async по definition добавляет latency
+- **Simple request-response** — if a synchronous response is needed, events add complexity
+- **Strong consistency requirements** — events → eventual consistency, not ACID
+- **Small projects with a single team** — setup overhead may not pay off
+- **Low-latency operations** — async by definition adds latency
 
 ## In-process event bus vs external message broker
 
 ### In-process event bus
 
-Events внутри одного приложения — publishers и subscribers в том же процессе.
+Events within a single application — publishers and subscribers in the same process.
 
 ~~~go
 type EventBus interface {
@@ -57,41 +57,41 @@ type EventBus interface {
 // Publisher
 bus.Publish(OrderCreated{OrderID: id})
 
-// Subscriber в том же процессе
+// Subscriber in the same process
 bus.Subscribe("OrderCreated", func(e Event) {
     // handle
 })
 ~~~
 
-Применение: модульный монолит — см. [modular-monolith.md](modular-monolith.md). Events — способ коммуникации между модулями без tight coupling.
+Application: modular monolith — see [modular-monolith.md](modular-monolith.md). Events are a way to communicate between modules without tight coupling.
 
-Плюсы: простота (in-memory), типизированные events, низкая latency.
+Pros: simplicity (in-memory), typed events, low latency.
 
-Минусы: не переживает restart (events in memory), не работает cross-process.
+Cons: doesn't survive restart (events in memory), doesn't work cross-process.
 
 ### External message broker
 
-Events через отдельный middleware: Kafka, RabbitMQ, NATS, Redis Streams, SQS.
+Events through a separate middleware: Kafka, RabbitMQ, NATS, Redis Streams, SQS.
 
 ~~~go
 // Publisher
 broker.Publish("order-events", orderCreated)
 
-// Subscriber в другом процессе
+// Subscriber in another process
 broker.Subscribe("order-events", "notification-service", handler)
 ~~~
 
-Применение: микросервисы, cross-process workflows, durable event storage.
+Application: microservices, cross-process workflows, durable event storage.
 
-Плюсы: durability, replay capability, cross-service, scalability.
+Pros: durability, replay capability, cross-service, scalability.
 
-Минусы: operational complexity (брокер — отдельный компонент), latency выше.
+Cons: operational complexity (the broker is a separate component), higher latency.
 
 ## Event structure
 
-### Анатомия события
+### Anatomy of an event
 
-Минимум:
+Minimum:
 
 ~~~json
 {
@@ -107,13 +107,13 @@ broker.Subscribe("order-events", "notification-service", handler)
 }
 ~~~
 
-- **event_id** — unique, для deduplication
-- **event_type** — тип, для routing
-- **timestamp** — когда произошло (не когда опубликовано)
-- **version** — schema версия
-- **data** — полезная нагрузка
+- **event_id** — unique, for deduplication
+- **event_type** — type, for routing
+- **timestamp** — when it happened (not when it was published)
+- **version** — schema version
+- **data** — payload
 
-### Метаданные (опционально)
+### Metadata (optional)
 
 ~~~json
 {
@@ -127,36 +127,36 @@ broker.Subscribe("order-events", "notification-service", handler)
 }
 ~~~
 
-- **trace_id** — для distributed tracing
-- **causation_id** — какое событие вызвало это
-- **correlation_id** — группирует связанные events (saga workflow)
-- **actor** — кто инициировал
-- **source** — какой сервис опубликовал
+- **trace_id** — for distributed tracing
+- **causation_id** — which event caused this one
+- **correlation_id** — groups related events (saga workflow)
+- **actor** — who initiated it
+- **source** — which service published it
 
-### Именование событий
+### Event naming
 
-- **Past tense** — event описывает что уже произошло (`OrderCreated`, `PaymentProcessed`), не `CreateOrder`, `ProcessPayment`
-- **Domain language** — используй термины домена, не технические (`OrderShipped` vs `OrderStatusUpdated`)
-- **Specific** — `OrderCancelled` лучше чем `OrderUpdated` (last requires inspection)
+- **Past tense** — an event describes what already happened (`OrderCreated`, `PaymentProcessed`), not `CreateOrder`, `ProcessPayment`
+- **Domain language** — use domain terms, not technical ones (`OrderShipped` vs `OrderStatusUpdated`)
+- **Specific** — `OrderCancelled` is better than `OrderUpdated` (the latter requires inspection)
 
-## Schemas и versioning
+## Schemas and versioning
 
 ### Schema evolution
 
-Events живут долго (в audit log, в archived queues). Schema должна эволюционировать backward compatibly.
+Events live long (in audit log, in archived queues). Schema must evolve backward compatibly.
 
-Правила совместимости:
+Compatibility rules:
 
 - **Adding optional fields** — safe
-- **Removing fields** — breaking, требует нового version
+- **Removing fields** — breaking, requires a new version
 - **Changing field types** — breaking
-- **Renaming fields** — breaking, сначала add new и deprecate old
+- **Renaming fields** — breaking, first add new and deprecate old
 
-Schema registry (Confluent Schema Registry, AWS Glue Schema Registry) помогает управлять schemas.
+Schema registry (Confluent Schema Registry, AWS Glue Schema Registry) helps manage schemas.
 
-### Version в events
+### Version in events
 
-Событие содержит version schema. Consumer знает как parsing в зависимости от version:
+An event contains the schema version. The consumer knows how to parse depending on the version:
 
 ~~~json
 {
@@ -168,13 +168,13 @@ Schema registry (Confluent Schema Registry, AWS Glue Schema Registry) помог
 
 ### Backward compatibility
 
-Consumer должен обрабатывать как минимум current и previous version. Ideally — все version since last major breaking change.
+The consumer must handle at least the current and previous version. Ideally — all versions since the last major breaking change.
 
 ## Patterns
 
 ### Event notification
 
-Простейший паттерн — событие сообщает "X произошло", consumer reacts:
+The simplest pattern — the event announces "X happened", the consumer reacts:
 
 ~~~
 UserRegistered event
@@ -182,11 +182,11 @@ UserRegistered event
 EmailService — sends welcome email
 ~~~
 
-Data в событии минимальна — только identifier. Consumer fetches details если нужно.
+Data in the event is minimal — only an identifier. The consumer fetches details if needed.
 
 ### Event-carried state transfer
 
-Событие содержит всё state необходимое consumer:
+The event contains all the state the consumer needs:
 
 ~~~json
 {
@@ -200,15 +200,15 @@ Data в событии минимальна — только identifier. Consume
 }
 ~~~
 
-Consumer не нужно делать callback к publisher — state приходит в событии.
+The consumer doesn't need to make a callback to the publisher — state arrives in the event.
 
-Плюсы: consumer независим от publisher availability.
+Pros: consumer is independent of publisher availability.
 
-Минусы: события больше, дублирование данных.
+Cons: events are larger, data duplication.
 
 ### Event sourcing
 
-Источник правды — последовательность событий. Current state — projection из событий.
+The source of truth is a sequence of events. Current state is a projection from events.
 
 ~~~
 Events: OrderCreated → ItemAdded → ItemAdded → OrderPaid → OrderShipped
@@ -216,77 +216,77 @@ Events: OrderCreated → ItemAdded → ItemAdded → OrderPaid → OrderShipped
 Projection: Order current state
 ~~~
 
-Подходит для: financial systems (всё должно быть traceable), audit-heavy domains, systems где полная история value.
+Suitable for: financial systems (everything must be traceable), audit-heavy domains, systems where the full history has value.
 
-Не подходит для: простых CRUD, систем где current state достаточен.
+Not suitable for: simple CRUD, systems where current state is sufficient.
 
-Complexity существенный — event sourcing это big commitment.
+Complexity is substantial — event sourcing is a big commitment.
 
 ### CQRS (Command-Query Responsibility Segregation)
 
-Разделение write-side (commands изменяющие state) от read-side (queries читающие state):
+Separation of the write side (commands changing state) from the read side (queries reading state):
 
 ~~~
 Commands → Write Model → Events → Read Models (denormalized for queries)
 ~~~
 
-Часто используется с event sourcing, но не обязательно.
+Often used with event sourcing, but not required.
 
-Плюсы: scaling read и write независимо, optimized data models для разных use cases.
+Pros: scaling read and write independently, optimized data models for different use cases.
 
-Минусы: complexity, eventual consistency между write и read sides.
+Cons: complexity, eventual consistency between write and read sides.
 
 ### Saga pattern
 
-Distributed transaction через последовательность местных transactions и compensating actions.
+Distributed transaction through a sequence of local transactions and compensating actions.
 
 ~~~
 Step 1: OrderCreated — reserves inventory
 Step 2: PaymentProcessed — charges customer
 Step 3: ShipmentInitiated — sends to fulfillment
 
-Failure в шаге 3:
+Failure at step 3:
 Compensate step 2 — refund payment
 Compensate step 1 — release inventory
 ~~~
 
-Два стиля:
+Two styles:
 
-- **Choreography** — каждый сервис подписан на события предыдущего шага
-- **Orchestration** — central coordinator управляет saga
+- **Choreography** — each service subscribes to events from the previous step
+- **Orchestration** — a central coordinator manages the saga
 
-Детали — см. [microservices.md](microservices.md).
+Details — see [microservices.md](microservices.md).
 
 ## Consumer patterns
 
 ### At-least-once delivery
 
-Broker гарантирует что событие доставится хотя бы раз. Возможны дубликаты.
+The broker guarantees the event will be delivered at least once. Duplicates are possible.
 
-Consumer должен быть idempotent — повторная обработка того же события не меняет результат.
+The consumer must be idempotent — reprocessing the same event doesn't change the result.
 
-Типичная имплементация:
+Typical implementation:
 
-- Consumer сохраняет `processed_event_ids` с TTL
-- При получении события проверяет — уже обработано?
-- Если да — ack и skip
-- Если нет — process, потом записать в processed, потом ack
+- The consumer stores `processed_event_ids` with a TTL
+- On receiving an event, checks — already processed?
+- If yes — ack and skip
+- If no — process, then record as processed, then ack
 
 ### At-most-once delivery
 
-Broker не гарантирует delivery. Возможна потеря.
+The broker doesn't guarantee delivery. Loss is possible.
 
-Redко используется — только когда loss приемлемо (metrics, non-critical notifications).
+Rarely used — only when loss is acceptable (metrics, non-critical notifications).
 
 ### Exactly-once delivery
 
-Гарантия что событие обработано ровно один раз. Требует transactional messaging (Kafka transactions, RabbitMQ transactions).
+A guarantee that the event is processed exactly once. Requires transactional messaging (Kafka transactions, RabbitMQ transactions).
 
-Complexity высокая, performance impact есть. Используется когда идемпотентность невозможна.
+High complexity, there is a performance impact. Used when idempotency is impossible.
 
 ### Consumer groups
 
-Несколько instance сервиса читают из одного topic, каждое событие обрабатывается одним instance:
+Several service instances read from one topic, each event is handled by one instance:
 
 ~~~
 Topic: order-events
@@ -298,135 +298,135 @@ Topic: order-events
         └── instance 1 (handles all partitions)
 ~~~
 
-Horizontal scaling — больше instances в group = больше throughput.
+Horizontal scaling — more instances in the group = more throughput.
 
 ## Observability
 
-### Events как trace points
+### Events as trace points
 
-Каждое событие — natural checkpoint в workflow. Tracing через trace_id в метаданных:
+Each event is a natural checkpoint in the workflow. Tracing via trace_id in metadata:
 
-- Publisher добавляет trace_id в событие
-- Consumer продолжает trace
-- End-to-end visibility для всей saga
+- Publisher adds trace_id to the event
+- Consumer continues the trace
+- End-to-end visibility for the entire saga
 
 ### Dead letter queue
 
-События которые не удалось обработать после N retries — в dead letter queue:
+Events that couldn't be processed after N retries go to the dead letter queue:
 
-- Не блокируют основной queue
-- Manual inspection позже
-- Retry mechanism после fix
+- Don't block the main queue
+- Manual inspection later
+- Retry mechanism after fix
 
 ### Monitoring
 
-Ключевые metrics:
+Key metrics:
 
 - **Throughput** — events per second (publisher, consumer)
-- **Lag** — насколько consumer отстаёт от publisher
-- **Error rate** — % событий в dead letter queue
-- **Processing time** — p95, p99 обработки consumer
+- **Lag** — how far the consumer is behind the publisher
+- **Error rate** — % of events in the dead letter queue
+- **Processing time** — p95, p99 of consumer processing
 
 ## Common pitfalls
 
 ### Event spam
 
-Публикация каждого мелкого изменения — events become noise, consumers overloaded.
+Publishing every minor change — events become noise, consumers overloaded.
 
-Решение: events на granularity domain-significant changes, не implementation details.
+Solution: events at the granularity of domain-significant changes, not implementation details.
 
 ### Breaking schema changes
 
-Удаление или переименование поля без version bump — ломает consumers.
+Removing or renaming a field without a version bump — breaks consumers.
 
-Решение: schema registry, backward compatibility rules, explicit versioning.
+Solution: schema registry, backward compatibility rules, explicit versioning.
 
 ### Missing event store
 
-Events теряются при restart broker. Невозможно replay или audit.
+Events are lost on broker restart. Impossible to replay or audit.
 
-Решение: durable storage (Kafka с retention), event store (EventStore DB), database-backed events.
+Solution: durable storage (Kafka with retention), event store (EventStore DB), database-backed events.
 
-### Sync thinking in async system
+### Sync thinking in an async system
 
-Trying to request-response через events — "publish event and wait for response":
+Trying request-response through events — "publish event and wait for response":
 
 ~~~
 ❌ BAD: publish, wait for reply (blocks)
 ✅ GOOD: publish and continue, handle response event later
 ~~~
 
-Event-driven требует mental shift к async.
+Event-driven requires a mental shift to async.
 
-### Tight coupling через shared schemas
+### Tight coupling through shared schemas
 
-Publisher и всех consumers strongly typed to same schema. Changing schema — деплой всех одновременно.
+Publisher and all consumers strongly typed to the same schema. Changing the schema — deploy everyone simultaneously.
 
-Решение: consumer-side взаимодействует через projection/view, tolerant reader pattern (игнорирует unknown fields).
+Solution: consumer-side interacts through a projection/view, tolerant reader pattern (ignores unknown fields).
 
 ### No ordering guarantees
 
-Events могут приходить не в том порядке в котором опубликованы (особенно cross-partition).
+Events may arrive out of the order in which they were published (especially cross-partition).
 
-Решение: включай ordering concerns в design — sequence numbers, timestamps, causation chain.
+Solution: factor ordering concerns into the design — sequence numbers, timestamps, causation chain.
 
 ### Event as API
 
-Events становятся частью API contract. Все subscribers depend on schema.
+Events become part of the API contract. All subscribers depend on the schema.
 
 Treated accordingly — versioning, documentation, deprecation process.
 
-## Хранение событий
+## Event storage
 
 ### Ephemeral (queue)
 
-События в queue до consumption, потом удаляются (RabbitMQ default, SQS).
+Events sit in the queue until consumption, then are deleted (RabbitMQ default, SQS).
 
-Подходит для: task queues, temporary notifications.
+Suitable for: task queues, temporary notifications.
 
 ### Retained (log-based)
 
-События хранятся в log на заданное время (Kafka, Kinesis).
+Events are stored in a log for a set time (Kafka, Kinesis).
 
-Позволяет:
+Allows:
 
-- Replay события с определённого момента
-- Новые consumers получают historical events
+- Replaying events from a specific point
+- New consumers get historical events
 - Audit trail
-- Debug через replay
+- Debug via replay
 
 ### Event store
 
-Специализированная БД для событий (EventStore DB, custom БД):
+A specialized DB for events (EventStore DB, custom DB):
 
 - Guaranteed ordering
 - Efficient append
 - Replay capabilities
 - Subscriptions
 
-Для event sourcing.
+For event sourcing.
 
-## Миграция к event-driven
+## Migration to event-driven
 
-Существующая система без events — постепенный переход:
+Existing system without events — gradual transition:
 
 ### Strangler fig
 
-1. Identify workflow для migration
-2. Add event publishing в существующий sync код
-3. Create consumer реализующий integration
+1. Identify workflow for migration
+2. Add event publishing to the existing sync code
+3. Create a consumer implementing the integration
 4. Validate parity
-5. Switch sync call на event-driven
-6. Repeat для следующих workflows
+5. Switch the sync call to event-driven
+6. Repeat for the next workflows
 
 ### Dual-write pattern
 
-Temporarily — и sync call, и event publishing:
+Temporarily — both sync call and event publishing:
 
-- Helps validate event-driven version
-- Provides rollback option
-- Remove sync call после confidence
+- Helps validate the event-driven version
+- Provides a rollback option
+- Remove the sync call once confident
 
 ### Parallel runs
 
-Run both old и new paths в parallel, compare results, only switch когда consistent.
+Run both old and new paths in parallel, compare results, only switch when consistent.

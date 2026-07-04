@@ -1,119 +1,146 @@
-# Стандарты качества кода
+# Code quality standards
 
-Правила о том какой код считается хорошим. Это про сам код, не про процесс работы агента (см. principles.md) и не про автоматизированные проверки (см. quality-gates.md).
+Rules about what counts as good code. This is about the code itself, not about the agent's work
+process (see principles.md) and not about automated checks (see quality-gates.md).
 
 ## Single Responsibility Principle
 
-Класс или модуль делает одну вещь. Один смысл существования.
+A class or module does one thing. One reason to exist.
 
-Признаки нарушения:
+Signs of a violation:
 
-- Имя содержит "And" (`UserAndBilling`, `DataLoaderAndValidator`) — почти всегда split
-- Больше 10 public методов — подумать о split
-- Методы образуют несвязные группы — разные ответственности, split по группам
-- Название не объясняет однозначно что класс делает — плохое имя = размытая ответственность
+- The name contains "And" (`UserAndBilling`, `DataLoaderAndValidator`) — almost always split
+- More than 10 public methods — consider a split
+- Methods form unrelated groups — different responsibilities, split by group
+- The name doesn't unambiguously explain what the class does — a bad name = blurred responsibility
 
-При обнаружении — split до мержа задачи, не откладывать.
+On detection — split before merging the task, don't defer it.
 
-## Запрет на God Objects
+## Prohibition on God Objects
 
-Большие классы/модули — частая причина проблем. Признаки God Object:
+Large classes/modules are a frequent source of problems. Signs of a God Object:
 
-- Перешёл LOC-порог (см. [quality-gates.md](quality-gates.md)) — это **сигнал, будящий суждение**, не сам вердикт: порог обязывает обоснованный ответ «делает одну вещь, вот почему» ИЛИ split (QG-NN-03)
-- Управление одновременно несколькими уровнями (persistence + UI state + business logic + networking в одном классе)
-- Высокий fan-in и fan-out — знает про всё и все знают про него
-- Сложность тестирования — нужны моки всего подряд
+- Crossed the LOC threshold (see [quality-gates.md](quality-gates.md)) — this is **a signal that
+  wakes up judgment**, not the verdict itself: the threshold obligates a reasoned answer — "it does
+  one thing, here's why" — OR a split (QG-NN-03)
+- Managing several levels at once (persistence + UI state + business logic + networking in one
+  class)
+- High fan-in and fan-out — it knows about everything and everything knows about it
+- Hard to test — needs mocks for everything
 
-Для **подтверждённого** God Object (сигналы сошлись, не один лишь размер) решение одно — split по responsibility. Не "класс из 1500 строк это нормально если он про одну вещь" — не про одну. Про одну вещь не бывает 1500 строк. Но один лишь перешагнутый LOC-порог God Object ещё не доказывает — длинный-но-цельный парсер обосновывается, а не режется ради цифры.
+For a **confirmed** God Object (signals converged, not just size), there's one solution — split by
+responsibility. Not "a 1500-line class is fine if it's about one thing" — it isn't about one thing.
+Nothing about one thing runs 1500 lines. But a LOC threshold crossed on its own doesn't yet prove a
+God Object — a long-but-coherent parser gets justified, not cut just to hit a number.
 
-## Слоистая архитектура — однонаправленные зависимости — [CQ-NN-02 · non-negotiable · accountability]
+## Layered architecture — one-directional dependencies — [CQ-NN-02 · non-negotiable · accountability]
 
-Если проект разбит на слои (это почти всегда хорошая идея), зависимости между слоями строго однонаправленные.
+If a project is split into layers (almost always a good idea), dependencies between layers are
+strictly one-directional.
 
-Для проекта с тремя слоями (типичный case):
+For a project with three layers (the typical case):
 
 ~~~
 {{layer-ui}} → {{layer-bridge}} → {{layer-core}}
 ~~~
 
-{{layer-core}} никогда не импортирует из {{layer-bridge}} или {{layer-ui}}.
-{{layer-bridge}} никогда не импортирует из {{layer-ui}}.
+{{layer-core}} never imports from {{layer-bridge}} or {{layer-ui}}.
+{{layer-bridge}} never imports from {{layer-ui}}.
 
-Это правило не имеет исключений. Если возникает "нужно" нарушить — значит слой спроектирован неправильно, рефакторить его, не нарушать правило.
+This rule has no exceptions. If a "need" to violate it comes up — the layer is designed wrong;
+refactor the layer, don't break the rule.
 
-Конкретные названия слоёв и их назначение — во входном файле регламента проекта и (если оставлен соответствующий architecture-модуль) в [architecture/layered-architecture.md](../architecture/layered-architecture.md); для desktop/UI-специфики с native+declarative слоями — [architecture/three-tier-with-bridge.md](../architecture/three-tier-with-bridge.md).
+The concrete layer names and their purposes live in the project's regimen entry file and (if the
+corresponding architecture module is kept) in [architecture/layered-architecture.md](../architecture/layered-architecture.md);
+for desktop/UI specifics with native+declarative layers — [architecture/three-tier-with-bridge.md](../architecture/three-tier-with-bridge.md).
 
-## Запрет на TODO/FIXME — [CQ-NN-01 · non-negotiable · mechanical(opt): check-no-todo.sh]
+## Prohibition on TODO/FIXME — [CQ-NN-01 · non-negotiable · mechanical(opt): check-no-todo.sh]
 
-Если что-то нужно сделать — делай сейчас. Если не делается сейчас — не оставляй пометку в коде, создай задачу в трекере.
+If something needs doing — do it now. If it can't be done now — don't leave a marker in the code,
+create a task in the tracker.
 
-TODO в коде — это неоплаченный технический долг который растёт незаметно. Через полгода никто не помнит зачем он там и что надо сделать.
+A TODO in code is unpaid technical debt that grows unnoticed. Six months later nobody remembers why
+it's there or what needs to be done.
 
-Исключений нет. "Временный TODO" становится постоянным в 99% случаев.
+There are no exceptions. A "temporary TODO" becomes permanent 99% of the time.
 
-## Запрет на закомментированный код — [CQ-NN-03 · non-negotiable · accountability]
+## Prohibition on commented-out code — [CQ-NN-03 · non-negotiable · accountability]
 
-Если код не нужен — удалить. Не комментировать "на всякий случай".
+If code isn't needed — delete it. Don't comment it out "just in case."
 
-Git помнит всю историю. Если код понадобится — восстановится из истории.
+Git remembers the whole history. If the code is needed again, it can be restored from history.
 
-Закомментированный код гниёт. Через месяц непонятно зачем он закомментирован, работает ли ещё, нужен ли. Занимает место в файлах, сбивает grep, мешает навигации.
+Commented-out code rots. A month later it's unclear why it was commented out, whether it still
+works, whether it's needed. It takes up space in files, confuses grep, and gets in the way of
+navigation.
 
-## Именование
+## Naming
 
-Общие принципы (конкретные конвенции — в `stack/<stack>.md`):
+General principles (concrete conventions live in `stack/<stack>.md`):
 
-- Имена описывают **что**, не **как**. `UserRepository`, не `UserMySQLDataLoader`.
-- Избегать сокращений кроме общепринятых (`id`, `url`, `io`). Не `usrMgr`, а `userManager`.
-- Классы — существительные (`OrderProcessor`).
-- Методы — глаголы (`processOrder`, `sendEmail`).
-- Булевые переменные и методы — `is/has/should/can` префиксы (`isActive`, `hasPermission`, `shouldRetry`).
-- Константы — по конвенции стека (UPPER_SNAKE_CASE в C++/Python, kPascalCase в Google style, PascalCase в C#).
+- Names describe **what**, not **how**. `UserRepository`, not `UserMySQLDataLoader`.
+- Avoid abbreviations except widely accepted ones (`id`, `url`, `io`). Not `usrMgr`, but
+  `userManager`.
+- Classes are nouns (`OrderProcessor`).
+- Methods are verbs (`processOrder`, `sendEmail`).
+- Boolean variables and methods use `is/has/should/can` prefixes (`isActive`, `hasPermission`,
+  `shouldRetry`).
+- Constants follow the stack's convention (UPPER_SNAKE_CASE in C++/Python, kPascalCase in Google
+  style, PascalCase in C#).
 
-Имя должно быть понятно без комментариев. Если нужен комментарий чтобы объяснить зачем переменная — переименуй.
+A name should be clear without comments. If a comment is needed to explain what a variable is for —
+rename it.
 
-## Обработка ошибок
+## Error handling
 
-Универсальные принципы (конкретные механизмы — в stack-файлах):
+Universal principles (concrete mechanisms live in the stack files):
 
-- Ошибки не игнорируются молча. Либо обрабатывать, либо явно пробрасывать.
-- Empty catch-блоки запрещены. Либо логируется и обрабатывается, либо не ловится вообще.
-- Ошибки типизированы — не общий `Exception`/`Error`, а конкретные типы с конкретной семантикой.
-- User-facing ошибки и internal ошибки — разные вещи. Не показывать пользователю stack trace с техническими деталями.
-- Возврат ошибок из функций — через типизированный механизм стека (`Result<T, E>`, `std::expected`, `Option`, tuple).
+- Errors are never silently ignored. Either handle them or explicitly propagate them.
+- Empty catch blocks are forbidden. Either it's logged and handled, or it isn't caught at all.
+- Errors are typed — not a generic `Exception`/`Error`, but concrete types with concrete semantics.
+- User-facing errors and internal errors are different things. Don't show the user a stack trace
+  with technical detail.
+- Returning errors from functions goes through the stack's typed mechanism (`Result<T, E>`,
+  `std::expected`, `Option`, tuple).
 
-## Async-безопасность
+## Async safety
 
-Если проект имеет concurrency (почти всегда):
+If the project has concurrency (almost always):
 
-- Сигналы между потоками передаются по значению, не по ссылке на shared state
-- Shared mutable state — отсутствует либо защищён синхронизацией
-- Главный поток не блокируется на IO, сетевых вызовах, тяжёлых вычислениях
-- Паттерн: Command-объект попадает в очередь, выполняется в worker'е, результат через сигнал/callback
+- Signals between threads are passed by value, not by reference to shared state
+- Shared mutable state is either absent or protected by synchronization
+- The main thread never blocks on I/O, network calls, or heavy computation
+- Pattern: a Command object goes into a queue, executes in a worker, the result comes back via a
+  signal/callback
 
-Конкретные механизмы — в stack-файле (goroutines+channels, async/await, signals/slots, actor model).
+Concrete mechanisms live in the stack file (goroutines+channels, async/await, signals/slots, actor
+model).
 
-## Security-минимум — [CQ-NN-04 · non-negotiable · accountability]
+## Security minimum — [CQ-NN-04 · non-negotiable · accountability]
 
-Всегда соблюдается независимо от проекта:
+Always observed regardless of the project:
 
-- Пароли никогда не в plaintext в БД, никогда в коде, никогда в логах
-- API-ключи и секреты — через secrets management (env variables, vault, keychain), не в репозитории
-- User input никогда не используется напрямую в SQL — только через prepared statements
-- User input в HTML/XML — sanitized и escaped
-- User input в shell-командах — запрещено либо через строгий whitelist
-- PII (персональные данные) — минимизация сбора, шифрование в rest, audit log доступа
-- Secrets в git history — при компрометации: rotation + rewrite history + notification
+- Passwords are never in plaintext in the database, never in code, never in logs
+- API keys and secrets go through secrets management (env variables, vault, keychain), not in the
+  repository
+- User input is never used directly in SQL — only through prepared statements
+- User input in HTML/XML is sanitized and escaped
+- User input in shell commands is forbidden, or only through a strict whitelist
+- PII (personal data) — minimize collection, encryption at rest, an access audit log
+- Secrets in git history — on compromise: rotation + rewrite history + notification
 
-Это базовый минимум. Регулируемые домены (медицина, финансы, госданные) добавляют требования — см. [domain/regulated.md](../domain/regulated.md) (если этот domain-модуль оставлен в проекте).
+This is the baseline minimum. Regulated domains (healthcare, finance, government data) add
+requirements — see [domain/regulated.md](../domain/regulated.md) (if this domain module is kept in
+the project).
 
-## Читаемость важнее "умности"
+## Readability over "cleverness"
 
-Предпочитать простой и явный код сложному и "элегантному":
+Prefer simple, explicit code over complex and "elegant":
 
-- Два простых метода лучше одного сложного
-- Явное `if (x != null) { ... }` понятнее хитрого `x?.let { ... }?.also { ... }`
-- Цепочка из 10 `.map().filter().reduce()` — разбей на именованные промежуточные переменные
-- Оптимизации без benchmark'ов — запрещены. "Это быстрее" без измерения — галлюцинация.
+- Two simple methods beat one complex one
+- An explicit `if (x != null) { ... }` is clearer than a clever `x?.let { ... }?.also { ... }`
+- A chain of 10 `.map().filter().reduce()` — break it into named intermediate variables
+- Optimizations without benchmarks are forbidden. "This is faster" without measurement is a
+  hallucination.
 
-Код читается в 10 раз чаще чем пишется. Оптимизируй читаемость.
+Code is read 10 times more often than it's written. Optimize for readability.

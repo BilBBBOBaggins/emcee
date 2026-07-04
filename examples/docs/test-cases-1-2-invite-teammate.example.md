@@ -1,76 +1,76 @@
-# Тест-кейсы: Пригласить участника (День 1, Задача 2)
+# Test cases: Invite a teammate (Day 1, Task 2)
 
-Автор: QA UAT. Формат — [roles/qa-uat.md](../../roles/qa-uat.md). Источник сценариев: [scenarios-1-2-invite-teammate.example.md](scenarios-1-2-invite-teammate.example.md).
-Вход для: QA E2E. Референс: Slack + common sense.
+Author: QA UAT. Format — [roles/qa-uat.md](../../roles/qa-uat.md). Scenario source: [scenarios-1-2-invite-teammate.example.md](scenarios-1-2-invite-teammate.example.md).
+Input for: QA E2E. Reference: Slack + common sense.
 
-## TC-INVITE-001: Отправка приглашения (happy path)
+## TC-INVITE-001: Sending an invitation (happy path)
 
-**Приоритет:** P0 Critical
-**Источник:** Сценарий 1.1 из scenarios-1-2-invite-teammate.md
-**Автоматизация:** Да
+**Priority:** P0 Critical
+**Source:** Scenario 1.1 from scenarios-1-2-invite-teammate.md
+**Automation:** Yes
 
-### Предусловие
-- Пользователь залогинен, открыта страница своей команды.
-- В команде нет инвайта на `newdev@example.com`.
+### Precondition
+- The user is logged in, their team page is open.
+- There is no invite for `newdev@example.com` in the team.
 
-### Шаги
+### Steps
 
-| # | Given (состояние) | When (действие) | Then (ожидание) | UI selector |
+| # | Given (state) | When (action) | Then (expectation) | UI selector |
 |---|-------------------|-----------------|-----------------|-------------|
-| 1 | Страница команды | Нажать «Invite teammate» | Модалка открыта, поле email в фокусе и пустое, кнопка Send серая/неактивная | inviteButton, inviteModal, inviteEmailInput, inviteSubmit |
-| 2 | Модалка открыта | Ввести `newdev@example.com` | Кнопка Send активна | inviteEmailInput, inviteSubmit |
-| 3 | Email введён | Нажать Send | Send показывает спиннер и неактивна; затем toast «Invitation sent to newdev@example.com»; модалка закрывается | inviteSubmit, inviteToast |
+| 1 | Team page | Click "Invite teammate" | Modal is open, the email field is focused and empty, the Send button is gray/disabled | inviteButton, inviteModal, inviteEmailInput, inviteSubmit |
+| 2 | Modal is open | Enter `newdev@example.com` | Send button is enabled | inviteEmailInput, inviteSubmit |
+| 3 | Email entered | Click Send | Send shows a spinner and is disabled; then a toast "Invitation sent to newdev@example.com"; the modal closes | inviteSubmit, inviteToast |
 
-### Тестовые данные
+### Test data
 - Email: `newdev@example.com`
 
-### Критерий прохождения
-- [ ] Toast с точным текстом показан и автоскрылся.
-- [ ] Модалка закрыта, фокус вернулся на страницу.
-- [ ] **Серверная проверка:** в БД появился `Invite{email:"newdev@example.com", status:"pending"}` в нужном tenant.
+### Pass criteria
+- [ ] The toast with the exact text is shown and auto-dismisses.
+- [ ] The modal is closed, focus returns to the page.
+- [ ] **Server-side check:** an `Invite{email:"newdev@example.com", status:"pending"}` appeared in the DB in the correct tenant.
 
-## TC-INVITE-002: Валидация email (кнопка Send заблокирована)
+## TC-INVITE-002: Email validation (Send button blocked)
 
-**Приоритет:** P1 High
-**Источник:** Сценарий 1.2 из scenarios-1-2-invite-teammate.md
-**Автоматизация:** Да
+**Priority:** P1 High
+**Source:** Scenario 1.2 from scenarios-1-2-invite-teammate.md
+**Automation:** Yes
 
-### Предусловие
-- Модалка приглашения открыта.
+### Precondition
+- The invite modal is open.
 
-### Шаги
+### Steps
 
-| # | Given (состояние) | When (действие) | Then (ожидание) | UI selector |
+| # | Given (state) | When (action) | Then (expectation) | UI selector |
 |---|-------------------|-----------------|-----------------|-------------|
-| 1 | Поле email пустое | — | Кнопка Send неактивна | inviteEmailInput, inviteSubmit |
-| 2 | Поле email пустое | Ввести `not-an-email` | Кнопка Send остаётся неактивной | inviteEmailInput, inviteSubmit |
-| 3 | Невалидный ввод | Исправить на `ok@example.com` | Кнопка Send активируется | inviteEmailInput, inviteSubmit |
+| 1 | Email field is empty | — | Send button is disabled | inviteEmailInput, inviteSubmit |
+| 2 | Email field is empty | Enter `not-an-email` | Send button remains disabled | inviteEmailInput, inviteSubmit |
+| 3 | Invalid input | Fix to `ok@example.com` | Send button becomes enabled | inviteEmailInput, inviteSubmit |
 
-### Тестовые данные
-- Невалидный: `not-an-email`; валидный: `ok@example.com`
+### Test data
+- Invalid: `not-an-email`; valid: `ok@example.com`
 
-### Критерий прохождения
-- [ ] При пустом и невалидном вводе отправка невозможна (никакого запроса к API не уходит).
+### Pass criteria
+- [ ] With empty or invalid input, submission is impossible (no request goes to the API).
 
-## TC-INVITE-003: Повторное приглашение (409)
+## TC-INVITE-003: Repeat invitation (409)
 
-**Приоритет:** P1 High
-**Источник:** Сценарий 1.3 из scenarios-1-2-invite-teammate.md
-**Автоматизация:** Да
+**Priority:** P1 High
+**Source:** Scenario 1.3 from scenarios-1-2-invite-teammate.md
+**Automation:** Yes
 
-### Предусловие
-- На `dup@example.com` в этой команде уже есть pending-инвайт (создать через API в setup).
+### Precondition
+- `dup@example.com` already has a pending invite in this team (create via API in setup).
 
-### Шаги
+### Steps
 
-| # | Given (состояние) | When (действие) | Then (ожидание) | UI selector |
+| # | Given (state) | When (action) | Then (expectation) | UI selector |
 |---|-------------------|-----------------|-----------------|-------------|
-| 1 | Модалка открыта | Ввести `dup@example.com`, нажать Send | Модалка не закрывается; под полем инлайн-ошибка «This person already has a pending invite» | inviteEmailInput, inviteSubmit, inviteError |
-| 2 | Показана ошибка | Изменить email на `fresh@example.com` | Ошибка исчезает, Send активна | inviteEmailInput, inviteError, inviteSubmit |
+| 1 | Modal is open | Enter `dup@example.com`, click Send | Modal doesn't close; inline error under the field "This person already has a pending invite" | inviteEmailInput, inviteSubmit, inviteError |
+| 2 | Error shown | Change email to `fresh@example.com` | Error disappears, Send is enabled | inviteEmailInput, inviteError, inviteSubmit |
 
-### Тестовые данные
-- Дубль: `dup@example.com` (pending-инвайт создан в setup); новый: `fresh@example.com`
+### Test data
+- Duplicate: `dup@example.com` (pending invite created in setup); new: `fresh@example.com`
 
-### Критерий прохождения
-- [ ] Дубль не создаёт второй инвайт (серверная проверка: ровно один pending на `dup@example.com`).
-- [ ] Сообщение об ошибке видно пользователю и исчезает при исправлении.
+### Pass criteria
+- [ ] The duplicate does not create a second invite (server-side check: exactly one pending for `dup@example.com`).
+- [ ] The error message is visible to the user and disappears when fixed.

@@ -95,3 +95,12 @@ given — do not improvise synonyms (no "protocol"/"ruleset" where "regimen" is 
 | «первый километр» (ADR-003) | "first kilometer" |
 | ФЗ-152 | Russia's Federal Law No. 152-FZ (expand on first use) |
 | энфорсмент | enforcement |
+| «Коротко» (секция ADR) | "In short" |
+| «Контекст» (секция ADR) | "Context" |
+| «Решение» (секция ADR) | "Decision" |
+| «Последствия» (секция ADR) | "Consequences" |
+| «Альтернативы (отклонены)» (секция ADR) | "Alternatives (rejected)" |
+| «Формат вызова» (секция ролей) | "Invocation format" |
+| «Чистая сборка» (секция stack-файлов) | "Clean build" |
+| «Специфика проекта» | "Project specifics" |
+| «Эволюция этого документа» | "Evolution of this document" |

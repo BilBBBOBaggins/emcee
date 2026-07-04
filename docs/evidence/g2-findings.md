@@ -1,106 +1,116 @@
-# G2 — docs-only на Codex: эмпирический результат (живой бинарь codex 0.138.0)
+# G2 — docs-only on Codex: empirical result (live binary codex 0.138.0)
 
-> Тест проведён P4-агентом на `codex-cli 0.138.0` (`/opt/homebrew/bin/codex`), macOS seatbelt
-> (`sandbox-exec`). Метод: `codex sandbox -- <команда>` запускает произвольную команду под той же
-> OS-песочницей, что и агент. Это тестирует **аппаратную границу ниже слоя тулов** — `apply_patch`,
-> raw-shell и MCP-запись все сводятся к одним и тем же write-syscall'ам, которые seatbelt либо
-> пропускает, либо нет. Поэтому тест raw-write под профилем покрывает все три «вектора атаки» сразу.
+> Test conducted by the P4 agent on `codex-cli 0.138.0` (`/opt/homebrew/bin/codex`), macOS
+> seatbelt (`sandbox-exec`). Method: `codex sandbox -- <command>` runs an arbitrary command under
+> the same OS sandbox as the agent. This tests the **hardware boundary below the tool layer** —
+> `apply_patch`, raw shell, and MCP writes all reduce to the same write syscalls, which seatbelt
+> either allows or blocks. So a raw-write test under the profile covers all three "attack vectors"
+> at once.
 
-## Что доказано (аппаратные факты)
+## What's proven (hardware facts)
 
-| Тир | Codex-конфиг | Результат | Класс |
+| Tier | Codex config | Result | Class |
 |---|---|---|---|
-| **read-only** (reviewer, auditor) | `sandbox_mode = "read-only"` | Запись в `src/` И `docs/` → `Operation not permitted`. Блокируется seatbelt'ом. Воспроизведено многократно. | **GREEN — аппаратно** |
-| **full** (developer, qa-e2e, debugger, devops, architect-код) | `sandbox_mode = "workspace-write"` | Документированный стабильный путь; в реальной агент-сессии делает workspace писибельным. | **GREEN — аппаратно** (стабильный документированный конфиг) |
-| **docs-only** (ba, qa-uat, sa, arbiter, red/blue — пишут только в `docs/`/`scratchpad/`, не в `src/`) | стабильный путь структурно неспособен; per-path только через нестабильный `[permissions]`-enum | **ПОДТВЕРЖДЕНО живым агентом:** карв-аут «write `docs/`, deny `src/`» недостижим практическим конфигом (см. ниже). | **RED (стабильный путь) — деградирует в прозу+accountability** |
+| **read-only** (reviewer, auditor) | `sandbox_mode = "read-only"` | Write to `src/` AND `docs/` → `Operation not permitted`. Blocked by seatbelt. Reproduced multiple times. | **GREEN — hardware** |
+| **full** (developer, qa-e2e, debugger, devops, architect-code) | `sandbox_mode = "workspace-write"` | Documented stable path; makes the workspace writable in a real agent session. | **GREEN — hardware** (stable, documented config) |
+| **docs-only** (ba, qa-uat, sa, arbiter, red/blue — write only to `docs/`/`scratchpad/`, not `src/`) | stable path is structurally incapable; per-path only via the unstable `[permissions]` enum | **CONFIRMED by a live agent:** the "write `docs/`, deny `src/`" carve-out is unreachable with a practical config (see below). | **RED (stable path) — degrades to prose+accountability** |
 
-## Почему docs-only = AMBER, а не GREEN/RED
+## Why docs-only = AMBER, not GREEN/RED
 
-1. **Машинерия присутствует** (не RED — способность не отсутствует). Реверс схемы из бинаря:
-   - Стабильный путь: `sandbox_mode = "workspace-write"` + `[sandbox_workspace_write]` с
+1. **The machinery is present** (not RED — the capability is not absent). Reverse-engineered
+   from the binary's schema:
+   - Stable path: `sandbox_mode = "workspace-write"` + `[sandbox_workspace_write]` with
      `writable_roots = [...]`, `exclude_tmpdir_env_var`, `exclude_slash_tmp`.
-   - Нестабильный путь (gated «unstable features»): `[permissions.<profile>]`-система,
-     `default_permissions = "<profile>"` (top-level), `--permissions-profile <name>`. Структура
-     профиля (`PermissionProfileToml`): поля `deny_read`, `description`, `extends`, `workspace_roots`
-     (`WorkspaceRootsToml`-структ), `filesystem` (`FilesystemPermissionsToml`), `network`. Фильтр
-     ФС — `FileSystemSandboxEntry { access, glob/path, permission_profile }`, `glob_scan_max_depth`,
-     `entries`. Точную TOML-инкантацию untagged-enum `FilesystemPermissionToml` за разумный таймбокс
-     закрыть не удалось (схема недокументирована и помечена нестабильной).
-2. **Стабильный путь (`workspace-write` + `writable_roots`) СТРУКТУРНО НЕСПОСОБЕН — подтверждено живым
-   агентом.** Решающий тест (`codex exec -s workspace-write`, `writable_roots=["<proj>/docs"]`, агент
-   получил задачу записать в `docs/ok.md` И `src/bad.go`): **обе записи прошли** (ground-truth файлы
-   на диске подтверждают `src/bad.go` записан). Структурная причина (сверена с бинарём
-   `SandboxWorkspaceWrite.ts`): поля = `writable_roots`, `network_access`, `exclude_tmpdir_env_var`,
-   `exclude_slash_tmp` — **опции исключить cwd НЕТ**. `writable_roots` **добавляет** к дефолтному
-   writable-набору (cwd), а не ограничивает его. cwd всегда писибелен → `src/` под cwd всегда писибелен.
-3. **`workspace_roots` (поле профиля) — булевы тумблеры, не список путей** (`expected a boolean` на
-   `["docs"]`; поля вида `git`/`local`/`enabled`). Не даёт «writable = только docs».
-4. **Единственный per-path-механизм — нестабильный `[permissions].filesystem` untagged-enum**
-   (`FilesystemPermissionToml`: `entries`/`glob`/`deny_read`). Помечен «unstable features», точную
-   TOML-инкантацию закрыть не удалось за ~15 проб в двух сессиях. Строить docs-only-тир на нём =
-   хрупко (схема меняется между версиями codex; 0.138→0.142+ уже вышла) — инженерно не оправдано.
+   - Unstable path (gated behind "unstable features"): the `[permissions.<profile>]` system,
+     `default_permissions = "<profile>"` (top-level), `--permissions-profile <name>`. Profile
+     structure (`PermissionProfileToml`): fields `deny_read`, `description`, `extends`, `workspace_roots`
+     (a `WorkspaceRootsToml` struct), `filesystem` (`FilesystemPermissionsToml`), `network`. The
+     filesystem filter is `FileSystemSandboxEntry { access, glob/path, permission_profile }`,
+     `glob_scan_max_depth`, `entries`. Could not pin down the exact TOML incantation for the
+     untagged enum `FilesystemPermissionToml` within a reasonable timebox (the schema is
+     undocumented and marked unstable).
+2. **The stable path (`workspace-write` + `writable_roots`) is STRUCTURALLY INCAPABLE — confirmed
+   by a live agent.** Decisive test (`codex exec -s workspace-write`, `writable_roots=["<proj>/docs"]`,
+   the agent was tasked to write to `docs/ok.md` AND `src/bad.go`): **both writes succeeded**
+   (ground-truth files on disk confirm `src/bad.go` was written). Structural cause (cross-checked
+   against the binary's `SandboxWorkspaceWrite.ts`): the fields are `writable_roots`,
+   `network_access`, `exclude_tmpdir_env_var`, `exclude_slash_tmp` — **there is no option to
+   exclude cwd**. `writable_roots` **adds to** the default writable set (cwd), it does not
+   restrict it. cwd is always writable → `src/` under cwd is always writable.
+3. **`workspace_roots` (a profile field) is boolean toggles, not a list of paths** (`expected a
+   boolean` on `["docs"]`; fields like `git`/`local`/`enabled`). Does not give "writable = docs only".
+4. **The only per-path mechanism is the unstable `[permissions].filesystem` untagged enum**
+   (`FilesystemPermissionToml`: `entries`/`glob`/`deny_read`). Marked "unstable features"; could not
+   pin down the exact TOML incantation after ~15 attempts across two sessions. Building the
+   docs-only tier on it would be fragile (the schema changes between codex versions; 0.138→0.142+
+   has already shipped) — not engineering-justified.
 
-**Вывод (definitive):** аппаратный docs-only на Codex 0.138.0 **недостижим практическим конфигом** —
-стабильный путь структурно неспособен (cwd всегда писибелен, доказано живым агентом), `workspace_roots`
-= тумблеры, per-path только через нестабильный enum. Это **RED для стабильного пути**, сильнее прежнего
-AMBER. **Следствие для матрицы:** docs-only роли = `sandbox_mode="workspace-write"` + **прозовый
-констрейнт «пиши только в `docs/`/`scratchpad/`»** (accountability), потому что `read-only` сломал бы их
-способность производить артефакты. Клетка деградирует в прозу — закрыто, не TODO.
+**Conclusion (definitive):** hardware docs-only on Codex 0.138.0 **is unreachable with a
+practical config** — the stable path is structurally incapable (cwd is always writable, proven by
+a live agent), `workspace_roots` is toggles, per-path only via the unstable enum. This is **RED for
+the stable path**, stronger than the previous AMBER. **Consequence for the matrix:** docs-only
+roles = `sandbox_mode="workspace-write"` + a **prose constraint "write only to
+`docs/`/`scratchpad/`"** (accountability), because `read-only` would break their ability to produce
+artifacts. The cell degrades to prose — closed, not a TODO.
 
-## KL-7 — активация хуков Codex: ПРОВЕРЕНО на живом `codex exec` (6 сессий)
+## KL-7 — Codex hook activation: VERIFIED on live `codex exec` (6 sessions)
 
-**Вердикт: ни один хук НЕ сработал в headless `codex exec` (0.138.0).** Это не «не тестировано» —
-это «тестировано исчерпывающе, не активируется из user/repo-конфига в exec-режиме».
+**Verdict: not a single hook fired in headless `codex exec` (0.138.0).** This is not "untested" —
+it's "tested exhaustively, does not activate from user/repo config in exec mode".
 
-**Что точно установлено:**
-- Фича `CodexHooks` включена по умолчанию (видно в session-логе `features=[…,CodexHooks,…]`).
-- События (enum, PascalCase в конфиге): `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`,
+**What's firmly established:**
+- The `CodexHooks` feature is on by default (visible in the session log `features=[…,CodexHooks,…]`).
+- Events (enum, PascalCase in config): `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`,
   `PostCompact`, `SessionStart`, `UserPromptSubmit`, `Stop`, `SubagentStart`, `SubagentStop`.
-- **Канонический формат = Claude-Code-совместимый `hooks.json`** (из реальных plugin-хуков
+- **The canonical format is a Claude-Code-compatible `hooks.json`** (from real plugin hooks at
   `~/.codex/.tmp/plugins/*/hooks.json`): `{"hooks":{"PostToolUse":[{"matcher":"Bash","hooks":[{"type":
-  "command","command":"./scripts/x.sh"}]}],"Stop":[…]}}`. Ключи событий **PascalCase**, `command` —
-  **строка-путь** (не массив), `matcher` — имя тула.
-- **Два гейта активации:** (1) фича включена; (2) **persisted trust** — интерактивный промпт TUI
-  («These hooks run outside the sandbox after you trust them. [Trust all and continue] / [Continue
-  without]»); для автоматизации — флаг `--dangerously-bypass-hook-trust`.
-- **Тихий провал валидации:** `[hooks]` в `config.toml` принимает произвольные имена событий и типов
-  БЕЗ ошибки (проверено `codex sandbox`). Мисконфиг хука не даёт обратной связи.
+  "command","command":"./scripts/x.sh"}]}],"Stop":[…]}}`. Event keys are **PascalCase**, `command` is
+  a **path string** (not an array), `matcher` is the tool name.
+- **Two activation gates:** (1) the feature is enabled; (2) **persisted trust** — an interactive TUI
+  prompt ("These hooks run outside the sandbox after you trust them. [Trust all and continue] /
+  [Continue without]"); for automation, the `--dangerously-bypass-hook-trust` flag.
+- **Silent validation failure:** `[hooks]` in `config.toml` accepts arbitrary event names and types
+  WITHOUT an error (checked via `codex sandbox`). A hook misconfiguration gives no feedback.
 
-**Что НЕ сработало (исчерпывающе):** хук не запустился в `codex exec` при — корректной канонической
-схеме (PascalCase `Stop` + строка-путь к реальному `.sh`), `--dangerously-bypass-hook-trust`
-(предупреждение «hooks may run without review» подтверждено активным), несколько событий (`Stop`,
-`PostToolUse`, `session_start`, `user_prompt_submit`), разные sandbox-режимы, завершившиеся сессии
-(тул-коллы исполнялись, агент останавливался). Маркер-файл не появился ни разу.
+**What did NOT fire (exhaustively):** the hook did not run in `codex exec` with — the correct
+canonical schema (PascalCase `Stop` + a path string to a real `.sh`), `--dangerously-bypass-hook-trust`
+(the "hooks may run without review" warning confirmed active), several events (`Stop`, `PostToolUse`,
+`session_start`, `user_prompt_submit`), different sandbox modes, completed sessions (tool calls
+executed, the agent stopped). The marker file never appeared, not once.
 
-**Интерпретация:** рабочие хуки в 0.138.0 существуют как **plugin-хуки** (`hooks.json` через
-plugin-манифест — отдельный, тяжёлый путь загрузки), а trust-промпт — **TUI-аффорданс**. Путь
-«user/repo `[hooks]` в `config.toml` → exec» либо не поддержан, либо требует интерактивной TUI-сессии
-для granting trust. В **интерактивном `codex` TUI** хуки, вероятно, срабатывают (после granting trust)
-— но это headless-агенту/CI недоступно без интерактива.
+**Interpretation:** working hooks in 0.138.0 exist as **plugin hooks** (`hooks.json` via a plugin
+manifest — a separate, heavyweight loading path), and the trust prompt is a **TUI affordance**. The
+"user/repo `[hooks]` in `config.toml` → exec" path is either unsupported, or requires an
+interactive TUI session to grant trust. In the **interactive `codex` TUI**, hooks probably do fire
+(after granting trust) — but that's unavailable to a headless agent/CI without interaction.
 
-**Следствие для регламента:** на Claude Code хуки-гейты (`settings.json`) срабатывают во ВСЕХ режимах
-(включая headless). На Codex 0.138.0 регламентные хуки-гейты из конфига в headless-режиме **НЕ
-активируются** → клетка матрицы «хуки» = **деградирует в accountability** (обязательство под запись),
-а для жёсткого энфорсмента на Codex предпочтительны **CI/pre-commit**, не рантайм-хуки. Это сильнее
-прежнего «KL-7-pending»: подтверждено эмпирически, не отложено.
+**Consequence for the regimen:** on Claude Code, hook gates (`settings.json`) fire in ALL modes
+(including headless). On Codex 0.138.0, regimen hook gates from config **do NOT activate** in
+headless mode → the "hooks" matrix cell **degrades to accountability** (an obligation on record),
+and for hard enforcement on Codex, **CI/pre-commit** are preferred over runtime hooks. This is
+stronger than the previous "KL-7-pending": confirmed empirically, not deferred.
 
-Док-предупреждение (сохраняет силу): `PreToolUse` — не полная граница энфорсмента → docs-only через
-PreToolUse-хук был бы ложной гарантией (ADR-010 уже отклонил в пользу permission-profile).
+Doc caveat (still holds): `PreToolUse` is not a complete enforcement boundary → docs-only via a
+PreToolUse hook would be a false guarantee (ADR-010 already rejected this in favor of a
+permission-profile).
 
-## Статус верификаций (всё закрыто живой сессией)
+## Verification status (all closed by a live session)
 
-- [x] **docs-only аппаратность** — ЗАКРЫТО (RED, живой `codex exec`): стабильный путь структурно
-      неспособен (cwd всегда писибелен, агент записал `src/`), `workspace_roots`=тумблеры, per-path
-      только через нестабильный `[permissions]`-enum. Клетка = проза+accountability. Не TODO.
-- [x] **KL-7** — ЗАКРЫТО (живой `codex exec`, 6 сессий): хуки из конфига в headless не срабатывают.
-      Клетка хуков = accountability; жёсткий гейт на Codex → CI/pre-commit.
-- [ ] **(низкий приоритет, не блокер)** Точная форма `[permissions].filesystem`-профиля — если
-      когда-нибудь потребуется аппаратный docs-only/секрет-deny; нестабильная схема, ждать
-      стабилизации/доков codex. Сейчас инженерно не оправдано (хрупко по версиям).
+- [x] **docs-only hardware feasibility** — CLOSED (RED, live `codex exec`): the stable path is
+      structurally incapable (cwd is always writable, the agent wrote to `src/`),
+      `workspace_roots` = toggles, per-path only via the unstable `[permissions]` enum. The cell =
+      prose+accountability. Not a TODO.
+- [x] **KL-7** — CLOSED (live `codex exec`, 6 sessions): hooks from config do not fire in
+      headless mode. The hooks cell = accountability; hard gating on Codex → CI/pre-commit.
+- [ ] **(low priority, not a blocker)** The exact shape of the `[permissions].filesystem`
+      profile — should hardware docs-only/secret-deny ever be needed; unstable schema, wait for
+      codex to stabilize/document it. Not engineering-justified right now (fragile across
+      versions).
 
 ---
 
-**Итог G2+KL-7:** обе живые верификации закрыты. Матрица гарантий ([core/portability.md](../../core/portability.md))
-полностью заземлена на эмпирике 0.138.0, ни одной «pending»-клетки. Аппаратно на Codex: read-only,
-full-write, skills, авточтение входа. Проза/accountability: docs-only, scratchpad-only, no-Bash,
-slash-dispatch, хуки. Это осознанная деградация (ADR-010/011), не дефект.
+**Bottom line for G2+KL-7:** both live verifications are closed. The guarantee matrix
+([core/portability.md](../../core/portability.md)) is now fully grounded in 0.138.0 empirics, with
+no "pending" cells left. Hardware-backed on Codex: read-only, full-write, skills, auto-read of the
+entry file. Prose/accountability: docs-only, scratchpad-only, no-Bash, slash-dispatch, hooks. This
+is a deliberate degradation (ADR-010/011), not a defect.

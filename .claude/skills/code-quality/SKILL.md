@@ -1,17 +1,17 @@
 ---
 name: code-quality
-description: Стандарты качества кода — SRP, запрет God Objects, однонаправленные слои, запрет TODO/закомментированного кода, именование, обработка ошибок, security-минимум, читаемость > «умности». Используй, когда пишешь или ревьюишь код.
+description: Code quality standards — SRP, no God Objects, unidirectional layers, no TODOs/commented-out code, naming, error handling, security minimum, readability over "cleverness". Use when writing or reviewing code.
 ---
 
-Стандарты кода этого проекта. **Полные правила — в файле `core/code-quality.md`** (от корня проекта): прочитай его целиком при написании/ревью кода.
+This project's code standards. **Full rules in the `core/code-quality.md` file** (from the project root): read it in full when writing/reviewing code.
 
-Кратко:
+Briefly:
 
-- **SRP / без God Objects:** один класс — одна ответственность; «And» в имени и >10 public-методов → split; перешёл LOC-порог → сигнал: обоснуй цельность ИЛИ split (не сам вердикт); подтверждённый God Object → split.
-- **Слои однонаправленно:** зависимости только в одну сторону, обратные импорты запрещены.
-- **Без TODO/FIXME и закомментированного кода** — делай сейчас или заводи задачу; git помнит историю.
-- **Ошибки** типизированы, не глотаются молча; пустых catch нет.
-- **Security-минимум:** секреты не в коде/логах; user input — только через prepared statements / sanitize.
-- **Читаемость > «умности»:** простое явное лучше хитрого; оптимизации без бенчмарка запрещены.
-- LOC-лимиты и правила тестов — в `core/quality-gates.md`.
-- **Когда НЕ:** не для дебага сломанного (→ `debugging`) и не для выбора архитектуры (→ architect/`/panel`) — это стандарты написания/ревью, не поиск причины и не структурное решение.
+- **SRP / no God Objects:** one class — one responsibility; "And" in a name and >10 public methods → split; crossed the LOC threshold → a signal: justify cohesion OR split (not a verdict by itself); a confirmed God Object → split.
+- **Layers are unidirectional:** dependencies go one way only, reverse imports are forbidden.
+- **No TODO/FIXME and no commented-out code** — do it now or file a task; git remembers the history.
+- **Errors** are typed, never swallowed silently; no empty catches.
+- **Security minimum:** no secrets in code/logs; user input only via prepared statements / sanitization.
+- **Readability > "cleverness":** simple and explicit beats clever; optimizations without a benchmark are forbidden.
+- LOC limits and test rules — in `core/quality-gates.md`.
+- **When NOT to:** not for debugging something broken (→ `debugging`) and not for choosing architecture (→ architect/`/panel`) — these are writing/review standards, not root-cause search or a structural decision.

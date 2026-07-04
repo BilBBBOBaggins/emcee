@@ -1,21 +1,21 @@
 ---
-description: Запустить адверсивную панель разбора архитектурного/стратегического решения (red → blue → arbiter + codex)
-argument-hint: "[решение/вопрос или путь к спеке] — что разбираем"
+description: Launch the adversarial panel to review an architectural/strategic decision (red → blue → arbiter + codex)
+argument-hint: "[decision/question or path to a spec] — what we're reviewing"
 ---
 
-Прогони адверсивную панель по `core/adversarial-panel.md`. Разбираемое решение: `$ARGUMENTS` (если пусто — спроси пользователя, что разбираем, и/или возьми текущую обсуждаемую архитектуру).
+Run the adversarial panel per `core/adversarial-panel.md`. Decision under review: `$ARGUMENTS` (if empty — ask the user what we're reviewing, and/or take the architecture currently under discussion).
 
-Шаги (полностью — в `core/adversarial-panel.md`):
+Steps (in full — in `core/adversarial-panel.md`):
 
-0. **v1.** Выпиши разбираемое решение в `scratchpad/panel/architecture-v1.md`: несущие тезисы (каждый — отдельное проверяемое утверждение), контекст, ограничения. Извлеки нумерованный список несущих допущений. Покажи его пользователю до запуска атаки — он может зарубить плохую посылку сразу.
-1. **Red-team r1** → субагент `red-team` на `scratchpad/panel/architecture-v1.md` + допущения. Он **обязан** привлечь codex как вторую модель (при доступности — ADR-016; физически недоступен → честный фолбэк). Результат: `scratchpad/panel/red-r1.md`. Покажи вердикт + kill-list.
-2. **Blue-team r1** → субагент `blue-team` на `scratchpad/panel/architecture-v1.md` + `scratchpad/panel/red-r1.md`. Результат: `scratchpad/panel/blue-r1.md`. Покажи сводку защитимости.
-3. **Arbiter r1** → субагент `arbiter` на всех трёх. Результат: `scratchpad/panel/arbiter-r1.md`. Покажи вердикт + действия.
-4. **Второй раунд** — только если арбитр назначил: точечно по открытым пунктам red↔blue, затем arbiter r2.
-5. **Синтез v2** → `panel/architecture-v2.md` из вердикта арбитра.
-6. **Финал codex** → вычитка v2 на внутренние противоречия (`codex exec … -m <codex-model-id> -c model_reasoning_effort=xhigh`). Исправь найденное.
-7. **ADR** → зафиксируй решение в `docs/adr/` (формат — `roles/architect.md` → «ADR process»); открытые вопросы и предусловия выживания вынеси в Consequences как TODO с владельцем.
+0. **v1.** Write out the decision under review in `scratchpad/panel/architecture-v1.md`: load-bearing theses (each a separate, checkable claim), context, constraints. Extract a numbered list of load-bearing assumptions. Show it to the user before launching the attack — they can kill a bad premise right away.
+1. **Red-team r1** → the `red-team` subagent on `scratchpad/panel/architecture-v1.md` + the assumptions. It **must** bring in codex as a second model (when available — ADR-016; if physically unavailable, an honest fallback). Result: `scratchpad/panel/red-r1.md`. Show the verdict + kill list.
+2. **Blue-team r1** → the `blue-team` subagent on `scratchpad/panel/architecture-v1.md` + `scratchpad/panel/red-r1.md`. Result: `scratchpad/panel/blue-r1.md`. Show the defensibility summary.
+3. **Arbiter r1** → the `arbiter` subagent on all three. Result: `scratchpad/panel/arbiter-r1.md`. Show the verdict + actions.
+4. **Second round** — only if the arbiter calls for it: targeted red↔blue on the open items, then arbiter r2.
+5. **v2 synthesis** → `panel/architecture-v2.md` from the arbiter's verdict.
+6. **Final codex pass** → review v2 for internal contradictions (`codex exec … -m <codex-model-id> -c model_reasoning_effort=xhigh`). Fix what's found.
+7. **ADR** → record the decision in `docs/adr/` (format — `roles/architect.md` → "ADR process"); carry open questions and survival preconditions into Consequences as TODOs with an owner.
 
-Если субагенты (`.claude/agents/`) в проекте не установлены — выполняй роли последовательно в текущей сессии по их промптам в `.claude/agents/{red-team,blue-team,arbiter}.md` (прозовый режим). codex **обязателен при доступности** (ADR-016, симметрично red/blue); физически недоступен — не пропускай панель, перейди в честный фолбэк (`core/adversarial-panel.md` → «Вторая модель»). `<codex-model-id>` — плейсхолдер, см. `core/second-model.md`.
+If subagents (`.claude/agents/`) are not set up in the project — run the roles sequentially in the current session per their prompts in `.claude/agents/{red-team,blue-team,arbiter}.md` (prose mode). codex is **mandatory when available** (ADR-016, symmetric on red/blue); if physically unavailable — don't skip the panel, switch to the honest fallback (`core/adversarial-panel.md` → "Second model"). `<codex-model-id>` is a placeholder, see `core/second-model.md`.
 
-Консенсус = фиксированная точка (раунд без нового меняющего решение возражения, либо остаток = названные эмпирические неизвестные → TODO на discovery). Потолок 4-5 раундов; если расходятся — предъяви пользователю CRUX.
+Consensus = a fixed point (a round with no new decision-changing objection, or what remains = named empirical unknowns → TODO for discovery). Cap of 4-5 rounds; if still diverging — present the user with the CRUX.

@@ -1,95 +1,95 @@
-# {{STACK_NAME}} — правила работы со стеком
+# {{STACK_NAME}} — stack rules
 
-> СКЕЛЕТ нового стека. Создан генератором, потому что `stack/{{STACK_SLUG}}.md` ещё не был описан.
-> Заполни секции ниже (или попроси своего кодинг-агента — промпт в конце файла). Удали этот блок после заполнения.
-> Контракт: файл стека ДОЛЖЕН закрыть раздел «Чистая сборка» — на него ссылается [core/quality-gates.md](../core/quality-gates.md). Остальные секции — по аналогии с `stack/go.md` / `stack/python.md` (если их нет в проекте — смотри образец в репозитории emcee). Общие принципы — в [core/](../core/), здесь только специфика языка/фреймворка.
+> SKELETON for a new stack. Created by the generator, because `stack/{{STACK_SLUG}}.md` hasn't been written yet.
+> Fill in the sections below (or ask your coding agent — prompt at the end of the file). Delete this block once filled in.
+> Contract: the stack file MUST close out the "Clean build" section — [core/quality-gates.md](../core/quality-gates.md) references it by name. Other sections — modeled on `stack/go.md` / `stack/python.md` (if they're not in the project, look at the sample in the emcee repo). General principles are in [core/](../core/), only language/framework specifics go here.
 
-## Версия и инструменты
+## Version and tools
 
-- TODO: версия языка/рантайма ({{минимальная версия и почему}}).
-- TODO: менеджер зависимостей и lock-файл (что коммитится).
-- TODO: единый источник конфигов проекта (аналог `go.mod` / `pyproject.toml`).
+- TODO: language/runtime version ({{minimum version and why}}).
+- TODO: dependency manager and lock file (what gets committed).
+- TODO: single source of truth for project configs (the equivalent of `go.mod` / `pyproject.toml`).
 
-## Структура проекта
+## Project structure
 
 ~~~
-TODO: канонический layout каталогов.
-Обозначить, где живёт бизнес-логика и где — точки входа.
+TODO: canonical directory layout.
+Mark where business logic lives and where entry points live.
 ~~~
 
-- TODO: правило границ (что куда можно/нельзя импортировать). Слои — однонаправленно, как в [core/code-quality.md](../core/code-quality.md).
+- TODO: boundary rule (what can/can't import what). Layers are one-directional, as in [core/code-quality.md](../core/code-quality.md).
 
-## Обработка ошибок
+## Error handling
 
-- TODO: идиоматичный механизм ошибок стека (исключения / `Result` / коды) с обязательным контекстом.
-- TODO: запрет на молчаливое проглатывание ошибок; типизация ошибок.
+- TODO: the stack's idiomatic error mechanism (exceptions / `Result` / codes) with mandatory context.
+- TODO: prohibition on silently swallowing errors; error typing.
 
-## Concurrency / async (если применимо)
+## Concurrency / async (if applicable)
 
-- TODO: основной паттерн (потоки/корутины/actor), правила отмены и shared state.
-- Удали секцию, если в стеке нет конкурентности.
+- TODO: primary pattern (threads/coroutines/actor), cancellation and shared-state rules.
+- Delete this section if the stack has no concurrency.
 
-## База данных (если применимо)
+## Database (if applicable)
 
-- TODO: доступ к данным, миграции, защита от инъекций (параметризованные запросы).
-- Удали секцию, если стек не работает с БД.
+- TODO: data access, migrations, injection protection (parameterized queries).
+- Delete this section if the stack doesn't work with a database.
 
-## Фреймворк / runtime (если применимо)
+## Framework / runtime (if applicable)
 
-- TODO: дефолтный фреймворк и обоснование; что запрещено без ADR.
+- TODO: default framework and justification; what's forbidden without an ADR.
 
-## Тесты
+## Tests
 
-- TODO: тест-фреймворк, паттерн (table-driven / параметризация), разделение unit / integration.
-- TODO: команды запуска (быстрые vs полные); никаких реальных сети/таймеров в unit (см. [core/quality-gates.md](../core/quality-gates.md)).
-- TODO: команда coverage-отчёта + путь к артефакту. Назначение — **диагностика дыр** (какие файлы/пути без тестов), НЕ целевой процент и НЕ exit-гейт задачи. Гоняет qa-e2e (на solo-collapse — developer) по запросу; читают auditor/architect (см. `roles/qa-e2e.md` §Coverage-диагностика).
+- TODO: test framework, pattern (table-driven / parametrization), unit/integration separation.
+- TODO: run commands (fast vs. full); no real network/timers in unit tests (see [core/quality-gates.md](../core/quality-gates.md)).
+- TODO: coverage-report command + path to the artifact. Purpose — **diagnosing gaps** (which files/paths lack tests), NOT a target percentage and NOT a task exit gate. Run by qa-e2e (by developer on solo-collapse) on request; read by auditor/architect (see `roles/qa-e2e.md` §Coverage diagnostics).
 
-## Логирование
+## Logging
 
-- TODO: structured-логгер стека, запрет на логирование секретов/ПД.
+- TODO: the stack's structured logger, prohibition on logging secrets/PII.
 
-## Чистая сборка (clean build) — ОБЯЗАТЕЛЬНО
+## Clean build — MANDATORY
 
-Это конкретизация правила «без warnings» из [core/quality-gates.md](../core/quality-gates.md) для {{STACK_NAME}}. Без неё гейт завершённости задачи не определён для этого стека.
+This is the concretization of the "no warnings" rule from [core/quality-gates.md](../core/quality-gates.md) for {{STACK_NAME}}. Without it, the task-completion gate is undefined for this stack.
 
-«Без warnings» для {{STACK_NAME}} = зелёные команды:
+"No warnings" for {{STACK_NAME}} = green commands:
 
 ~~~bash
-# TODO: компиляция / typecheck без ошибок и warnings
-# TODO: линтер без нарушений
-# TODO: форматтер (--check) если есть
+# TODO: compilation / typecheck with no errors and no warnings
+# TODO: linter with no violations
+# TODO: formatter (--check) if present
 ~~~
 
-Любое из: ошибка компиляции/типов, warning, нарушение линтера = задача не завершена. Подавление (аналоги `# noqa`, `// @ts-ignore`, `#pragma`) — только с причиной в комментарии рядом.
+Any of: a compile/type error, a warning, a linter violation = the task is not done. Suppression (equivalents of `# noqa`, `// @ts-ignore`, `#pragma`) — only with a reason in a comment right next to it.
 
-## Static-adjunct QG-NN-05 (опционально, warn-контур)
+## Static-adjunct QG-NN-05 (optional, warn-track)
 
-Дешёвый комплемент assembled-теста — ловит подкласс «ноль продакшен-вызовов» ([core/quality-gates.md](../core/quality-gates.md) §Достижимость: комплемент, НЕ замена — опциональный параметр с дефолтом при живом вызове он не ловит).
+A cheap complement to the assembled test — catches the "zero production calls" subclass ([core/quality-gates.md](../core/quality-gates.md) §Assembled reachability: a complement, NOT a replacement — an optional parameter with a live default won't be caught by it).
 
 ~~~bash
-# TODO: dead-export / unused-symbol команда стека (примеры: deadcode ./... — Go; vulture — Python; knip — TS/JS)
+# TODO: the stack's dead-export / unused-symbol command (examples: deadcode ./... — Go; vulture — Python; knip — TS/JS)
 ~~~
 
-## Линтинг
+## Linting
 
-- TODO: линтер(ы) и строгий конфиг; перечислить обязательные правила/проверки.
+- TODO: linter(s) and strict config; list the mandatory rules/checks.
 
-## Специфические запреты
+## Specific prohibitions
 
-- TODO: антипаттерны стека, которые нельзя (по аналогии с go.md/python.md «Специфические запреты»).
+- TODO: stack anti-patterns that are not allowed (modeled on go.md/python.md "Specific prohibitions").
 
-## {{STACK_NAME}}-специфичные паттерны
+## {{STACK_NAME}}-specific patterns
 
-- TODO: DI, организация модулей, идиомы — что считается «нашим стилем».
+- TODO: DI, module organization, idioms — what counts as "our style."
 
 ---
 
 <!--
-Промпт кодинг-агенту, чтобы заполнить этот файл:
+Prompt for the coding agent to fill in this file:
 
-«Заполни stack/{{STACK_SLUG}}.md по структуре stack/go.md и stack/python.md, но для {{STACK_NAME}}.
-Все секции TODO — конкретными правилами идиоматичными для {{STACK_NAME}}.
-ОБЯЗАТЕЛЬНО раздел «Чистая сборка»: какие именно команды значат clean build для {{STACK_NAME}}
-(компилятор/typecheck/линтер/форматтер) — на него ссылается core/quality-gates.md.
-Удали неприменимые секции (например БД/concurrency если их нет). Удали верхний блок-предупреждение.»
+"Fill in stack/{{STACK_SLUG}}.md following the structure of stack/go.md and stack/python.md, but for {{STACK_NAME}}.
+All TODO sections — with concrete rules idiomatic to {{STACK_NAME}}.
+The "Clean build" section is MANDATORY: which exact commands constitute a clean build for {{STACK_NAME}}
+(compiler/typecheck/linter/formatter) — core/quality-gates.md references it.
+Delete inapplicable sections (e.g. DB/concurrency if the stack doesn't have them). Delete the warning block at the top."
 -->

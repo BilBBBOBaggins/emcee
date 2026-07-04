@@ -1,158 +1,164 @@
-# Пайплайн: как реально работать — от пустого репо до фич
+# Pipeline: how to actually work — from an empty repo to features
 
-Связный нарратив поверх ролей и команд. Отвечает на «развернул харнесс — что дальше?»: откуда берутся
-роадмап и гайды дня, кто что делает, как одна задача проходит через роли.
+A connected narrative on top of roles and commands. Answers "deployed the harness — what's next?":
+where the roadmap and day guides come from, who does what, how one task passes through roles.
 
-**Главное правило — вес процесса по сложности проекта, не по числу людей.** Простой проект (бот,
-скрипт) живёт в одном окне: `developer` (+`reviewer`). Сложный (мультисервис, регуляторика, внешние
-эксперты) разворачивает полный пайплайн. Ниже **дефолт — lightweight**; полный пайплайн помечен
-«[сложный]».
+**Main rule — process weight scales with project complexity, not headcount.** A simple project (bot,
+script) lives in one window: `developer` (+`reviewer`). A complex one (multi-service, regulated, external
+experts) deploys the full pipeline. Below, **the default is lightweight**; the full pipeline is marked
+"[complex]".
 
-## ФАЗА 0 — KICKOFF (один раз: новый проект ИЛИ перевод существующего)
+## PHASE 0 — KICKOFF (once: a new project OR adopting an existing one)
 
-Грамматика `R D T` работает по УЖЕ существующему роадмапу и дням. На старте их нет — поэтому старт
-проекта = **`/kickoff`** (а не «вводишь цифру»).
+The `R D T` grammar operates on an ALREADY-existing roadmap and days. At the start there is none —
+so starting a project = **`/kickoff`** (not "enter a number").
 
-`/kickoff` запускает **архитектора в kickoff-режиме** ([roles/architect.md](../roles/architect.md) →
-«Kickoff»). Он:
+`/kickoff` launches the **architect in kickoff mode** ([roles/architect.md](../roles/architect.md) →
+"Kickoff"). It:
 
-1. **Выясняет суть — только routing-вопросы** (по одному): что за продукт, для кого, стек, и
-   **routing-сигналы** (нужен ли отдельный QA-контур, домен с экспертом, UI) — чтобы выбрать
-   lightweight vs полный режим, стек, какие роли поднимать, первый срез. **Stop-rule:** архитектор НЕ
-   собирает happy path, edge cases, бизнес-правила, acceptance criteria, current process — это
-   доменное дискавери → **отдельная задача для SA** ([roles/sa.md](../roles/sa.md)), не дублировать.
-   Lightweight-by-default: простой бот = пара вопросов; сложный SaaS-класс = глубже + SA.
-2. **Заполняет входной файл регламента** из ответов — стек, архитектура, команды сборки/тестов, — и
-   **владеет `stack/<стек>.md`** (event-правило: файл появляется в момент выбора стека — на kickoff
-   или позже, когда выбор дал арх-анализ/`/panel`; дозаполнение — задача дня-0; не пользователь —
-   [roles/architect.md](../roles/architect.md) §Kickoff). **Provenance-
-   правило (для kickoff-заполнения агентом):** каждое поле помечает источником `[от юзера]` /
-   `[код:путь]` / `[вывод:cmd]`; чего не знает из источника — **оставляет видимый `{{плейсхолдер}}`,
-   НЕ угадывает** (молчаливая выдумка в конфиге хуже видимой дыры). Механические подстановки генератора
-   (`new-project.py`: имя/стек/testing из аргументов) — это отдельный generator-fill, provenance =
-   «new-project args», под это правило не подпадает.
-3. **Фиксирует сказанное тобой в `docs/PROJECT-STATE.md`** — в существующие секции («Следующий день» /
-   «Open questions» / «В работе»), с provenance. Приоритеты — **от тебя**; архитектор структурирует
-   сказанное, не сочиняет порядок и НЕ заводит отдельную roadmap-схему. Это снимок состояния, не
-   product-management (граница: PM начинается там, где появляется стабильная priorities/backlog-схема,
-   которую агент обязан вести/сортировать — этого тут нет).
-4. **Несущая архитектура** (границы модулей, выбор технологии, модель консистентности) → прогон
-   `/panel` → ADR в `docs/adr/` ([core/adversarial-panel.md](adversarial-panel.md)).
-5. **Первые гайды дня** — из среза: `docs/day-0-guide.md` (инициализация стека стандартным тулом, если
-   проект новый) + `docs/day-1-guide.md` (первый набор задач, каждая назначена роли).
+1. **Figures out the essence — routing questions only** (one at a time): what product, for whom, stack, and
+   **routing signals** (whether a separate QA loop is needed, a domain with an expert, UI) — to choose
+   lightweight vs full mode, stack, which roles to stand up, the first slice. **Stop rule:** the architect
+   does NOT collect happy path, edge cases, business rules, acceptance criteria, current process — that's
+   domain discovery → **a separate task for SA** ([roles/sa.md](../roles/sa.md)), don't duplicate it.
+   Lightweight-by-default: a simple bot = a couple of questions; a complex SaaS-class product = deeper + SA.
+2. **Fills in the regimen entry file** from the answers — stack, architecture, build/test commands — and
+   **owns `stack/<stack>.md`** (event rule: the file appears the moment the stack is chosen — at kickoff
+   or later, when the choice came from arch-analysis/`/panel`; filling in the rest is a day-0 task; not the
+   user — [roles/architect.md](../roles/architect.md) §Kickoff). **Provenance
+   rule (for agent kickoff-filling):** each field is tagged with its source — `[from user]` /
+   `[code:path]` / `[output:cmd]`; whatever it doesn't know from a source it **leaves as a visible
+   `{{placeholder}}`, does NOT guess** (a silent invention in config is worse than a visible hole). Mechanical
+   substitutions by the generator (`new-project.py`: name/stack/testing from arguments) are a separate
+   generator-fill, provenance = "new-project args", not covered by this rule.
+3. **Records what you said in `docs/PROJECT-STATE.md`** — in existing sections ("Next day" /
+   "Open questions" / "In progress"), with provenance. Priorities — **from you**; the architect structures
+   what was said, doesn't invent an order and does NOT set up a separate roadmap scheme. This is a
+   snapshot of state, not product management (boundary: PM starts where a stable priorities/backlog scheme
+   appears that the agent is obligated to maintain/sort — that's not the case here).
+4. **Load-bearing architecture** (module boundaries, technology choice, consistency model) → run
+   `/panel` → ADR in `docs/adr/` ([core/adversarial-panel.md](adversarial-panel.md)).
+5. **First day guides** — from the slice: `docs/day-0-guide.md` (stack init via the standard tool, if the
+   project is new) + `docs/day-1-guide.md` (first set of tasks, each assigned to a role).
 
-**Существующий проект:** архитектор сперва читает код (через subagents по модулям), реконструирует
-архитектуру/стек во входном файле регламента, потом тот же срез-роадмап остатка. Регламент уже стоял со старой версии и
-отстал → сперва [roles/upgrader.md](../roles/upgrader.md) (обнови регламент), потом `/kickoff` (заведи план).
+**Existing project:** the architect first reads the code (via subagents per module), reconstructs the
+architecture/stack in the regimen entry file, then the same slice-roadmap for the rest. The regimen was already
+in place from an old version and has fallen behind → first [roles/upgrader.md](../roles/upgrader.md) (upgrade
+the regimen), then `/kickoff` (set up the plan).
 
-После kickoff: `python3 regimen-doctor.py` (🟢 = регламент дозаполнен) → берёшь День 1.
+After kickoff: `python3 regimen-doctor.py` (🟢 = regimen filled in) → take Day 1.
 
-## ОНГОИНГ — дальше по дням (`R D T`)
+## ONGOING — day by day onward (`R D T`)
 
-Цикл повторяется, пока есть срез роадмапа:
+The cycle repeats as long as there's a roadmap slice:
 
-1. **Архитектор** (одно число `N` — входит в день N, статус) бьёт следующий срез → пишет
-   `docs/day-<N>-guide.md`: задачи, каждая с «Промпт для Claude Code», «После выполнения», «Коммит», и
-   назначенной ролью.
-2. **Роли исполняют** свои задачи (`R D T`). Каждая задача: constitution preflight → работа → гейты
-   зелёные → constitution exit → **твой коммит** (агент не коммитит).
-3. **Периодически:** статус (`N`), репланинг, `/panel` на несущем, ad-hoc `auditor` на дрейф.
-4. Растёт сложность → активируются роли (SA на новый домен, designer на UI).
+1. **Architect** (single number `N` — enters day N, status) breaks off the next slice → writes
+   `docs/day-<N>-guide.md`: tasks, each with "Prompt for Claude Code", "After completion", "Commit", and
+   an assigned role.
+2. **Roles execute** their tasks (`R D T`). Every task: constitution preflight → work → gates
+   green → constitution exit → **your commit** (the agent doesn't commit).
+3. **Periodically:** status (`N`), replanning, `/panel` on load-bearing decisions, ad-hoc `auditor` on drift.
+4. Complexity grows → roles activate (SA for a new domain, designer for UI).
 
-**Откуда что берётся (цепочка):**
+**Where things come from (the chain):**
 
 ```
-твои приоритеты ─/kickoff→ снимок состояния (PROJECT-STATE) ─architect→ гайд дня (day-N-guide)
+your priorities ─/kickoff→ state snapshot (PROJECT-STATE) ─architect→ day guide (day-N-guide)
                                                                           │
-        spec/scenarios/test-cases (SA/BA/qa-uat, по нужде) ←─────────────┘
+        spec/scenarios/test-cases (SA/BA/qa-uat, as needed) ←─────────────┘
 ```
 
-## Как одна задача проходит через роли
+## How one task passes through roles
 
-**Дефолт (lightweight, solo; он же solo-collapse) — большинство задач:**
+**Default (lightweight, solo; a.k.a. solo-collapse) — most tasks:**
 
-`developer` берёт задачу из гайда → пишет код + тесты (включая user-facing проверки) → `reviewer`
-читает заявленный developer'ом набор изменённых файлов в чистом контексте → ты коммитишь. Баг → `debugger`. Несущая развилка по ходу → стоп,
-`/panel`. **qa-e2e отдельным контуром НЕ нужен — developer сам кодит и гоняет тесты.**
+`developer` takes a task from the guide → writes code + tests (including user-facing checks) →
+`reviewer` reads the set of changed files declared by the developer, in a clean context → you commit. Bug →
+`debugger`. A load-bearing fork along the way → stop, `/panel`. **qa-e2e as a separate loop is NOT
+needed — the developer codes and runs the tests themselves.**
 
-**[Сложный] полный конвейер — фича с доменом и UI** (сложный SaaS-класс):
+**[Complex] full pipeline — a feature with a domain and UI** (complex SaaS-class):
 
-1. **SA** — discovery с экспертом → `docs/specs/<feature>.md` (требования, acceptance в Given/When/Then).
-2. **BA** — из спеки → `docs/scenarios-<DT>-<slug>.md` (пользовательские сценарии).
-3. **designer** (дормантная) — вайрфрейм из спеки (если UI-фича).
-4. **architect** — техспека / разбивка на задачи дня.
-5. **developer** — реализация по гайду.
-6. **qa-uat** — из сценариев → `docs/test-cases-<DT>-<slug>.md` (ожидания в user-visible терминах, +
-   негативные/стресс/concurrency). **Проектирует кейсы, код не пишет.**
-7. **qa-e2e** — кодит и гоняет кейсы на полном стеке, диагностирует разрыв цепочки. **Отдельный контур.**
-8. **reviewer** — статическая проверка. Систематические проблемы → `auditor`/`architect`.
+1. **SA** — discovery with an expert → `docs/specs/<feature>.md` (requirements, acceptance in
+   Given/When/Then).
+2. **BA** — from the spec → `docs/scenarios-<DT>-<slug>.md` (user scenarios).
+3. **designer** (dormant) — a wireframe from the spec (if it's a UI feature).
+4. **architect** — tech spec / breakdown into day tasks.
+5. **developer** — implementation per the guide.
+6. **qa-uat** — from the scenarios → `docs/test-cases-<DT>-<slug>.md` (expectations in user-visible
+   terms, + negative/stress/concurrency). **Designs cases, doesn't write code.**
+7. **qa-e2e** — codes and runs the cases on the full stack, diagnoses chain breaks. **Separate loop.**
+8. **reviewer** — static check. Systemic problems → `auditor`/`architect`.
 
-**qa-uat vs qa-e2e — не дубль:** qa-uat = *что* проверять (эталон продукта, видимое пользователю);
-qa-e2e = *кодит и гоняет* + диагностирует. На простом проекте оба схлопываются в developer'а (это и есть
-**solo-collapse**); разделение
-окупается там, где «зелёные unit, но кнопка не работает» — реальный риск.
+**qa-uat vs qa-e2e — not a duplicate:** qa-uat = *what* to check (the product benchmark, user-visible);
+qa-e2e = *codes and runs* + diagnoses. On a simple project both collapse into the developer (this is
+**solo-collapse**); the split pays off where "green unit tests but the button doesn't work" is a real
+risk.
 
-## Фазы-контракты (нет входного артефакта → STOP)
+## Phase contracts (no input artifact → STOP)
 
-Конвейер выше — не «предложения», а **контракты**: каждая фаза требует входной артефакт предыдущей.
-Артефакт отсутствует или пуст → **СТОП**: вернуть на предыдущую фазу или спросить пользователя, **не
-имитировать прогресс** (не писать код без спеки, не писать test-cases без сценариев, не ревьюить без списка изменённых файлов от developer'а).
+The pipeline above is not "suggestions" — these are **contracts**: each phase requires the previous
+phase's input artifact. Artifact missing or empty → **STOP**: return to the previous phase or ask the
+user, **don't simulate progress** (don't write code without a spec, don't write test cases without
+scenarios, don't review without a list of changed files from the developer).
 
-| Фаза | Требует на входе | Производит |
+| Phase | Requires as input | Produces |
 |------|------------------|------------|
-| SA | запрос + доменный эксперт | `docs/specs/<feature>.md` |
+| SA | request + domain expert | `docs/specs/<feature>.md` |
 | BA | spec | `docs/scenarios-<DT>-<slug>.md` |
-| architect | spec (+ scenarios) | task-разбивка / `docs/day-<N>-guide.md` |
-| developer | day-guide (+ spec/design) | код + тесты |
+| architect | spec (+ scenarios) | task breakdown / `docs/day-<N>-guide.md` |
+| developer | day-guide (+ spec/design) | code + tests |
 | qa-uat | scenarios | `docs/test-cases-<DT>-<slug>.md` |
-| qa-e2e | test-cases | прогон на полном стеке |
-| reviewer | список изменённых файлов из exit-отчёта developer'а | статический разбор (фактический git-diff в роли не верифицируется — read-only by hardware) |
+| qa-e2e | test-cases | run on the full stack |
+| reviewer | list of changed files from the developer's exit report | static analysis (the actual git diff is not verified by the role — read-only by hardware) |
 
-На lightweight (один developer) фазы схлопываются — но правило держится: **не выдавать пустой или
-выдуманный артефакт за готовый вход.** Кривой/пустой вход = дефект предыдущей фазы, а не повод
-фабриковать (= [principles.md](principles.md) «факт, не гипотеза»; [spec-driven.md](spec-driven.md)
-«кривой тест = дефект контракта, к architect/пользователю, не подгонять»).
+At the lightweight level (one developer) phases collapse — but the rule holds: **don't pass off an
+empty or invented artifact as a ready input.** A broken/empty input is a defect of the previous phase, not
+a reason to fabricate (= [principles.md](principles.md) "fact, not hypothesis"; [spec-driven.md](spec-driven.md)
+"a broken test = a contract defect, to the architect/user, don't force it to fit").
 
-**Активный pre-code self-stop developer'а (условный, [ADR-013](../docs/adr/013-feature-discovery-trigger.md)).**
-Запись `developer | day-guide (+ spec/design)` пассивна, а `spec/design` в скобках = опциональны: на
-solo-дефолте (SA схлопнут в developer) ничто не **обязывает** завести discovery до кода. Поэтому для
-задачи с **доменно-нетривиальной или необратимой** ценой (та же ось, что у `/panel` и
-[spec-driven.md](spec-driven.md) C+ — цена ошибки × необратимость) developer перед кодом обязан **либо**
-иметь достаточный существующий вход (day-guide / `docs/specs/` / design / ADR / PROJECT-STATE), **либо**
-остановиться и маршрутизировать в discovery (route to SA, если развёрнут; иначе self-discovery), **либо**
-спросить пользователя. Это **условный STOP-триггер, НЕ universal pre-code gate**: на локальные,
-технически очевидные, легко обратимые задачи не распространяется (иначе вернётся церемония против
-lightweight-дефолта). На solo это self-stop, повышающий видимость пропуска discovery, **не** независимый
-signoff — независимость появляется лишь при маршрутизации к SA/пользователю (остаток solo-режима).
+**The developer's active pre-code self-stop (conditional, [ADR-013](../docs/adr/013-feature-discovery-trigger.md)).**
+The entry `developer | day-guide (+ spec/design)` is passive, and `spec/design` in parentheses is
+optional: at the solo default (SA collapsed into developer) nothing **obligates** starting discovery before
+code. So for a task with a **domain-nontrivial or irreversible** cost (the same axis as `/panel` and
+[spec-driven.md](spec-driven.md) C+ — cost of error × irreversibility) the developer, before writing code, must
+**either** have sufficient existing input (day-guide / `docs/specs/` / design / ADR / PROJECT-STATE),
+**or** stop and route to discovery (route to SA if deployed; otherwise self-discovery), **or**
+ask the user. This is a **conditional STOP trigger, NOT a universal pre-code gate**: it does not apply to
+local, technically obvious, easily reversible tasks (otherwise ceremony creeps back in against the
+lightweight default). In solo mode this is a self-stop that raises the visibility of skipped discovery, **not**
+an independent signoff — independence appears only when routed to SA/the user (the remainder of solo mode).
 
-## Грамматика команд (шпаргалка)
+## Command grammar (cheat sheet)
 
-| Ввод | Что значит |
+| Input | What it means |
 |------|-----------|
-| `/kickoff` | старт проекта: архитектор в kickoff-режиме (Фаза 0). Дней ещё нет. |
-| `N` (одно число) | архитектор входит в день N: читает проект, выдаёт статус/риски. Lead-режим. |
-| `R D` (два числа) | роль R входит в контекст дня D без задачи (review, планирование). |
-| `R D T` (три числа) | роль R берёт задачу T из гайда дня D. **Основной режим.** |
-| `/panel <решение>` | адверсивная панель на несущем/необратимом решении → ADR. |
+| `/kickoff` | project start: architect in kickoff mode (Phase 0). No days yet. |
+| `N` (single number) | architect enters day N: reads the project, gives status/risks. Lead mode. |
+| `R D` (two numbers) | role R enters day D's context without a task (review, planning). |
+| `R D T` (three numbers) | role R takes task T from day D's guide. **Main mode.** |
+| `/panel <decision>` | adversarial panel on a load-bearing/irreversible decision → ADR. |
 
-Карта цифр ролей (`R`) — во входном файле регламента → «Маппинг ролей» (источник — `roles.json`). Архитектор — НЕ
-цифра в `R D T`; он зовётся одним числом `N` (lead) или `/kickoff` (старт).
+The role digit map (`R`) — in the regimen entry file → "Role map" (source — `roles.json`). The architect is
+NOT a digit in `R D T`; it's called by a single number `N` (lead) or `/kickoff` (start).
 
-**Это `origin: process-convention`, не привязка к рантайму.** Команды (`/kickoff`, `R D T`, `N`,
-`/panel`) и метки артефактов («Промпт для Claude Code») — Claude-Code-флавор *ввода*; на другом
-рантайме та же конвенция ролей/дней/задач, другой механизм вызова (слэш/число → эквивалент рантайма,
-см. [portability.md](portability.md)). Матрица гарантий (ADR-010/011) фиксирует: slash-dispatch на
-Codex деградирует в печатную `R D T` — конвенция держится, аппаратного вызова нет.
+**This is `origin: process-convention`, not a runtime binding.** Commands (`/kickoff`, `R D T`, `N`,
+`/panel`) and artifact labels ("Prompt for Claude Code") are the Claude-Code flavor of *input*; on
+another runtime the same role/day/task convention holds, with a different invocation mechanism (slash/number
+→ runtime equivalent, see [portability.md](portability.md)). The guarantee matrix (ADR-010/011) records:
+slash-dispatch on Codex degrades to typed `R D T` — the convention holds, there's no hardware-level
+invocation.
 
-## Что НЕ автоматизировано (сознательно)
+## What is NOT automated (deliberately)
 
-Канонический `roadmap.md`/`product-brief.md` как отдельные файлы + интейк-интервью-как-движок —
-**отложены под гейт** ([ADR-003](../docs/adr/003-first-km-intake.md) O1 / [ADR-007](../docs/adr/007-kickoff-pipeline.md)):
-строятся, только если ретро 2-3 реальных стартов покажет реальную потерю. Пока — kickoff-режим (prose)
-+ снимок в PROJECT-STATE. Это сознательно, не пропуск.
+The canonical `roadmap.md`/`product-brief.md` as separate files + an intake-interview-as-engine —
+**deferred under a gate** ([ADR-003](../docs/adr/003-first-km-intake.md) O1 / [ADR-007](../docs/adr/007-kickoff-pipeline.md)):
+built only if a retro of 2-3 real project starts shows a real loss. For now — kickoff mode (prose)
++ a snapshot in PROJECT-STATE. This is deliberate, not an omission.
 
-**Инвариант границы триггер↔движок ([ADR-013](../docs/adr/013-feature-discovery-trigger.md) D3).** Чтобы
-гейт O1 не размывался и не топил в себе невинные правки: правка discovery, **не** создающая owned
-PM-артефакт (roadmap / brief / backlog / интейк-движок), — **вне** O1; создающая такой артефакт — **под**
-O1. Активный self-stop developer'а (выше) и правило `AskUserQuestion` ([task-protocol.md](task-protocol.md)
-→ «Опрос пользователя») ни одного нового canonical-артефакта не вводят → вне O1.
+**The trigger↔engine boundary invariant ([ADR-013](../docs/adr/013-feature-discovery-trigger.md) D3).** So
+gate O1 doesn't blur and doesn't drag innocent edits down with it: a discovery edit that does **not**
+create an owned PM artifact (roadmap / brief / backlog / intake engine) is **outside** O1; one that creates
+such an artifact is **under** O1. The developer's active self-stop (above) and the `AskUserQuestion` rule
+([task-protocol.md](task-protocol.md) → "User Q&A") introduce zero new canonical artifacts →
+outside O1.

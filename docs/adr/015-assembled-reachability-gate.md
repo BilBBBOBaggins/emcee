@@ -1,147 +1,70 @@
-# ADR-015: Достижимость фичи в сборе как done-гейт (QG-NN-05) — «зелёные тесты ≠ фича подключена»
+# ADR-015: Assembled reachability of a feature as a done gate (QG-NN-05) — "green tests ≠ wired feature"
 
 Date: 2026-07-01 (Proposed) → 2026-07-02 (Accepted)
-Status: Accepted — ратифицирован адверсивной панелью
+Status: Accepted — ratified by the adversarial panel
 
-> Провенанс — **эмпирический** (автономный прогон пакета над MVP-клоном Balatro вскрыл класс дефекта,
-> верифицированный чтением кода) + **панельная ратификация 2026-07-02**: red → blue → arbiter, codex
-> gpt-5.5 xhigh симметрично у обеих сторон. Вердикт арбитра: «строить при условиях» — направление
-> устояло (фатальных дефектов нет), текст доработан поправками v2 (P1–P8 + 3 арбитражных уточнения +
-> закрытие двух лазеек из точечного red re-check). Приёмочные проверки пройдены: (а) адверсивный
-> dry-run — developer-агент на v2-тексте, не зная о ловушке, НЕ протащил outcome-ручку/persisted-фикстуру/
-> заниженный root: честно предъявил красный гейт, wiring-фикс, effect-assert и mutation-проверку, отверг
-> закрытие web-фичи через дешёвый CLI-root; (б) QG-матрицы двух независимых агентов по day-1-example
-> сошлись по механике атомизации и классов эквивалентности. Артефакты панели — в scratchpad сессии
-> (red-r1/blue-r1/arbiter-r1/red-r2-recheck/dryrun-report).
+> Provenance — **empirical** (an autonomous package run over an MVP Balatro clone uncovered a defect class, verified by reading the code) + **panel ratification on 2026-07-02**: red → blue → arbiter, codex gpt-5.5 xhigh symmetrically on both sides. Arbiter's verdict: "build under conditions" — the direction held (no fatal defects), the text was refined with v2 amendments (P1–P8 + 3 arbiter clarifications + closing two loopholes from a targeted red re-check). Acceptance checks passed: (a) an adversarial dry run — a developer agent on the v2 text, unaware of the trap, did NOT smuggle in an outcome handle / a persisted fixture / a lowered root: it honestly presented a red gate, a wiring fix, an effect assertion, and a mutation check, and rejected closing the web feature via a cheap CLI root; (b) two independent agents' QG matrices for the day-1 example converged on the mechanics of atomization and equivalence classes. Panel artifacts live in the session scratchpad (red-r1/blue-r1/arbiter-r1/red-r2-recheck/dryrun-report).
 
-## Коротко
+## In short
 
-Автономный прогон собрал играбельный продукт за 7 «дней» (75 агентов, ~4.9M токенов): зелёная сборка,
-**338 unit-тестов**, **3 e2e** — все настоящие (перепроверено независимо). Но архитектор объявил MVP
-done, а финальный аудит + независимый grep показали: **две заморожённых scope-фичи (boss-модификаторы,
-planet-прокачка рук) реализованы и unit-тестированы в движке, но НЕ подключены в собранный продукт** —
-`useGame` зовёт `startRun` без `bossModifierFor` (боссы беззубые), `levelUp` не имеет ни одного
-продакшен-вызова и UI (руки не качаются). Обе проходят все тесты: юниты дёргают функции в изоляции,
-happy-path e2e их не упражняет и ничего про них не ассертит.
+An autonomous run assembled a playable product over 7 "days" (75 agents, ~4.9M tokens): a green build, **338 unit tests**, **3 e2e tests** — all real (independently re-verified). But the architect declared the MVP done, while the final audit + an independent grep showed: **two frozen-scope features (boss modifiers, planet hand-leveling) are implemented and unit-tested in the engine but NOT wired into the assembled product** — `useGame` calls `startRun` without `bossModifierFor` (bosses are toothless), `levelUp` has zero production call sites and no UI (hands never level up). Both pass all tests: the units exercise functions in isolation, the happy-path e2e neither exercises them nor asserts anything about them.
 
-Причина — **структурная, не «плохой аудитор»**: приёмка разложена на пер-компонентные unit-контракты.
-Каждый агент доказал свой кусок; **связка между кусками — ничей контракт**. Смоки-ган прямо в коде:
-чтобы протестировать босса, тест **вручную вписал** `bossModifierFor: () => THE_WALL` — ту самую
-обвязку, которую собранное приложение опускает.
+The cause is **structural, not "a bad auditor"**: acceptance was decomposed into per-component unit contracts. Each agent proved its own piece; **the wiring between pieces is nobody's contract.** The smoking gun is right there in the code: to test the boss, the test **manually wrote in** `bossModifierFor: () => THE_WALL` — the very wiring the assembled application omits.
 
-Решение: ввести **QG-NN-05** — каждый пункт замороженного объёма обязан иметь ≥1 прогон через реальный
-composition root (без bespoke-инъекции), доводящий собранную систему до характерного случая фичи и
-ассертящий её наблюдаемость. Владелец — QA E2E; на solo-collapse — developer. Unit-контракты остаются
-(локализуют баг); assembled-suite добавляется сверху (ловит «не подключено»).
+Decision: introduce **QG-NN-05** — every item of the frozen scope must have ≥1 run through the real composition root (with no bespoke injection), driving the assembled system to the feature's characteristic case and asserting its observability. Owner: QA E2E; under solo-collapse, the developer. Unit contracts remain (they localize the bug); the assembled suite is added on top (it catches "not wired in").
 
-## Контекст
+## Context
 
-Эксперимент: проверить, замыкает ли пакет петлю разработки **без человека в петле** (диспетчер заменён
-Workflow-оркестратором, роли — реальные `architect/developer/reviewer/qa-e2e/devops/auditor` + панель).
-Заранее назван слепой пятно: убрали human-UAT → некому сказать «поиграл — боссов и левелапа не видел».
-Эксперимент это пятно материализовал в измеримой форме.
+The experiment: check whether the package closes the development loop **with no human in the loop** (the dispatcher replaced by a Workflow orchestrator, roles are the real `architect/developer/reviewer/qa-e2e/devops/auditor` + panel). A blind spot was named up front: with human UAT removed, there is nobody to say "I played it — never saw the bosses or the leveling." The experiment materialized that blind spot in measurable form.
 
-**Что произошло (верифицировано `file:line`, не предположение):**
+**What happened (verified by `file:line`, not assumed):**
 
-- `src/engine/blinds.test.ts:568-580` — тест боссов делает `startRun({ ..., bossModifierFor: () => THE_WALL })`:
-  селектор передаёт **сам тест**. Доказано «если движку дать селектор, таргет умножится» — не «игра его
-  даёт». `src/ui/useGame.ts:73` зовёт `startRun({ seed, config })` → `bossModifierFor ?? NO_BOSS_MODIFIER`
-  → `() => undefined`.
-- `src/engine/scoring.test.ts` — `levelUp(before, HandType.Pair)` дёргается напрямую. Продакшен-вызовов
-  `levelUp` — ноль; UI-триггера/показа уровней — ноль.
-- `e2e/smoke.spec.ts` — проверяет заголовок вкладки + видимость корня. Happy-path цикл проходит и без
-  боссова модификатора, и без левелапа; ни одного `expect`, требующего их.
+- `src/engine/blinds.test.ts:568-580` — the boss test calls `startRun({ ..., bossModifierFor: () => THE_WALL })`: **the test itself** supplies the selector. This proves "if the engine is given a selector, the target gets multiplied" — not "the game supplies it." `src/ui/useGame.ts:73` calls `startRun({ seed, config })` → `bossModifierFor ?? NO_BOSS_MODIFIER` → `() => undefined`.
+- `src/engine/scoring.test.ts` — `levelUp(before, HandType.Pair)` is invoked directly. Production call sites of `levelUp` — zero; UI trigger/level display — zero.
+- `e2e/smoke.spec.ts` — checks the tab title + root visibility. The happy-path cycle passes both without the boss modifier and without leveling; not a single `expect` requires either of them.
 
-Ни один тест не «сломан» и не «неправильный». «Зелено» и «фича мертва» уживаются без противоречия,
-потому что **никто не ассертил достижимость фичи через собранный продукт**.
+Not a single test is "broken" or "wrong." "Green" and "the feature is dead" coexist without contradiction, because **nobody asserted the feature's reachability through the assembled product**.
 
-**Ground truth пакета:** риск уже частично осознан — `quality-gates.md` §«Разделение контуров» называет
-«зелёные unit, но кнопка не работает» и советует развернуть QA-контур; `qa-e2e.md` запрещает «invoke
-обходит UI» (анти-паттерн #5). Пробел: (а) правило узко про UI-обход, не про инъекцию интеграции на
-любом слое; (б) на **solo-collapse** роли QA нет, developer пишет unit + happy-e2e — и стык остаётся
-бесхозным именно там, где независимой проверки нет.
+**Ground truth of the package:** the risk was already partly recognized — `quality-gates.md` §"Separation of tracks" names "green units but the button doesn't work" and advises deploying a QA track; `qa-e2e.md` forbids "invoke bypasses the UI" (anti-pattern #5). The gap: (a) the rule is narrow, about UI bypass, not about integration injection at any layer; (b) under **solo-collapse** there is no QA role, the developer writes both unit and happy-path e2e tests — and the seam stays ownerless precisely where there is no independent check.
 
-## Решение
+## Decision
 
-**Ввести QG-NN-05 «Достижимость фичи в сборе» как non-negotiable done-гейт** (accountability). Канон —
-[core/quality-gates.md](../../core/quality-gates.md) §QG-NN-05; строка в реестре
-[core/constitution.md](../../core/constitution.md); владение — [roles/qa-e2e.md](../../roles/qa-e2e.md).
+**Introduce QG-NN-05 "Assembled reachability of a feature" as a non-negotiable done gate** (accountability). Canon: [core/quality-gates.md](../../core/quality-gates.md) §QG-NN-05; a line in the registry [core/constitution.md](../../core/constitution.md); ownership: [roles/qa-e2e.md](../../roles/qa-e2e.md).
 
-Суть:
+Substance:
 
-1. **Каждый пункт frozen scope → ≥1 прогон через реальный composition root**, без bespoke-инъекции
-   обвязки, которую поставка обязана дать сама. Тест доводит собранную систему до характерного случая
-   фичи и ассертит наблюдаемость.
-2. **«В сборе» = через точку сборки продукта, не обязательно через браузер.** Обобщение анти-паттерна
-   «invoke обходит UI» на любой слой. Часть покрытия — быстрый раннер на уровне сборки, тонкий e2e сверху.
-3. **Детерминизм — предусловие**: довод до состояния через **state-selection** control-surface (seed /
-   время / persisted-данные, которые способна записать сама поставка), не рандом; outcome / dependency /
-   trigger / wiring-ручки запрещены в любой упаковке (поправка P1). Тянет control-surface детерминизма
-   в сам продукт.
-4. **Покрытие, не комбинаторика**: каждая фича в характерном случае, не каждая комбинация (иначе гейт
-   уходит в бесконечность).
-5. **Владелец**: QA E2E (assembled-behavior suite поверх developer-контрактов); на solo-collapse —
-   developer сам. Пункт frozen scope без assembled-пути = задача НЕ done.
+1. **Every item of the frozen scope → ≥1 run through the real composition root**, with no bespoke injection of wiring that the delivery must supply itself. The test drives the assembled system to the feature's characteristic case and asserts observability.
+2. **"Assembled" = through the product's composition point, not necessarily through the browser.** A generalization of the "invoke bypasses the UI" anti-pattern to any layer. Part of the coverage is a fast build-level runner, with a thin e2e layer on top.
+3. **Determinism is a precondition**: drive to the state via a **state-selection** control surface (seed / time / persisted data that the delivery itself is able to write), not randomness; outcome / dependency / trigger / wiring handles are forbidden in any packaging (amendment P1). This pulls the determinism control surface into the product itself.
+4. **Coverage, not combinatorics**: every feature in its characteristic case, not every combination (otherwise the gate runs off into infinity).
+5. **Owner**: QA E2E (an assembled-behavior suite on top of developer contracts); under solo-collapse, the developer themself. A frozen-scope item with no assembled path = the task is NOT done.
 
-Unit-контракты (в т.ч. spec-driven C+, [ADR-002](002-spec-driven-cplus.md)) **сохраняются** —
-локализуют «где сломано»; QG-NN-05 добавляется сверху и ловит «что не подключено».
+Unit contracts (including spec-driven C+, [ADR-002](002-spec-driven-cplus.md)) **remain in place** — they localize "where it's broken"; QG-NN-05 is added on top and catches "what isn't wired in."
 
-### Поправки v2 (по вердикту панели; канон — [quality-gates.md §QG-NN-05](../../core/quality-gates.md))
+### v2 amendments (per the panel's verdict; canon — [quality-gates.md §QG-NN-05](../../core/quality-gates.md))
 
-- **P1 (обходимость):** разрешённая ручка детерминизма выбирает **состояние** (seed, время,
-  persisted-данные, которые способна записать сама поставка); ручка, задающая outcome / зависимость /
-  триггер / wiring — bespoke-инъекция в любой упаковке (конфиг, seed, data-фикстура с производным
-  состоянием); QG-прогон — в release-like конфигурации через публичные входы.
-- **P2 (root):** shipping composition root(s) объявляет architect при kickoff/разбивке, по одному на
-  артефакт поставки; для multi-артефактного продукта критерий привязан к артефакту, где фича обещана;
-  валидность suite = mutation-фальсифицируемость («удалил wiring → suite красная», spot-check);
-  декларация обновляется event-driven.
-- **P3 (независимый верификатор):** чеклист reviewer (статически: root / инъекция / фикстура / эффект /
-  `@qg` / декларация roots) + опциональный static-adjunct как warn-слот per-stack (ловит подкласс
-  «ноль prod-вызовов», не заменяет assembled-тест).
-- **P4 (референт, усилен арбитром):** frozen scope = product-level scope-документ **плюс** задачная
-  разбивка; product-facing acceptance — product-observable; downstream-артефакты уточняют, не расширяют;
-  классификация «вне гейта» — только под запись. (Эмпирика арбитра: референт «только гайды дня»
-  пропустил бы оба кейса исходного инцидента — `day-7-guide` выносил levelUp-UI за scope дня, а
-  product-пункт жил в `MVP-SCOPE-FREEZE.md` и остался невыполнен.)
-- **P5 (единица учёта):** атомарный acceptance-критерий (Given/When/Then), compound → split или waiver;
-  группировка в классы эквивалентности — защита «покрытия, не комбинаторики».
-- **P6 (контуры):** третий контур **assembled contract tests** (быстрый раннер на уровне сборки, импорт
-  только объявленных roots); запреты UI-обхода qa-e2e скоупированы E2E-контуром; assembled дополняет
-  E2E снизу, не замещает; на solo-collapse контуры схлопываются.
-- **P7 (ассерт):** наблюдаемость = наблюдаемый **эффект** (feature-on/off-дифференциал), presence-ассерт
-  гейт не проходит; mutation-фальсификация ассерта; чисто визуальные фичи → waiver под запись.
-- **P8 (evidence):** durable-связка `@qg:<scope-id>` (аннотация в тесте или checked-in манифест);
-  PROJECT-STATE хранит ссылку; наличие машинно-проверяемо, качество — reviewer/spot-check.
+- **P1 (bypassability):** an allowed determinism handle selects **state** (seed, time, persisted data that the delivery itself is able to write); a handle that sets outcome / dependency / trigger / wiring is bespoke injection in any packaging (config, seed, a data fixture with derived state); the QG run happens in a release-like configuration via public inputs.
+- **P2 (root):** the shipping composition root(s) is declared by the architect at kickoff/breakdown, one per delivery artifact; for a multi-artifact product, the criterion is tied to the artifact where the feature is promised; suite validity = mutation falsifiability ("delete the wiring → the suite goes red," spot-checked); the declaration is updated event-driven.
+- **P3 (independent verifier):** a reviewer checklist (statically: root / injection / fixture / effect / `@qg` / declared roots) + an optional static adjunct as a per-stack warn slot (catches the subclass of "zero prod call sites," does not replace the assembled test).
+- **P4 (referent, strengthened by the arbiter):** the frozen scope = the product-level scope document **plus** the task breakdown; product-facing acceptance is product-observable; downstream artifacts refine, they do not expand; classifying something as "outside the gate" is only on the record. (The arbiter's empirics: a referent of "day guides only" would have missed both cases in the original incident — `day-7-guide` carved the levelUp UI out of the day's scope, while the product-level item lived in `MVP-SCOPE-FREEZE.md` and was left unfulfilled.)
+- **P5 (unit of account):** an atomic acceptance criterion (Given/When/Then); a compound one → split or waive; grouping into equivalence classes protects "coverage, not combinatorics."
+- **P6 (tracks):** a third track of **assembled contract tests** (a fast build-level runner, importing only declared roots); qa-e2e's UI-bypass prohibitions are scoped to the E2E track; assembled supplements E2E from below, it does not replace it; under solo-collapse the tracks collapse together.
+- **P7 (assertion):** observability = an observable **effect** (a feature-on/off differential); a mere presence assertion does not pass the gate; mutation-falsification of the assertion; purely visual features → a waiver, on the record.
+- **P8 (evidence):** a durable link `@qg:<scope-id>` (an annotation in the test or a checked-in manifest); PROJECT-STATE holds the reference; presence is machine-checkable, quality is reviewer/spot-checked.
 
-## Последствия
+## Consequences
 
-- **+** Автономный режим не может объявить done с неподключённой frozen-фичей: собранный прогон её не
-  покажет → красный. Ближайший машинный прокси к убранному human-UAT.
-- **+** Единый владелец «куски соединены» (раньше — ничей контракт).
-- **−** Требует детерминированного control-surface в продукте (seed/config-override) — иначе assembled-
-  тесты флаки. Для многих доменов это и так полезно; где дорого — фиксируется как отступление под запись.
-- **−** Небольшой рост стоимости приёмки (assembled-прогоны тяжелее unit). Смягчение: «в сборе» ≠ «всё
-  через браузер»; на уровне composition root много покрытия идёт в быстром раннере.
-- **Взаимодействие:** не отменяет разделение контуров (QA E2E) и spec-driven; дополняет. Уважает
-  solo-collapse ([pipeline.md](../../core/pipeline.md)) — там гейт несёт developer.
-- **Принятые остатки (явно, не маскируются):** (1) на solo-collapse без CI гейт — самоаттестация с
-  машинно-проверяемым **наличием** evidence, но без гарантии его качества — ограничение
-  accountability-класса by design; поднять выше можно только обязательным CI для автономного режима
-  (стратегический вопрос за пользователем); (2) stack-neutral core не даёт равных машинных гарантий
-  стекам — static-adjunct есть не везде (матрица гарантий, паттерн ADR-010/011); (3) границы классов
-  эквивалентности и серые зоны state-vs-outcome — суждение architect/reviewer, спор сужен, не снят.
-- **Verification-TODO:** (1) типичность класса дефекта (n=1) — второй автономный прогон или пассивная
-  линза auditor на ближайших 2–3 проектах, владелец: пользователь; (2) доля waiver'ов в
-  недетерминированных доменах (внешний API/ML) — пилот, владелец: пользователь/auditor; (3) стратегич.:
-  обязательный CI как предусловие автономного режима; бюджет церемонии (рост реестра non-negotiable) —
-  оба за пользователем.
+- **+** Autonomous mode cannot declare done with an unwired frozen feature: the assembled run will not show it → red. The closest machine proxy to the removed human UAT.
+- **+** A single owner for "the pieces are connected" (previously nobody's contract).
+- **−** Requires a deterministic control surface in the product (seed/config override) — otherwise assembled tests are flaky. Useful for many domains anyway; where it's costly, it's recorded as a deviation, on the record.
+- **−** A modest rise in acceptance cost (assembled runs are heavier than unit ones). Mitigation: "assembled" ≠ "everything through the browser"; at the composition-root level, a lot of coverage runs in the fast runner.
+- **Interaction:** does not overrule the separation of tracks (QA E2E) or spec-driven; it supplements them. Respects solo-collapse ([pipeline.md](../../core/pipeline.md)) — there the gate is carried by the developer.
+- **Accepted residuals (explicit, not masked):** (1) under solo-collapse with no CI, the gate is self-attestation with a machine-checkable **presence** of evidence but no guarantee of its quality — a limitation of the accountability class by design; raising the bar further requires mandatory CI for autonomous mode (a strategic question left to the user); (2) the stack-neutral core does not give equal machine guarantees across stacks — the static adjunct is not available everywhere (a guarantee matrix, the ADR-010/011 pattern); (3) the boundaries of equivalence classes and the gray zones of state-vs-outcome are architect/reviewer judgment — the dispute is narrowed, not closed.
 
-## Альтернативы (отклонены)
+**Verification TODO:** (1) how typical this defect class is (n=1) — a second autonomous run or a passive auditor lens on the next 2–3 projects, owner: the user; (2) the share of waivers in nondeterministic domains (external API/ML) — a pilot, owner: the user/auditor; (3) strategic: mandatory CI as a precondition for autonomous mode; the ceremony budget (growth of the non-negotiable registry) — both left to the user.
 
-- **«Хотя бы один интеграционный тест на фичу» бантиком сбоку** — слабее: не делает достижимость частью
-  критерия done, легко забыть. QG-NN-05 привязывает покрытие к списку frozen scope.
-- **Полный сквозной прогон всех комбинаций в сборе** — уходит в комбинаторный взрыв и бесконечный гейт.
-  Отвергнуто в пользу «характерный случай каждой фичи».
-- **Полагаться на аудитора** — аудитор пойман постфактум (после `projectDone=true`) и его веса
-  субъективны от прогона к прогону. Гейт должен быть в критерии done, не в постфактум-ревью.
+## Alternatives (rejected)
+
+- **"At least one integration test per feature" tacked on as an afterthought** — weaker: does not make reachability part of the done criterion, easy to forget. QG-NN-05 ties coverage to the frozen-scope list.
+- **A full end-to-end run of every combination in the assembled product** — runs into a combinatorial explosion and an infinite gate. Rejected in favor of "each feature's characteristic case."
+- **Rely on the auditor** — the auditor catches things after the fact (after `projectDone=true`) and its weighting is subjective from run to run. The gate must live in the done criterion, not in a post-hoc review.

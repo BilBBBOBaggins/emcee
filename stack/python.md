@@ -1,47 +1,47 @@
-# Python — правила работы со стеком
+# Python — stack rules
 
-Специфические правила для Python-кода. Общие принципы в [core/](../core/).
+Python-specific code rules. General principles are in [core/](../core/).
 
-## Версия и инструменты
+## Version and tools
 
-- Python 3.12+ (современный typing, performance).
-- **uv** для управления зависимостями и venv (быстрее pip/poetry); lock-файл `uv.lock` коммитится.
-- `pyproject.toml` — single source of truth для зависимостей и конфигов инструментов. Никаких `setup.py`, `requirements.txt` как основного источника.
-- Виртуальное окружение обязательно, никаких глобальных установок пакетов проекта.
+- Python 3.12+ (modern typing, performance).
+- **uv** for dependency and venv management (faster than pip/poetry); the `uv.lock` lock file is committed.
+- `pyproject.toml` — single source of truth for dependencies and tool configs. No `setup.py`, no `requirements.txt` as the primary source.
+- A virtual environment is mandatory, no global installs of project packages.
 
-## Структура проекта
+## Project structure
 
 ~~~
 src/
-  acme/                 # пакет проекта (src-layout)
-    domain/             # сущности и бизнес-правила, без IO
-    service/            # use cases
-    repository/         # доступ к данным
-    transport/          # FastAPI routers, middleware
-    config.py           # настройки через pydantic-settings
+  acme/                 # project package (src-layout)
+    domain/             # entities and business rules, no IO
+    service/             # use cases
+    repository/          # data access
+    transport/            # FastAPI routers, middleware
+    config.py            # settings via pydantic-settings
 tests/
   unit/
   integration/
 pyproject.toml
 ~~~
 
-Правила:
+Rules:
 
-- **src-layout** (пакет в `src/`) — чтобы тесты гоняли установленный пакет, не локальные файлы.
-- Бизнес-логика не живёт в `transport/`. Слои: `transport → service → repository`, обратных импортов нет ([core/code-quality.md](../core/code-quality.md)).
-- Циклические импорты запрещены.
+- **src-layout** (package in `src/`) — so tests run against the installed package, not local files.
+- Business logic doesn't live in `transport/`. Layers: `transport → service → repository`, no reverse imports ([core/code-quality.md](../core/code-quality.md)).
+- Circular imports are forbidden.
 
-## Типизация — обязательна
+## Typing — mandatory
 
-- Все функции и методы аннотированы (параметры + возврат). Публичный API без аннотаций не проходит.
-- `mypy --strict` (или `pyright` в strict) — часть гейта (см. ниже). Никакого `Any` кроме границы с нетипизированными библиотеками, и тогда — локально.
-- `# type: ignore` — только с кодом и причиной: `# type: ignore[arg-type]  # lib stubs неполные`.
-- Предпочитать `dataclasses` / `pydantic` модели голым `dict` для структурированных данных.
-- `from __future__ import annotations` или PEP 604 (`X | None`) для современных аннотаций.
+- All functions and methods are annotated (parameters + return). Public API without annotations doesn't pass.
+- `mypy --strict` (or `pyright` in strict mode) — part of the gate (see below). No `Any` except at the boundary with untyped libraries, and even then — locally.
+- `# type: ignore` — only with a code and a reason: `# type: ignore[arg-type]  # lib stubs incomplete`.
+- Prefer `dataclasses` / `pydantic` models over a plain `dict` for structured data.
+- `from __future__ import annotations` or PEP 604 (`X | None`) for modern annotations.
 
-## Обработка ошибок
+## Error handling
 
-- Исключения типизированы — свои классы под домен, не голый `Exception`:
+- Exceptions are typed — custom classes per domain, not a plain `Exception`:
 
 ~~~python
 class ValidationError(Exception):
@@ -51,37 +51,37 @@ class ValidationError(Exception):
         super().__init__(f"validation failed on {field}: {message}")
 ~~~
 
-- Никаких «голых» `except:` и `except Exception: pass`. Ловить конкретные типы, либо логировать и пробрасывать.
-- Контекст при перевыбросе: `raise ServiceError(...) from err` — сохраняет цепочку.
-- User-facing ошибки и internal — разделены (не отдавать traceback наружу).
+- No bare `except:` and no `except Exception: pass`. Catch specific types, or log and re-raise.
+- Context on re-raise: `raise ServiceError(...) from err` — preserves the chain.
+- User-facing errors and internal ones are separated (don't leak tracebacks outward).
 
 ## Async
 
-- Если проект async (FastAPI, aiohttp) — **не смешивать** sync-блокирующие вызовы в event loop. Блокирующее IO/CPU — через `asyncio.to_thread` или пул.
-- `async def` для IO-bound; чистый CPU-bound — отдельный процесс/пул, не корутина.
-- Любая корутина с фоновой задачей имеет способ отмены (`asyncio.TaskGroup`, `CancelledError` пробрасывается, не глотается).
-- Никаких голых `asyncio.create_task` без хранения ссылки и обработки исключений.
+- If the project is async (FastAPI, aiohttp) — **don't mix** sync-blocking calls into the event loop. Blocking IO/CPU — via `asyncio.to_thread` or a pool.
+- `async def` for IO-bound work; pure CPU-bound work — a separate process/pool, not a coroutine.
+- Any coroutine with a background task has a way to be cancelled (`asyncio.TaskGroup`, `CancelledError` is propagated, not swallowed).
+- No bare `asyncio.create_task` without keeping a reference and handling exceptions.
 
-## База данных
+## Database
 
-- **SQLAlchemy 2.0** (typed, `Mapped[...]`) или **asyncpg** напрямую для простых случаев. ORM-магия минимизируется.
-- Миграции — **Alembic**, файлы версионируются.
-- Параметризованные запросы всегда — никакой строковой конкатенации SQL (защита от инъекций, [core/code-quality.md](../core/code-quality.md)).
-- Транзакции явные (`async with session.begin():`), границы транзакции — в service-слое, не в repository.
+- **SQLAlchemy 2.0** (typed, `Mapped[...]`) or **asyncpg** directly for simple cases. ORM magic is minimized.
+- Migrations — **Alembic**, files are versioned.
+- Parameterized queries always — no string concatenation of SQL (protection against injection, [core/code-quality.md](../core/code-quality.md)).
+- Transactions are explicit (`async with session.begin():`), transaction boundaries are in the service layer, not in the repository.
 
-## Web-фреймворк
+## Web framework
 
-- **FastAPI** по умолчанию (async, pydantic-валидация, OpenAPI из коробки).
-- Pydantic-модели для request/response — валидация на границе, типы — source of truth.
-- Зависимости через `Depends`, не глобальные синглтоны.
-- Flask/Django — только если есть явная причина (legacy, admin-heavy) и это зафиксировано в ADR.
+- **FastAPI** by default (async, pydantic validation, OpenAPI out of the box).
+- Pydantic models for request/response — validation at the boundary, types are the source of truth.
+- Dependencies via `Depends`, not global singletons.
+- Flask/Django — only if there's an explicit reason (legacy, admin-heavy) and it's recorded in an ADR.
 
-## Тесты
+## Tests
 
-- **pytest** + `pytest-asyncio` для async.
-- Фикстуры для setup, не глобальное состояние между тестами.
-- Параметризация через `@pytest.mark.parametrize` (аналог table-driven).
-- Unit-тесты — без реальной сети/БД (моки, in-memory). Integration — отдельно, помечены маркером:
+- **pytest** + `pytest-asyncio` for async.
+- Fixtures for setup, not global state between tests.
+- Parametrization via `@pytest.mark.parametrize` (the table-driven equivalent).
+- Unit tests — no real network/DB (mocks, in-memory). Integration tests — separate, marked with a marker:
 
 ~~~python
 @pytest.mark.integration
@@ -89,52 +89,52 @@ async def test_repo_persists_invite(db_session): ...
 ~~~
 
 ~~~bash
-pytest tests/unit                       # быстрые
-pytest -m integration                   # интеграционные
+pytest tests/unit                       # fast
+pytest -m integration                   # integration
 ~~~
 
-- `freezegun`/инъекция времени вместо реального времени; никаких `time.sleep()` для синхронизации (см. [core/quality-gates.md](../core/quality-gates.md)).
-- Coverage-отчёт (диагностика дыр, не целевой процент — см. `roles/qa-e2e.md` §Coverage-диагностика): `pytest --cov=<пакет> --cov-report=term-missing` (плагин `pytest-cov`); машиночитаемый артефакт — `--cov-report=json:coverage.json`.
+- `freezegun`/time injection instead of real time; no `time.sleep()` for synchronization (see [core/quality-gates.md](../core/quality-gates.md)).
+- Coverage report (diagnoses gaps, not a target percentage — see `roles/qa-e2e.md` §Coverage diagnostics): `pytest --cov=<package> --cov-report=term-missing` (plugin `pytest-cov`); machine-readable artifact — `--cov-report=json:coverage.json`.
 
-## Логирование
+## Logging
 
-- `structlog` или stdlib `logging` со structured-форматтером. Не `print()`.
-- Structured key-value, не f-строки в сообщении:
+- `structlog` or stdlib `logging` with a structured formatter. Not `print()`.
+- Structured key-value, not f-strings in the message:
 
 ~~~python
 logger.info("invite created", invite_id=invite.id, tenant_id=tenant_id)
 ~~~
 
-- Запрет на логирование секретов и ПД (пароли, токены, email в открытом виде где это ПД) — `[REDACTED]`.
+- Logging secrets and PII is forbidden (passwords, tokens, email in plaintext where it counts as PII) — `[REDACTED]`.
 
-## Чистая сборка (clean build) — линтинг, типы, формат
+## Clean build — linting, types, formatting
 
-- **ruff** — линтер + форматтер (заменяет flake8/isort/black). Строгий конфиг в `pyproject.toml`.
-- **mypy --strict** (или pyright strict) — типы.
-- Это и есть «без warnings» для Python из [core/quality-gates.md](../core/quality-gates.md):
+- **ruff** — linter + formatter (replaces flake8/isort/black). Strict config in `pyproject.toml`.
+- **mypy --strict** (or pyright strict) — types.
+- This is "no warnings" for Python from [core/quality-gates.md](../core/quality-gates.md):
 
 ~~~bash
-ruff check .          # линт без нарушений
-ruff format --check . # формат
-mypy src              # типы без ошибок
-pytest                # тесты зелёные
+ruff check .          # lint with no violations
+ruff format --check . # formatting
+mypy src              # types with no errors
+pytest                # tests green
 ~~~
 
-Любое нарушение ruff/mypy = задача не завершена. Подавление (`# noqa`, `# type: ignore`) — только с кодом и причиной.
+Any ruff/mypy violation = the task is not done. Suppression (`# noqa`, `# type: ignore`) — only with a code and a reason.
 
-## Специфические запреты
+## Specific prohibitions
 
-- Мутабельные дефолтные аргументы (`def f(x=[])`) — запрещены, классический баг.
-- `import *` — запрещён.
-- Глобальное мутабельное состояние с бизнес-данными — запрещено, всё через DI/зависимости.
-- `eval`/`exec` на пользовательском вводе — запрещено.
-- `assert` для рантайм-валидации в production-коде — запрещён (вырезается при `-O`); assert только в тестах.
-- Бизнес-логика в `__init__.py` — запрещена (только реэкспорт).
-- `requirements.txt` как основной манифест — использовать `pyproject.toml` + `uv.lock`.
+- Mutable default arguments (`def f(x=[])`) — forbidden, a classic bug.
+- `import *` — forbidden.
+- Global mutable state with business data — forbidden, everything via DI/dependencies.
+- `eval`/`exec` on user input — forbidden.
+- `assert` for runtime validation in production code — forbidden (stripped out under `-O`); `assert` only in tests.
+- Business logic in `__init__.py` — forbidden (re-export only).
+- `requirements.txt` as the primary manifest — use `pyproject.toml` + `uv.lock`.
 
-## Python-специфичные паттерны
+## Python-specific patterns
 
-**Dependency injection через конструктор / FastAPI Depends**, не через глобальные синглтоны:
+**Dependency injection via constructor / FastAPI `Depends`**, not via global singletons:
 
 ~~~python
 class InviteService:
@@ -143,4 +143,4 @@ class InviteService:
         self._mailer = mailer
 ~~~
 
-**Pydantic-модель на границе, dataclass внутри домена** — валидация снаружи, чистые типы внутри. DI-фреймворки (dependency-injector) на старте не нужны — конструкторов достаточно.
+**Pydantic model at the boundary, dataclass inside the domain** — validation outside, clean types inside. DI frameworks (dependency-injector) aren't needed at the start — constructors are sufficient.

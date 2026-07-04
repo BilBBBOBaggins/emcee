@@ -1,44 +1,46 @@
-# PROCESS-METRICS — окупается ли тяжесть процесса (пример)
+# PROCESS-METRICS — does the process weight pay off (example)
 
-> **Opt-in, не для каждого проекта.** Заводи этот файл только когда разворачиваешь **тяжёлый**
-> процесс (полный пайплайн SA→BA→QA-UAT→QA-E2E, C+ spec-driven, адверсивная панель) и хочешь
-> ПРОВЕРИТЬ, что он ловит дефекты сверх дешёвого `developer+reviewer`. Для простого проекта
-> (бот-класс, один-оконный режим) метрики — лишний ритуал, не заводи.
+> **Opt-in, not for every project.** Set up this file only when you're rolling out a **heavy**
+> process (the full SA→BA→QA-UAT→QA-E2E pipeline, C+ spec-driven, adversarial panel) and want to
+> VERIFY that it catches defects beyond a cheap `developer+reviewer`. For a simple project (bot-class,
+> single-pane mode), metrics are a needless ritual — don't set them up.
 >
-> Зачем: [ADR-002](adr/) СТОП-3 требует замерить, даёт ли C+ новый класс дефектов сверх
-> qa-uat+reviewer; [ADR-003](adr/) O1/O3 требуют ретро реальных стартов. Без этого лога «процесс
-> окупается» — интуиция, а не факт; а нефальсифицируемый процесс легко становится религией.
-> Цель здесь — **корректность ставки на процесс**, не бюрократия: одна строка на пойманный дефект.
+> Why: [ADR-002](adr/) STOP-3 requires measuring whether C+ catches a new class of defects beyond
+> qa-uat+reviewer; [ADR-003](adr/) O1/O3 require retros of real kickoffs. Without this log, "the
+> process pays off" is intuition, not fact — and an unfalsifiable process easily becomes a religion.
+> The goal here is **correctness of the bet on process**, not bureaucracy: one line per caught defect.
 
-## Журнал перехватов (одна строка на находку)
+## Interception log (one line per finding)
 
-Кто поймал дефект → что именно → поймал бы это более дешёвый шаг (developer/reviewer)? Если «нет» —
-шаг окупился; если «да всегда» — шаг под вопросом.
+Who caught the defect → what exactly → would a cheaper step (developer/reviewer) have caught it? If
+"no" — the step paid off; if "yes, always" — the step is in question.
 
-| Дата | Шаг (роль/метод) | Что поймал | Поймал бы reviewer/developer? | Класс |
+| Date | Step (role/method) | What it caught | Would reviewer/developer have caught it? | Class |
 |------|------------------|-----------|-------------------------------|-------|
-| 2026-06-14 | QA-E2E | инвайт уходил, но письмо не доставлялось (разрыв bridge→provider) | нет (unit зелёные, разрыв только в полном стеке) | окупился |
-| 2026-06-15 | adversarial test-review (C+) | тесты парсера не покрывали пустой и max-length вход | нет (реализатор написал бы те же удобные тесты) | окупился |
-| 2026-06-18 | панель | арх-решение «один общий воркер» = single point of failure под нагрузкой | нет (выявилось только в red↔blue) | окупился |
-| 2026-06-20 | QA-UAT | сценарий не описывал отказ при дубле email — фича молча падала | спорно | под наблюдением |
+| 2026-06-14 | QA-E2E | invite went out, but the email wasn't delivered (bridge→provider break) | no (unit tests were green, the break only shows in the full stack) | paid off |
+| 2026-06-15 | adversarial test-review (C+) | parser tests didn't cover empty and max-length input | no (the implementer would have written the same convenient tests) | paid off |
+| 2026-06-18 | panel | architecture decision "one shared worker" = single point of failure under load | no (surfaced only in red↔blue) | paid off |
+| 2026-06-20 | QA-UAT | scenario didn't describe the failure on a duplicate email — the feature silently failed | disputed | under watch |
 
-## Escape-дефекты (проскочили ВЕСЬ процесс в прод)
+## Escape defects (slipped through the ENTIRE process into production)
 
-Дефекты, найденные пользователями/в проде, — что их должно было поймать и почему не поймало.
+Defects found by users/in production — what should have caught them and why it didn't.
 
-| Дата | Дефект | Какой шаг ДОЛЖЕН был поймать | Почему не поймал |
+| Date | Defect | Which step SHOULD have caught it | Why it didn't |
 |------|--------|------------------------------|------------------|
-| — | (пока нет) | | |
+| — | (none yet) | | |
 
-## Вердикт по стоп-гейтам (пересматривать раз в 2-3 фичи)
+## Verdict on the stop gates (revisit every 2-3 features)
 
-- **C+ (ADR-002 СТОП-3):** за 2-3 фичи adversarial test-review поймал ≥1 класс дефектов сверх
-  qa-uat+reviewer? → ДА = C+ оправдан, оставить. НЕТ = откат к D (даже markdown-слой не окупился).
-  *Текущий статус: [заполнить после 2-3 фич]*
-- **Тяжёлый пайплайн (ADR-003 O1):** были реальные перехваты на QA-UAT/QA-E2E/панели, которых не
-  дал бы developer+reviewer? → ДА = пайплайн оправдан для этого класса проекта. НЕТ за 3 фичи =
-  опустить каденцию (это решение пользователя, не агента — PR-NN-02).
-  *Текущий статус: [заполнить]*
+- **C+ (ADR-002 STOP-3):** over 2-3 features, did adversarial test-review catch ≥1 class of defects
+  beyond qa-uat+reviewer? → YES = C+ is justified, keep it. NO = roll back to D (even the markdown
+  layer didn't pay off).
+  *Current status: [fill in after 2-3 features]*
+- **Heavy pipeline (ADR-003 O1):** were there real interceptions at QA-UAT/QA-E2E/panel that
+  developer+reviewer wouldn't have given? → YES = the pipeline is justified for this class of
+  project. NO after 3 features = drop the cadence (this is the user's decision, not the agent's —
+  PR-NN-02).
+  *Current status: [fill in]*
 
-Прунинг: журнал — эпизодический (см. [core/memory.md](../../core/memory.md) → прунинг). Старые строки
-со временем в холод (git history); горячими держи последние 2-3 фичи + вердикт.
+Pruning: the log is episodic (see [core/memory.md](../../core/memory.md) → pruning). Old lines go
+cold over time (git history); keep the last 2-3 features + verdict hot.

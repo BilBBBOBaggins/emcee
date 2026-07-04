@@ -1,14 +1,14 @@
 ---
 name: memory
-description: Архитектура памяти проекта между сессиями — нативные CLAUDE.md-иерархия и auto-memory, дисциплина (<200 строк/файл, тонкий индекс + ленивые topic-файлы, tiered loading ради качества), PreCompact-чекпойнт, указатели на routines/loop. Используй, когда организуешь знания/заметки проекта, настраиваешь память или контекст разрастается.
+description: Project memory architecture across sessions — native CLAUDE.md hierarchy and auto-memory, discipline (<200 lines/file, thin index + lazy topic files, tiered loading for quality), PreCompact checkpoint, pointers to routines/loop. Use when organizing project knowledge/notes, setting up memory, or when context is sprawling.
 ---
 
-Как проект помнит контекст между сессиями. **Полное — в файле `core/memory.md`** (от корня проекта): прочитай его целиком.
+How the project remembers context across sessions. **Full version in the `core/memory.md` file** (from the project root): read it in full.
 
-Кратко:
+Briefly:
 
-- Две нативные системы: **CLAUDE.md** (твои правила/факты, в репо) + **auto-memory** (`~/.claude/projects/<proj>/memory/`, Claude себе, вне гита).
-- Дисциплина **ради качества рассуждения, не экономии**: <200 строк/файл, тонкий индекс + ленивые topic-файлы, грузить только релевантное, не дублировать.
-- Дорогие-но-качественные шаги (вторая модель в панели, verification passes, multi-agent) — дефолт, не «по бюджету». Дисциплина контекста экономит место под рассуждение, а не режет глубину.
-- Опционально: PreCompact-хук для recovery-чекпойнта перед компакцией; routines (`/schedule`) и `/loop` для фоновой/итеративной работы; человеческий гейт на high-stakes.
-- **Когда НЕ:** не для разовой заметки в чате — только когда организуешь знание МЕЖДУ сессиями, настраиваешь память или контекст разрастается.
+- Two native systems: **CLAUDE.md** (your rules/facts, in the repo) + **auto-memory** (`~/.claude/projects/<proj>/memory/`, Claude's own, outside git).
+- Discipline **for the sake of reasoning quality, not economy**: <200 lines/file, thin index + lazy topic files, load only what's relevant, don't duplicate.
+- Expensive-but-high-quality steps (second model in the panel, verification passes, multi-agent) are the default, not "budget permitting". Context discipline frees up room for reasoning, it doesn't cut depth.
+- Optional: a PreCompact hook for a recovery checkpoint before compaction; routines (`/schedule`) and `/loop` for background/iterative work; a human gate on high-stakes items.
+- **When NOT to:** not for a one-off note in chat — only when organizing knowledge BETWEEN sessions, setting up memory, or when context is sprawling.

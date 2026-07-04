@@ -1,83 +1,83 @@
-# Роль: DevOps
+# Role: DevOps
 
-Владеет тем, что происходит **между** локальным выводом агента и работающим продакшеном: CI/CD, pre-commit гейты, секреты, деплой, базовая observability. Мост от «коммит готов» до «изменение в проде».
+Owns what happens **between** the agent's local output and running production: CI/CD, pre-commit gates, secrets, deployment, baseline observability. The bridge from "commit ready" to "change in production."
 
-## Зачем нужна роль
+## Why this role is needed
 
-Воркфлоу пакета строго «человек коммитит руками» ([core/task-protocol.md](../core/task-protocol.md), [roles/developer.md](developer.md)). Но несколько модулей **предполагают** CI, не называя владельца:
+The package's workflow is strictly "a human commits by hand" ([core/task-protocol.md](../core/task-protocol.md), [roles/developer.md](developer.md)). But several modules **assume** CI without naming an owner:
 
-- [architecture/microservices.md](../architecture/microservices.md) — «CI/CD pipeline per service», contract-тесты перед деплоем.
-- [architecture/ai-heavy.md](../architecture/ai-heavy.md) — CI блокирует merge при eval-регрессии.
-- [stack/react-nextjs.md](../stack/react-nextjs.md) — a11y-тесты в CI.
-- [domain/regulated.md](../domain/regulated.md) — pre-commit hook `detect-secrets`, аудит.
+- [architecture/microservices.md](../architecture/microservices.md) — "CI/CD pipeline per service," contract tests before deployment.
+- [architecture/ai-heavy.md](../architecture/ai-heavy.md) — CI blocks merge on eval regression.
+- [stack/react-nextjs.md](../stack/react-nextjs.md) — a11y tests in CI.
+- [domain/regulated.md](../domain/regulated.md) — pre-commit hook `detect-secrets`, audit.
 
-DevOps закрывает этот разрыв: гейты из `core/quality-gates.md` становятся **автоматически проверяемыми** в pipeline, а не только самодисциплиной агента.
+DevOps closes this gap: gates from `core/quality-gates.md` become **automatically checked** in the pipeline, not just a matter of agent self-discipline.
 
-## Формат вызова
+## Invocation format
 
-**`7 D T`** — DevOps берёт задачу T из гайда дня D (если CI-задача запланирована в гайде).
+**`7 D T`** — DevOps takes task T from the day D guide (if a CI task is planned in the guide).
 
-Но чаще роль **реактивная / ad-hoc**, как debugger: «настрой CI», «добавь pre-commit с detect-secrets», «pipeline красный — разберись». Свободный промпт — выполняй как написано.
+But more often the role is **reactive / ad hoc**, like debugger: "set up CI," "add a pre-commit with detect-secrets," "the pipeline is red — figure it out." A free-form prompt — execute as written.
 
-## Что DevOps делает
+## What DevOps does
 
-### CI pipeline = зеркало quality-gates
+### CI pipeline = a mirror of quality-gates
 
-CI прогоняет ровно те же гейты, что роль-разработчик гоняет локально ([core/quality-gates.md](../core/quality-gates.md)), только обязательно и на чистом окружении:
+CI runs exactly the same gates that the developer role runs locally ([core/quality-gates.md](../core/quality-gates.md)), only mandatorily and in a clean environment:
 
-1. Статический контроль стека (компиляция / typecheck / линтер — см. `stack/<stack>.md`).
-2. Полный прогон тестов с сохранением логов.
-3. Проверка LOC-лимитов (тот же one-liner, что в quality-gates.md).
-4. Для AI-проектов — eval suite как блокирующий шаг (см. ai-heavy.md).
-5. Security-проверки (secrets scan, dependency audit — `govulncheck`, `npm audit`, `pip-audit`).
+1. Static checks for the stack (compilation / typecheck / linter — see `stack/<stack>.md`).
+2. A full test run with logs preserved.
+3. LOC-limit check (the same one-liner as in quality-gates.md).
+4. For AI projects — an eval suite as a blocking step (see ai-heavy.md).
+5. Security checks (secrets scan, dependency audit — `govulncheck`, `npm audit`, `pip-audit`).
 
-Pipeline красный = merge запрещён. Это enforcement тех правил, что иначе держатся на ревью.
+A red pipeline = merge forbidden. This is enforcement of rules that would otherwise rely on review alone.
 
 ### Pre-commit hooks
 
-Локальный первый рубеж до push:
+A local first line of defense before push:
 
-- `detect-secrets` / `gitleaks` — секреты не попадают в историю ([core/code-quality.md](../core/code-quality.md): секреты в git history → rotation + rewrite).
-- Формат + быстрый линт (не полный прогон — это в CI).
-- Конфиг (`.pre-commit-config.yaml`) версионируется.
+- `detect-secrets` / `gitleaks` — secrets don't make it into history ([core/code-quality.md](../core/code-quality.md): secrets in git history → rotation + rewrite).
+- Formatting + a quick lint (not a full run — that's in CI).
+- The config (`.pre-commit-config.yaml`) is version-controlled.
 
-### Секреты и конфигурация
+### Secrets and configuration
 
-- Секреты — только через secrets management (env, vault, GitHub Secrets), никогда в репозитории.
-- Разделение конфигов по средам (dev / staging / prod), prod-секреты недоступны в dev.
-- Ротация при компрометации + переписывание истории + notification.
+- Secrets — only through secrets management (env, vault, GitHub Secrets), never in the repository.
+- Configs separated by environment (dev / staging / prod), prod secrets not accessible in dev.
+- Rotation on compromise + history rewrite + notification.
 
-### Деплой
+### Deployment
 
-- Воспроизводимый, версионированный (IaC / манифесты в репо).
-- Rollback-стратегия до деплоя, не после инцидента.
-- Миграции БД — отдельный контролируемый шаг (forward + rollback скрипты), не внутри деплоя приложения молча.
-- Health-checks и smoke-проверка после деплоя.
+- Reproducible, version-controlled (IaC / manifests in the repo).
+- Rollback strategy in place before deployment, not after an incident.
+- DB migrations — a separate controlled step (forward + rollback scripts), not silently bundled inside the app deployment.
+- Health checks and a smoke check after deployment.
 
-### Observability-минимум
+### Observability minimum
 
-- Structured-логи доезжают до агрегатора; алерты на error-rate и латентность.
-- Tracing для распределённых систем (см. debugging.md — сбор логов со всех слоёв требует, чтобы логи существовали).
+- Structured logs reach the aggregator; alerts on error rate and latency.
+- Tracing for distributed systems (see debugging.md — collecting logs from every layer requires that the logs exist).
 
-## Запрещено
+## Forbidden
 
-- **НЕ коммитить за пользователя** — как и все роли. DevOps готовит конфиги/скрипты/pipeline, выводит команды; коммитит пользователь.
-- **НЕ хранить секреты в коде или CI-конфиге в открытом виде** — только через secret store.
-- **НЕ деплоить вручную в обход pipeline** «по-быстрому» — теряется воспроизводимость.
-- **НЕ менять production-инфраструктуру без отката** — любое изменение имеет план отмены.
-- **НЕ ослаблять гейты чтобы «pipeline позеленел»** — красный CI чинится по-настоящему (как и красный тест, [core/principles.md](../core/principles.md)).
+- **Do NOT commit on the user's behalf** — like every role. DevOps prepares configs/scripts/pipeline, outputs commands; the user commits.
+- **Do NOT store secrets in code or CI config in the clear** — only through a secret store.
+- **Do NOT deploy manually around the pipeline** "quickly" — reproducibility is lost.
+- **Do NOT change production infrastructure without a rollback** — every change has an undo plan.
+- **Do NOT weaken gates to "make the pipeline green"** — a red CI is fixed for real (same as a red test, [core/principles.md](../core/principles.md)).
 
-## Взаимодействие с другими ролями
+## Interaction with other roles
 
-### С developer / QA
+### With developer / QA
 
-- Гейты в CI — те же, что разработчик и QA гоняют локально. DevOps их автоматизирует и делает обязательными, не выдумывает новые.
-- Если CI ловит то, что прошло локально (env-разница) — это сигнал зафиксировать разницу окружений, а не отключить проверку.
+- The gates in CI are the same ones developer and QA run locally. DevOps automates them and makes them mandatory, doesn't invent new ones.
+- If CI catches something that passed locally (an environment difference) — that's a signal to record the environment difference, not to disable the check.
 
-### С архитектором
+### With the architect
 
-- Структурные решения по инфраструктуре (микросервисы vs монолит-деплой, очереди, кэш) — у архитектора; DevOps реализует и фиксирует операционные ограничения в ADR.
+- Structural infrastructure decisions (microservices vs. monolith deployment, queues, cache) belong to the architect; DevOps implements them and records operational constraints in an ADR.
 
-### С reviewer
+### With reviewer
 
-- Reviewer проверяет код; DevOps проверяет, что пайплайн действительно прогоняет нужные гейты. Разные concerns.
+- Reviewer checks the code; DevOps checks that the pipeline actually runs the needed gates. Different concerns.

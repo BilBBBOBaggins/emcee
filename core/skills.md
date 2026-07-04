@@ -1,60 +1,67 @@
-# Скиллы как роутеры — стандарт авторинга
+# Skills as routers — the authoring standard
 
-Скилл — это **тонкий роутер к каноническому знанию**, не мануал и не его копия. Задача скилла: по
-релевантной ситуации разбудить нужный метод (указать на `core/*.md` / `stack/*` / `architecture/*` /
-`domain/*`), а не изложить его. Толстый скилл = дубль источника истины + засорение контекста.
+A skill is a **thin router to canonical knowledge**, not a manual and not a copy of one. The
+skill's job: given a relevant situation, wake up the right method (point at `core/*.md` /
+`stack/*` / `architecture/*` / `domain/*`), not spell it out. A fat skill = a duplicate of the
+source of truth + context clutter.
 
-`origin: process-convention` — это наш дизайн скиллов, не привязка к рантайму. Контент и шаблон ниже
-**harness-нейтральны**; механизм discovery (как харнесс поднимает скилл) — per-harness, см. конец.
+`origin: process-convention` — this is our skill design, not a runtime binding. The content and
+template below are **harness-neutral**; the discovery mechanism (how the harness surfaces a skill)
+is per-harness, see the end.
 
-## Что несёт SKILL.md (шаблон)
+## What SKILL.md carries (the template)
 
-- **Purpose** — что инкапсулирует, одна строка.
-- **When to use** — конкретные триггеры (в `description`, видно агенту всегда).
-- **When NOT to use** — где НЕ применять и что не путать. Это **анти-мисфайр и анти-реизобретение**:
-  явная граница не даёт выстрелить скиллом не туда или переизобрести метод инлайн (дебаг по наитию
-  вместо `debugging`, самодельный чек вместо `code-quality`).
-- **Routing / decision-tree** — *только если* скилл ведёт к нескольким процедурам: дерево «ситуация →
-  конкретный reference». Скиллу-указателю на один канонический файл дерево не нужно.
-- **Key constraints** — несущие запреты области, кратко.
-- **Pointer** — ссылка на канонический файл (источник истины), НЕ копия.
+- **Purpose** — what it encapsulates, one line.
+- **When to use** — concrete triggers (in `description`, always visible to the agent).
+- **When NOT to use** — where NOT to apply it and what not to confuse it with. This is
+  **anti-misfire and anti-reinvention**: an explicit boundary keeps the skill from firing on the
+  wrong thing or from having its method reinvented inline (debugging by gut feeling instead of
+  `debugging`, a homemade check instead of `code-quality`).
+- **Routing / decision-tree** — *only if* the skill leads to several procedures: a tree of
+  "situation → specific reference." A skill that just points to one canonical file doesn't need a
+  tree.
+- **Key constraints** — the domain's load-bearing prohibitions, briefly.
+- **Pointer** — a link to the canonical file (the source of truth), NOT a copy.
 
-Тело короткое (~10-15 строк): хватает, чтобы не ошибиться даже не открыв канон, но не пересказ.
+The body is short (~10-15 lines): enough to not go wrong even without opening the canon, but not a
+retelling.
 
-## Quality bar — когда вообще заводить скилл
+## Quality bar — when to create a skill at all
 
-Заводи, только если хотя бы одно:
-- процесс **частый**;
-- цена ошибки **высокая**;
-- ревью-комменты по теме **повторяются**;
-- агент **стабильно выбирает не тот путь** без подсказки;
-- есть **чёткий порядок шагов**, повышающий безопасность.
+Create one only if at least one of these holds:
+- the process is **frequent**;
+- the cost of error is **high**;
+- review comments on the topic **keep recurring**;
+- the agent **consistently picks the wrong path** without a nudge;
+- there's a **clear step order** that improves safety.
 
-НЕ заводи скилл для:
-- one-off задачи;
-- размытой широкой темы без триггера;
-- **policy-prose без операционных шагов** (это правило в `core/`/конституции, не скилл);
-- обзора домена без процедуры.
+Do NOT create a skill for:
+- one-off tasks;
+- a vague, broad topic with no trigger;
+- **policy prose with no operational steps** (that's a rule in `core/`/the constitution, not a
+  skill);
+- a domain overview with no procedure.
 
-Не каждый повторяющийся таск нужен скиллом — только где есть ясная ценность. Лишний скилл засоряет
-discovery и конкурирует за внимание с нужным.
+Not every recurring task needs a skill — only where there's clear value. An unnecessary skill
+clutters discovery and competes for attention with the one that's actually needed.
 
-## Триггеры: хорошие vs плохие
+## Triggers: good vs. bad
 
-- **Хорошо** (конкретно, фальсифицируемо): «падает тест / есть стектрейс», «пишешь парсер с жёстким
-  контрактом», «контекст разрастается перед компакцией».
-- **Плохо** (размыто): «делаешь бэкенд», «работаешь с кодом», «что-то про качество».
+- **Good** (concrete, falsifiable): "a test is failing / there's a stack trace," "you're writing a
+  parser with a hard contract," "context is growing before compaction."
+- **Bad** (vague): "you're doing backend work," "you're working with code," "something about
+  quality."
 
-Плохой триггер либо не выстреливает, либо выстреливает всегда — оба бесполезны.
+A bad trigger either never fires or always fires — both are useless.
 
 ## Discovery — per-harness (P4, ADR-010/011)
 
-Контент и шаблон выше harness-нейтральны. КАК харнесс поднимает скилл — рантайм-специфично и живёт в
-оверлее, не здесь:
+The content and template above are harness-neutral. HOW the harness surfaces a skill is
+runtime-specific and lives in the overlay, not here:
 
-- **Claude Code:** `skills/<имя>/SKILL.md` + frontmatter (`name` + `description`); стек-скиллы несут
-  `paths:`-glob для path-scoped активации, `description` — фолбэк.
-- **Другие рантаймы:** эквивалент в `overlays/<harness>/` (`origin: harness:<name>`).
+- **Claude Code:** `skills/<name>/SKILL.md` + frontmatter (`name` + `description`); stack skills
+  carry a `paths:` glob for path-scoped activation, with `description` as the fallback.
+- **Other runtimes:** the equivalent in `overlays/<harness>/` (`origin: harness:<name>`).
 
-Источник истины один — канонический файл. Удалишь слой discovery — прозовый режим (роутер «По
-ситуации» во входном файле регламента) продолжит работать.
+There's one source of truth — the canonical file. Delete the discovery layer, and prose mode (the
+"Situational" router in the regimen entry file) keeps working.

@@ -1,30 +1,40 @@
-# ADR-001: Модульный монолит вместо микросервисов на старте
+# ADR-001: Modular monolith instead of microservices at the start
 
 Date: 2026-04-15
 Status: Accepted
 
-## Коротко
+## In short
 
-Стартуем как **модульный монолит**, а не микросервисы: один деплой с жёсткими внутренними границами
-модулей (`transport → service → repository`, межмодульно — только через сервисные интерфейсы) и
-multi-tenancy через Postgres RLS. Так раннему B2B SaaS с командой 1–2 человека хватает скорости MVP,
-но границы доменов уже заданы кодом — позже модуль можно вынести в сервис без переписывания.
+We're starting as a **modular monolith**, not microservices: a single deployment with hard internal
+module boundaries (`transport → service → repository`, cross-module only via service interfaces)
+and multi-tenancy via Postgres RLS. This gives an early B2B SaaS with a 1–2 person team enough MVP
+speed, while the domain boundaries are already set in code — a module can be split out into a
+service later without a rewrite.
 
 ## Context
 
-Acme Teams — ранний B2B SaaS, команда 1–2 человека, MVP за недели. Нужно быстро итерировать, при этом сохранить чистые границы доменов (teams, invites, billing), чтобы позже можно было вынести что-то в сервис без переписывания. Формат — [roles/architect.md](../../../roles/architect.md), композиция — [architecture/modular-monolith.md](../../../architecture/modular-monolith.md).
+Acme Teams is an early B2B SaaS, a 1–2 person team, MVP in weeks. Need to iterate fast while
+keeping clean domain boundaries (teams, invites, billing) so something can be split out into a
+service later without a rewrite. Format — [roles/architect.md](../../../roles/architect.md),
+composition — [architecture/modular-monolith.md](../../../architecture/modular-monolith.md).
 
 ## Decision
 
-Один деплой (модульный монолит) с жёсткими внутренними границами модулей в `internal/` и однонаправленными зависимостями `transport → service → repository`. Межмодульное взаимодействие — только через сервисные интерфейсы, не через прямой доступ к чужим таблицам. Multi-tenancy через Postgres RLS по `tenant_id`.
+A single deployment (modular monolith) with hard internal module boundaries under `internal/` and
+one-directional dependencies `transport → service → repository`. Cross-module interaction only
+through service interfaces, never direct access to another module's tables. Multi-tenancy via
+Postgres RLS on `tenant_id`.
 
 ## Consequences
 
-**Плюсы:** простой деплой и локальная разработка; одна транзакционная БД; границы заданы кодом, не сетью; рефакторинг дешёвый.
-**Минусы:** нет независимого масштабирования модулей; дисциплина границ держится на ревью, а не на сети — нужен contract-тест на запрет обратных импортов.
-**Риски:** при росте команды соблазн «срезать угол» через чужую таблицу. Митигация: линт-правило на границы импортов + проверка в reviewer ([roles/reviewer.md](../../../roles/reviewer.md)).
+**Pros:** simple deployment and local development; a single transactional DB; boundaries set by
+code, not by the network; cheap refactoring.
+**Cons:** no independent scaling of modules; boundary discipline rests on review, not the network —
+needs a contract test forbidding reverse imports.
+**Risks:** as the team grows, temptation to "cut a corner" via another module's table. Mitigation:
+an import-boundary lint rule + a check in review ([roles/reviewer.md](../../../roles/reviewer.md)).
 
 ## Alternatives considered
 
-- **Микросервисы сразу** ([architecture/microservices.md](../../../architecture/microservices.md)) — отклонено: операционная сложность не окупается на MVP с командой 1–2 человека.
-- **Монолит без модульных границ** — отклонено: дешевле сейчас, но превращается в big ball of mud и блокирует будущее вынесение сервисов.
+- **Microservices from day one** ([architecture/microservices.md](../../../architecture/microservices.md)) — rejected: the operational complexity doesn't pay off for an MVP with a 1–2 person team.
+- **Monolith with no module boundaries** — rejected: cheaper now, but turns into a big ball of mud and blocks splitting out services later.

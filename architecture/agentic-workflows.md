@@ -1,14 +1,14 @@
-# Agentic Workflows — архитектурный паттерн
+# Agentic Workflows — architecture pattern
 
-Паттерны для систем где AI-агенты выполняют многошаговые задачи с tool use, memory, оркестрацией.
+Patterns for systems where AI agents perform multi-step tasks with tool use, memory, orchestration.
 
-Применимо когда: AI — не просто chat, а actor который делает вещи (читает файлы, вызывает API, принимает решения, итерирует). Для простых chat/completion use cases — см. [ai-heavy.md](ai-heavy.md).
+Applicable when: AI isn't just chat, but an actor that does things (reads files, calls APIs, makes decisions, iterates). For simple chat/completion use cases — see [ai-heavy.md](ai-heavy.md).
 
 ## Single agent vs multi-agent
 
 ### Single agent
 
-Один LLM с доступом к tools. Agent получает задачу, планирует, использует tools в цикле, возвращает результат.
+One LLM with access to tools. The agent gets a task, plans, uses tools in a loop, returns a result.
 
 ~~~
 User Request
@@ -23,21 +23,21 @@ Agent (LLM with tools)
 Response
 ~~~
 
-Подходит для:
+Suitable for:
 
-- Задач которые укладываются в один context window
-- Линейных workflows
-- Когда специализация по ролям не нужна
+- Tasks that fit within one context window
+- Linear workflows
+- When role specialization isn't needed
 
-Проблемы:
+Problems:
 
-- Context window ограничен
-- Agent "теряется" в длинных задачах
-- Один промпт должен покрывать все возможные ситуации
+- The context window is limited
+- The agent "gets lost" in long tasks
+- One prompt must cover every possible situation
 
 ### Multi-agent
 
-Несколько специализированных агентов с разными ролями, координируются через orchestrator или через communication protocol.
+Several specialized agents with different roles, coordinated through an orchestrator or a communication protocol.
 
 ~~~
 User Request
@@ -50,49 +50,49 @@ Orchestrator
 Synthesized Response
 ~~~
 
-Подходит для:
+Suitable for:
 
-- Сложных задач требующих разных типов expertise
-- Workflows где явные роли повышают качество
-- Параллелизируемых подзадач
+- Complex tasks requiring different types of expertise
+- Workflows where explicit roles improve quality
+- Parallelizable subtasks
 
-Проблемы:
+Problems:
 
-- Координация сложнее
-- Больше tokens (каждый agent имеет свой system prompt)
-- Коммуникация между agents требует чёткого протокола
+- Coordination is harder
+- More tokens (each agent has its own system prompt)
+- Communication between agents requires a clear protocol
 
-Схема этого пакета — multi-agent (architect / developer / reviewer / QA / BA). Принцип: каждый agent имеет чётко определённую role с минимальным scope, orchestrator (пользователь или meta-agent) переключает между ними по мере необходимости.
+This package's scheme is multi-agent (architect / developer / reviewer / QA / BA). Principle: each agent has a clearly defined role with a minimal scope, an orchestrator (the user or a meta-agent) switches between them as needed.
 
-## Роли в multi-agent системах
+## Roles in multi-agent systems
 
-### По функции
+### By function
 
-- **Orchestrator** — разбивает задачу, делегирует subagents, агрегирует результаты
-- **Specialists** — выполняют специфичные типы работы (code, research, review, testing)
-- **Critics** — оценивают работу specialists, находят проблемы
-- **Memory agents** — управляют long-term memory, retrieval
+- **Orchestrator** — breaks down the task, delegates to subagents, aggregates results
+- **Specialists** — perform specific types of work (code, research, review, testing)
+- **Critics** — evaluate specialists' work, find problems
+- **Memory agents** — manage long-term memory, retrieval
 
-### Каждая роль имеет
+### Each role has
 
-- System prompt описывающий responsibilities, constraints, output format
-- Tools которые ей доступны (не все agents имеют доступ ко всем tools)
-- Context scope — что она читает, что не читает
-- Success criteria — когда task выполнена
+- A system prompt describing responsibilities, constraints, output format
+- Tools it has access to (not all agents have access to all tools)
+- A context scope — what it reads, what it doesn't read
+- Success criteria — when the task is done
 
-## Паттерны оркестрации
+## Orchestration patterns
 
 ### Linear workflow
 
-Agent A → Agent B → Agent C. Sequential, каждый работает с output предыдущего.
+Agent A → Agent B → Agent C. Sequential, each works on the previous one's output.
 
-Применение: определённый процесс (research → analysis → writeup).
+Use case: a defined process (research → analysis → writeup).
 
-Простая имплементация, предсказуемое поведение. Не гибко к unexpected.
+Simple to implement, predictable behavior. Not flexible to the unexpected.
 
 ### Router pattern
 
-Orchestrator классифицирует входящий запрос и роутит на подходящего agent:
+The orchestrator classifies the incoming request and routes it to the appropriate agent:
 
 ~~~
 Request → Classifier → Route to:
@@ -101,11 +101,11 @@ Request → Classifier → Route to:
                         └─ Research → ResearchAgent
 ~~~
 
-Применение: общие assistants с разными типами задач.
+Use case: general assistants with different types of tasks.
 
 ### Hierarchical (tree)
 
-Manager agent разбивает задачу, делегирует subtasks, каждый subagent может дальше делегировать:
+A manager agent breaks down the task, delegates subtasks, each subagent can delegate further:
 
 ~~~
 Manager
@@ -117,13 +117,13 @@ Manager
     └── Draft agent
 ~~~
 
-Применение: complex research, multi-stage planning.
+Use case: complex research, multi-stage planning.
 
-Каждый уровень имеет свой context scope — не загромождает verhний уровень деталями нижнего.
+Each level has its own context scope — it doesn't clutter the upper level with the lower level's details.
 
 ### Debate / Multi-perspective
 
-Несколько agents обсуждают одну проблему с разных углов, приходят к consensus:
+Several agents discuss one problem from different angles, reach a consensus:
 
 ~~~
 Problem
@@ -135,11 +135,11 @@ Problem
 Synthesis
 ~~~
 
-Применение: сложные решения где важна проверка разными углами, reducing single-agent bias.
+Use case: complex decisions where checking from different angles matters, reducing single-agent bias.
 
 ### Supervisor pattern
 
-Один agent делает работу, supervisor проверяет и approve/reject:
+One agent does the work, a supervisor checks it and approves/rejects:
 
 ~~~
 Worker agent → Output → Supervisor agent → Approve/Reject
@@ -147,56 +147,56 @@ Worker agent → Output → Supervisor agent → Approve/Reject
                                         Worker retries
 ~~~
 
-Применение: когда качество критично, нужна двойная проверка.
+Use case: when quality is critical, a double check is needed.
 
-Схема этого пакета — supervisor pattern: developer → reviewer.
+This package's scheme is the supervisor pattern: developer → reviewer.
 
-## Memory в agentic workflows
+## Memory in agentic workflows
 
 ### Short-term memory
 
-Conversation history в context window. Управляется LLM напрямую.
+Conversation history in the context window. Managed directly by the LLM.
 
-Ограничения — context window size. Длинные workflows выходят за лимит.
+Limits — the context window size. Long workflows exceed the limit.
 
 ### Long-term memory
 
-Данные которые сохраняются между sessions и retrieve по релевантности.
+Data that persists across sessions and is retrieved by relevance.
 
-Архитектура:
+Architecture:
 
-- **Storage** — vector DB (Pinecone, Qdrant, pgvector) + possibly key-value для structured data
-- **Retrieval** — semantic search + filtering по metadata
-- **Update** — agent или orchestrator решает что сохранить в memory
+- **Storage** — vector DB (Pinecone, Qdrant, pgvector) + possibly key-value for structured data
+- **Retrieval** — semantic search + metadata filtering
+- **Update** — the agent or orchestrator decides what to save to memory
 
-Паттерн:
+Pattern:
 
-1. В начале задачи — retrieve relevant memories по запросу
-2. В конце задачи — сохранить результаты которые могут быть полезны позже
-3. Периодически — consolidate memories (merge duplicates, remove outdated)
+1. At the start of a task — retrieve relevant memories for the query
+2. At the end of a task — save results that might be useful later
+3. Periodically — consolidate memories (merge duplicates, remove outdated ones)
 
 ### Scratchpad
 
-Временная память в рамках одной задачи:
+Temporary memory within a single task:
 
-- Промежуточные результаты
-- План задачи (tree of subtasks)
-- Uncertainty tracking (что известно, что неизвестно)
+- Intermediate results
+- The task plan (tree of subtasks)
+- Uncertainty tracking (what's known, what's unknown)
 
-Реализуется как файл на диске или state в memory который agent читает между итерациями.
+Implemented as a file on disk or state in memory that the agent reads between iterations.
 
 ## Tool use
 
 ### Tool definitions
 
-Каждый tool имеет:
+Each tool has:
 
-- **Name** — уникальный идентификатор
-- **Description** — что делает, когда использовать
-- **Parameters** — типизированная schema (JSON Schema)
-- **Return value** — что возвращает и в каком формате
+- **Name** — a unique identifier
+- **Description** — what it does, when to use it
+- **Parameters** — a typed schema (JSON Schema)
+- **Return value** — what it returns and in what format
 
-Description критичен — это то что LLM читает чтобы решить использовать tool.
+The description is critical — it's what the LLM reads to decide whether to use the tool.
 
 ~~~json
 {
@@ -221,9 +221,9 @@ Description критичен — это то что LLM читает чтобы 
 
 ### Tool granularity
 
-Слишком специфичные tools — их много, agent запутывается. Слишком общие — agent не знает когда использовать.
+Too-specific tools — there are many of them, the agent gets confused. Too generic — the agent doesn't know when to use them.
 
-Правило: tool покрывает atomic operation на уровне понятном человеку.
+Rule: a tool covers an atomic operation at a level a human can understand.
 
 - ✅ `read_file(path)` — atomic, clear
 - ✅ `search_codebase(query)` — atomic, clear
@@ -232,30 +232,30 @@ Description критичен — это то что LLM читает чтобы 
 
 ### Tool permissions
 
-Agents имеют разный scope tools:
+Agents have different tool scopes:
 
 - Research agent — read-only tools (search, read)
 - Developer agent — write tools (edit files, run code)
 - Debugger agent — read + observation tools (logs, traces)
 
-Принцип least privilege — agent имеет только те tools которые ему нужны.
+Principle of least privilege — an agent has only the tools it needs.
 
 ### Error handling
 
-Tool вызовы могут fail:
+Tool calls can fail:
 
 - Network errors
 - Invalid parameters
 - Resource not found
 - Permission denied
 
-Ошибки возвращаются agent в structured формате. Agent решает — retry, escalate, или report back to user.
+Errors are returned to the agent in a structured format. The agent decides — retry, escalate, or report back to the user.
 
 ## Plan execution
 
 ### Chain of thought
 
-Agent перед действием explicitly думает:
+The agent explicitly thinks before acting:
 
 ~~~
 Thought: I need to find the authentication logic. I'll search the codebase.
@@ -266,11 +266,11 @@ Action: read_file(path="auth/handler.go")
 ...
 ~~~
 
-Улучшает quality reasoning, делает процесс debuggable.
+Improves reasoning quality, makes the process debuggable.
 
 ### Plan-then-execute
 
-Agent сначала формирует план всей задачи, потом выполняет:
+The agent first forms a plan for the whole task, then executes:
 
 ~~~
 Plan:
@@ -285,53 +285,53 @@ Step 1: ...
 Step 2: ...
 ~~~
 
-Подходит для предсказуемых workflows. Менее гибкий чем chain of thought но более структурированный.
+Suitable for predictable workflows. Less flexible than chain of thought but more structured.
 
 ### ReAct (Reasoning + Acting)
 
-Комбинация — agent перемежает reasoning и actions, без явного pre-planning:
+A combination — the agent interleaves reasoning and actions, without explicit pre-planning:
 
 ~~~
 Thought → Action → Observation → Thought → Action → ...
 ~~~
 
-Наиболее гибкий, работает хорошо для широкого класса задач.
+The most flexible, works well for a wide class of tasks.
 
 ## Context management
 
 ### Context window constraints
 
-LLM имеют лимит context window (часто 200K+ tokens у современных моделей, но всё равно лимит).
+LLMs have a context window limit (often 200K+ tokens for modern models, but there's still a limit).
 
-Проблема: долгие agentic sessions накапливают context, упираются в лимит.
+Problem: long agentic sessions accumulate context, hit the limit.
 
-Решения:
+Solutions:
 
-**Summarization** — периодически summarize прошлую часть conversation в короткую версию, заменять ей original.
+**Summarization** — periodically summarize the past part of the conversation into a short version, replace it with the original.
 
-**Sliding window** — держать только последние N turns.
+**Sliding window** — keep only the last N turns.
 
-**External memory** — переносить детали в long-term memory, держать в context только pointers.
+**External memory** — move details to long-term memory, keep only pointers in context.
 
-**Hierarchical** — подзадачи выполняются subagents с отдельным context, возвращают summary в parent.
+**Hierarchical** — subtasks are executed by subagents with a separate context, they return a summary to the parent.
 
 ### Context hygiene
 
-Из [core/principles.md](../core/principles.md): принцип минимального контекста.
+From [core/principles.md](../core/principles.md): the principle of minimal context.
 
-Специфично для agents:
+Specific to agents:
 
-- Agent читает только файлы указанные в task или явно необходимые
-- Не исследует codebase "на всякий случай"
-- После subtask — возвращает summary, не full context
+- The agent reads only the files specified in the task or explicitly required
+- It doesn't explore the codebase "just in case"
+- After a subtask — it returns a summary, not the full context
 
 ## Debugging multi-agent systems
 
-Сложнее чем debug одной LLM call. Принципы:
+Harder than debugging a single LLM call. Principles:
 
 ### Tracing
 
-Каждое действие (LLM call, tool use, agent transition) логируется с:
+Every action (LLM call, tool use, agent transition) is logged with:
 
 - Timestamp
 - Agent ID
@@ -340,80 +340,80 @@ LLM имеют лимит context window (часто 200K+ tokens у совре�
 - Duration
 - Cost
 
-OpenTelemetry или specialized observability (LangSmith, Langfuse, Helicone).
+OpenTelemetry or specialized observability (LangSmith, Langfuse, Helicone).
 
 ### Replay-ability
 
-Возможность replay sessions с теми же inputs для debugging:
+The ability to replay sessions with the same inputs for debugging:
 
-- Deterministic execution requires temperature=0, но это не всегда применимо
-- Record-replay frameworks для reproducibility
+- Deterministic execution requires temperature=0, but that's not always applicable
+- Record-replay frameworks for reproducibility
 - Snapshot state at key points
 
 ### Agent output inspection
 
-Chain of thought должно быть видимо и сохранено. При проблеме — читать reasoning agent'а чтобы понять где пошло не так.
+The chain of thought must be visible and saved. When there's a problem — read the agent's reasoning to understand where it went wrong.
 
 ## Quality control
 
-### Eval suite для agents
+### Eval suite for agents
 
-Отличается от eval для simple completions:
+Different from evaluating simple completions:
 
-- Input — not single query, а full task description
-- Output — agent's final answer + optionally trace of actions
-- Evaluation — может требовать проверки side effects (созданные файлы, выполненные actions)
-- Rubric — часто multi-dimensional (correctness, efficiency, safety)
+- Input — not a single query, but a full task description
+- Output — the agent's final answer + optionally a trace of actions
+- Evaluation — may require checking side effects (files created, actions performed)
+- Rubric — often multi-dimensional (correctness, efficiency, safety)
 
 ### Golden traces
 
-Сохранённые примеры successful agent sessions. Используются для:
+Saved examples of successful agent sessions. Used for:
 
 - Testing (regression detection)
-- Training (fine-tuning на successful patterns)
-- Documentation (показать что agent может)
+- Training (fine-tuning on successful patterns)
+- Documentation (showing what the agent can do)
 
 ### Guard rails
 
-Защита от unsafe или suboptimal behavior:
+Protection against unsafe or suboptimal behavior:
 
-- **Action filters** — запрет определённых actions (file deletion вне scope, external API calls с sensitive data)
-- **Budget limits** — максимум steps, максимум tokens, максимум cost per session
-- **Human-in-the-loop** — для critical actions требуется approval
+- **Action filters** — forbidding certain actions (file deletion outside scope, external API calls with sensitive data)
+- **Budget limits** — maximum steps, maximum tokens, maximum cost per session
+- **Human-in-the-loop** — approval required for critical actions
 
-## Specific to Claude Code workflow
+## Specific to the Claude Code workflow
 
-Если проект использует Claude Code как основной agentic engine:
+If a project uses Claude Code as the main agentic engine:
 
-### CLAUDE.md как agent configuration
+### CLAUDE.md as agent configuration
 
-CLAUDE.md — это persistent system prompt для всех sessions в проекте. Содержит:
+CLAUDE.md — a persistent system prompt for all sessions in the project. Contains:
 
 - Project context
 - Architectural rules
 - Code conventions
-- Roles definitions
+- Role definitions
 - Quality gates
 
-Каждый session начинается с чтения этого файла.
+Every session starts by reading this file.
 
-### Task definitions через guides
+### Task definitions via guides
 
-Структурированные задачи в `docs/day-N-guide.md` файлах:
+Structured tasks in `docs/day-N-guide.md` files:
 
-- Явные промпты для agent
-- Ожидаемый output
+- Explicit prompts for the agent
+- Expected output
 - Acceptance criteria
-- Команды проверки
+- Verification commands
 
-Agent получает задачу через короткую команду, читает guide, выполняет.
+The agent receives a task via a short command, reads the guide, executes it.
 
-### Role switching через short commands
+### Role switching via short commands
 
-Короткие команды (цифры) переключают активную роль:
+Short commands (numbers) switch the active role:
 
-- Один и тот же Claude Code становится developer / reviewer / QA в зависимости от команды
-- Каждая роль — отдельный файл role description
-- Пользователь определяет когда какая роль нужна
+- The same Claude Code instance becomes developer / reviewer / QA depending on the command
+- Each role — a separate role description file
+- The user decides when which role is needed
 
-Этот подход простой и работает. Альтернатива — полноценная multi-agent orchestration через отдельные processes — complexity которая может не окупиться для solo/small team проектов.
+This approach is simple and works. The alternative — full multi-agent orchestration via separate processes — is complexity that may not pay off for solo/small-team projects.

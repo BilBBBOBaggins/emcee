@@ -1,15 +1,15 @@
 ---
 name: debugging
-description: Метод дебага сломанного поведения — одновременный сбор логов со всех слоёв цепочки, поиск разрыва, запрет угадывания, правило трёх попыток. Используй, когда что-то не работает, падает тест, есть стектрейс или нужно найти причину бага.
+description: A method for debugging broken behavior — simultaneous log collection from every layer of the chain, finding the break, no guessing, the three-attempt rule. Use when something doesn't work, a test fails, there's a stack trace, or the root cause of a bug needs to be found.
 ---
 
-Дисциплина дебага этого проекта. **Полный метод — в файле `core/debugging.md`** (от корня проекта): прочитай его целиком, прежде чем дебажить.
+This project's debugging discipline. **Full method in the `core/debugging.md` file** (from the project root): read it in full before debugging.
 
-Кратко (чтобы не ошибиться, даже если файл не открыл):
+Briefly (so you don't go wrong even without opening the file):
 
-- Пользователь сообщил баг = **факт**; причина = **гипотеза**, требует верификации по коду/логам.
-- Собери логи **всех** звеньев цепочки **одновременно** (не по одному слою за раз), коррелируй по времени, найди разрыв — где данные потерялись/не дошли. Только потом формулируй причину.
-- Не угадывай («скорее всего», «возможно» — запрещены). Не уверен → не дочитал.
-- Фикс локализуй (protocol/platform/edge-specific), не правь общий код без подтверждения.
-- Правило трёх попыток: не чинится после 3 содержательных попыток — стоп, к пользователю.
-- **Когда НЕ:** это поиск причины УЖЕ сломанного. Не для новой фичи/планирования (→ spec-driven/architect). Совпала ситуация — вызови метод, не дебажь по наитию (см. `core/skills.md`).
+- The user reporting a bug is a **fact**; the cause is a **hypothesis**, requiring verification against code/logs.
+- Collect logs from **all** links of the chain **simultaneously** (not one layer at a time), correlate by time, find the break — where the data was lost/didn't arrive. Only then formulate the cause.
+- Don't guess ("most likely", "probably" are forbidden). Not sure → you haven't finished reading.
+- Localize the fix (protocol/platform/edge-specific), don't touch shared code without confirmation.
+- Three-attempt rule: not fixed after 3 substantive attempts — stop, go to the user.
+- **When NOT to:** this is root-cause search for something ALREADY broken. Not for a new feature/planning (→ spec-driven/architect). When the situation matches, invoke the method, don't debug by gut feel (see `core/skills.md`).

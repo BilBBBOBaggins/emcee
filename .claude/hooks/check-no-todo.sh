@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Stop-хук (OPT-IN): блокирует завершение, если в ДОБАВЛЕННОМ коде есть comment-like TODO/FIXME
-# (конституция CQ-NN-01, core/code-quality.md). exit 2 → stderr возвращается агенту как фидбэк.
+# Stop hook (OPT-IN): blocks completion if the ADDED code contains a comment-like TODO/FIXME
+# (constitution CQ-NN-01, core/code-quality.md). exit 2 → stderr is returned to the agent as feedback.
 #
-# Узкий контракт (минимум ложных срабатываний):
-# - только добавленные строки (git diff -U0 HEAD) + новые untracked-файлы;
-# - только кодовые расширения; исключены vendor/node_modules/dist/build/coverage/generated;
-# - ловим только comment-like маркеры (// # /* * -- ; перед TODO/FIXME), не произвольный литерал;
-# - печатает file:line. НЕ включён по умолчанию — добавь вручную в settings.json (см. .claude/README.md).
+# Narrow contract (minimizes false positives):
+# - only added lines (git diff -U0 HEAD) + new untracked files;
+# - only code extensions; vendor/node_modules/dist/build/coverage/generated are excluded;
+# - catches only comment-like markers (// # /* * -- ; before TODO/FIXME), not an arbitrary literal;
+# - prints file:line. NOT enabled by default — add it manually to settings.json (see .claude/README.md).
 set -uo pipefail
 
 python3 - <<'PY'
@@ -21,19 +21,19 @@ def git(*a):
 
 hits = []
 
-# 1) добавленные строки в отслеживаемых файлах
+# 1) added lines in tracked files
 cur, newln = None, 0
 for ln in git("diff", "-U0", "HEAD").splitlines():
     if ln.startswith('+++ b/'):
         cur = ln[6:]; continue
     if ln.startswith('@@'):
         m = re.search(r'\+(\d+)', ln); newln = int(m.group(1)) if m else 0; continue
-    if ln.startswith('+'):  # добавленная строка (+++ уже отсеян выше)
+    if ln.startswith('+'):  # an added line (+++ was already filtered out above)
         if cur and CODE.search(cur) and not EXCL.search(cur) and MARK.search(ln[1:]):
             hits.append(f"{cur}:{newln}: {ln[1:].strip()}")
         newln += 1
 
-# 2) новые untracked-файлы — весь файл
+# 2) new untracked files — the whole file
 for f in git("ls-files", "--others", "--exclude-standard").split():
     if not CODE.search(f) or EXCL.search(f) or not os.path.isfile(f):
         continue
@@ -45,10 +45,10 @@ for f in git("ls-files", "--others", "--exclude-standard").split():
         pass
 
 if hits:
-    sys.stderr.write("Constitution CQ-NN-01 (без TODO/FIXME): маркеры в добавленном коде —\n")
+    sys.stderr.write("Constitution CQ-NN-01 (no TODO/FIXME): markers in added code —\n")
     for h in hits[:50]:
         sys.stderr.write("  " + h + "\n")
-    sys.stderr.write("Убери TODO/FIXME (делай сейчас или заведи задачу) — core/code-quality.md.\n")
+    sys.stderr.write("Remove the TODO/FIXME (do it now or file a task) — core/code-quality.md.\n")
     sys.exit(2)
 sys.exit(0)
 PY

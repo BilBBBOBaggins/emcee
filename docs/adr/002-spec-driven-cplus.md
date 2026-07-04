@@ -1,94 +1,98 @@
-# ADR-002: Spec-driven — строим C+ сейчас, исполняемый слой откладываем
+# ADR-002: Spec-driven — we build C+ now, defer the executable layer
 
 Date: 2026-06-27
-Status: Accepted (реализовано: core/spec-driven.md — контур C+ в пакете)
+Status: Accepted (implemented: core/spec-driven.md — the C+ outline in the package)
 
-> Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md). Связан с [ADR-001](001-scope-process-overlay.md): тот установил норму «process-overlay, не строить исполняемый код под неизмеренную боль» — этот ADR применяет ту же норму к spec-driven.
+> Decision reached by running the adversarial panel (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md). Related to [ADR-001](001-scope-process-overlay.md): that ADR established the norm "process overlay, don't build executable code for unmeasured pain" — this ADR applies the same norm to spec-driven.
 
-## Коротко
+## In short
 
-Вопрос был: автоматизировать ли spec-driven так, чтобы пайплайн «спека → задачи → тесты → код →
-интеграция» крутился сам. Ответ — нет, и вот ключевой довод: у автоматизации **нет нового оракула.**
-Весь автоцикл сверяется с той же одной спекой, поэтому он не поймает ничего, чего не поймал бы
-человек, зато перестанет смотреть. Качество добавляет не оркестрация, а **новый угол проверки** — его
-и строим. Это «C+»: тест-первый, независимый автор тестов и состязательная вычитка самих тестов. Всё
-в markdown, без исполняемого кода и без долга сопровождения.
+The question was whether to automate spec-driven development so that the pipeline "spec → tasks
+→ tests → code → integration" runs itself. The answer is no, and here's the key argument:
+automation has **no new oracle.** The whole auto-cycle checks against the same single spec, so it
+won't catch anything a human wouldn't catch — but it will stop looking. Quality isn't added by
+orchestration, but by a **new verification angle** — and that's what we build. This is "C+":
+test-first, an independent test author, and an adversarial review pass of the tests themselves. All
+in markdown, with no executable code and no maintenance debt.
 
-## Контекст
+## Context
 
-Вопрос: добавлять ли spec-driven автоматизацию, где пайплайн «спека-контракт → задачи →
-[RED → GREEN → ревью] → интеграция» крутится сам?
+Question: should spec-driven automation be added, where the pipeline "spec contract → tasks →
+[RED → GREEN → review] → integration" runs itself?
 
-Контекст принятия решения: разработка соло; north star — качество, а не экономия токенов; жёсткое
-предусловие «человеческий гейт на high-stakes решениях». Ручной конвейер уже есть (роли-субагенты,
-quality-gates, конституция, адверсивная панель) — он дёргается вручную командами `R D T`.
+Decision context: solo development; the north star is quality, not token economy; a hard
+precondition of "a human gate on high-stakes decisions." A manual pipeline already exists
+(role subagents, quality gates, constitution, adversarial panel) — it's triggered manually via
+`R D T` commands.
 
-Рассмотренные варианты:
+Options considered:
 
-- **A** — полная автоматизация: оркестратор-Workflow + auto-debug + consistency-гейт.
-- **B** — MVP-Workflow: loop-until-green на каждую задачу + 2 чекпойнта.
-- **C** — формализация ручного конвейера без исполнения.
-- **C+** — это C плюс новый шаг-оракул.
-- **D** — не строить ничего.
+- **A** — full automation: a Workflow orchestrator + auto-debug + a consistency gate.
+- **B** — MVP Workflow: loop-until-green per task + 2 checkpoints.
+- **C** — formalizing the manual pipeline without executing it.
+- **C+** — this is C plus a new oracle step.
+- **D** — build nothing.
 
-## Решение
+## Decision
 
-**Строим C+ сейчас** (только markdown, нулевой runtime-долг). **Исполняемый слой** (A / B / Workflow
-/ skill в репозитории) **не строим сейчас.** Вариант A отклонён. Вариант D не выбираем проактивно,
-но он остаётся резервным исходом.
+**We build C+ now** (markdown only, zero runtime debt). **We do not build the executable layer**
+(A / B / a Workflow / a skill in the repository) **now.** Variant A is rejected. We don't
+proactively choose variant D, but it remains a fallback outcome.
 
-**Решающий фактор:** у автоматизации нет нового оракула. Весь цикл сверяется с одной спекой —
-автоцикл не ловит того, чего не ловит человек, зато перестаёт смотреть. А исполняемый слой ещё и
-нарушает норму ADR-001 (не строить под неизмеренную боль). Качество добавляет не оркестрация, а
-новый угол проверки — его и строим, без долга.
+**Decisive factor:** automation has no new oracle. The whole cycle checks against one spec — the
+auto-cycle doesn't catch what a human wouldn't, but it stops looking. And the executable layer also
+violates the ADR-001 norm (don't build for unmeasured pain). Quality isn't added by orchestration,
+but by a new verification angle — and that's what we build, debt-free.
 
-**Что входит в C+** (строим, ~2–3 инж-дня, только регламент):
+**What C+ includes** (we build this, ~2–3 engineer-days, regimen only):
 
-1. **Спека как контракт** — ужать `docs/specs/*` до проверяемого контракта. Автодеривация тестов —
-   **только для жёстких контрактов** (парсеры / вычисления / валидаторы, то есть «Вариант 3 TDD» из
-   `CLAUDE.md`), но не для живых продуктовых доменов, где спека дрейфует.
-2. **Тест-первый (RED → GREEN)** для этих контрактных случаев.
-3. **Новый обязательный шаг-оракул** (это и есть реальное приращение): состязательная вычитка самих
-   тестов (red-линза на тесты — «чего они НЕ ловят»); независимый автор тестов, не совпадающий с
-   имплементатором; сверка контракта через вторую модель (codex) на high-stakes.
-4. **Человеческий коммит на каждую задачу сохраняется** (как в `roles/reviewer.md`) — не ослаблять
-   до коммита на фичу.
+1. **Spec as a contract** — tighten `docs/specs/*` down to a verifiable contract. Automatic test
+   derivation — **only for hard contracts** (parsers / computations / validators, i.e. "Variant 3
+   TDD" from `CLAUDE.md`), but not for live product domains where the spec drifts.
+2. **Test-first (RED → GREEN)** for these contract cases.
+3. **A new mandatory oracle step** (this is the real increment): an adversarial review pass of the
+   tests themselves (a red lens on the tests — "what do they NOT catch"); an independent test
+   author who doesn't overlap with the implementer; a contract check via a second model (codex) on
+   high-stakes cases.
+4. **The human commit per task is preserved** (as in `roles/reviewer.md`) — not weakened to a
+   commit per feature.
 
-**Что не строим:** Workflow или skill в репозитории. Любой такой PR отклонять до прохождения обоих
-порогов «боли» (см. «Риски и открытые вопросы») **и** отдельного ADR на «слой 2»; даже тогда
-предпочтительнее держать его user-local вне репозитория (не брать версионный долг по ADR-001). Также
-не строим: автодеривацию на живых доменах; чекпойнты на каждую фичу; половинчатый вариант B —
-митигации его обязательных дефектов (кривой тест в loop; формальные rubber-stamp-чекпойнты) раздувают
-его до сложности A, поэтому либо осознанно A позже при наличии данных + ADR, либо никак.
+**What we don't build:** a Workflow or a skill in the repository. Reject any such PR until both
+"pain" thresholds are crossed (see "Risks and open questions") **and** a separate ADR on "layer 2"
+exists; even then it's preferable to keep it user-local outside the repository (not take on version
+debt per ADR-001). We also don't build: automatic derivation on live domains; a checkpoint per
+feature; a half-measure variant B — mitigations for its inherent defects (a bad test in the loop;
+formal rubber-stamp checkpoints) inflate it to A's complexity, so it's either a deliberate A later
+given data + an ADR, or not at all.
 
-## Последствия
+## Consequences
 
-**Плюсы:** добавляется дешёвый новый угол проверки (состязательная вычитка тестов) без
-runtime-долга; человеческий гейт не ослаблен; ручной `R D T` и адверсивная панель не тронуты; охват
-ADR-001 цел.
+**Pros:** a cheap new verification angle is added (adversarial test review) with no runtime
+debt; the human gate is not weakened; the manual `R D T` and the adversarial panel are untouched;
+the ADR-001 scope stays intact.
 
-**Риски и открытые вопросы:**
+**Risks and open questions:**
 
-- [ ] **Порог «боли» (решает пользователь).** Заранее назвать порог, который оправдает исполняемый
-      слой (например, «ручная оркестрация съела больше X на N фичах») — **до** эксперимента, иначе
-      условие нефальсифицируемо.
-- [ ] **Проверка порога — зеркало ADR-001.** Провести 2–3 реальные фичи в режиме C+. Если за 3
-      старта боль не достигла порога — исполняемый слой не строить никогда.
-- [ ] **Оправданность самого C+.** Если за 2–3 фичи состязательная вычитка тестов не поймала ни
-      одного класса дефектов сверх того, что ловят qa-uat + reviewer, — откат к D (даже markdown-слой
-      не окупился).
-- [ ] **C+ vs D — ценностный вопрос, решает пользователь.** Арбитр постановил C+, но финально решает
-      измеренная польза (предыдущий пункт), а не дебат.
-- [ ] **Нужны данные:** mid-run user input в Workflow — сверить с документацией Claude Code до любого
-      «слоя 2».
+- [ ] **The "pain" threshold (decided by the user).** Name the threshold that would justify an
+      executable layer ahead of time (e.g. "manual orchestration cost more than X on N features") —
+      **before** the experiment, otherwise the condition is unfalsifiable.
+- [ ] **Verifying the threshold — mirrors ADR-001.** Run 2–3 real features in C+ mode. If the pain
+      hasn't reached the threshold across 3 starts — never build the executable layer.
+- [ ] **Whether C+ itself is justified.** If across 2–3 features the adversarial test review pass
+      hasn't caught a single class of defect beyond what qa-uat + reviewer catch, roll back to D
+      (even the markdown layer didn't pay for itself).
+- [ ] **C+ vs D — a values question, decided by the user.** The arbiter ruled for C+, but the final
+      decision rests on measured benefit (previous item), not on debate.
+- [ ] **Data needed:** mid-run user input in a Workflow — check against Claude Code documentation
+      before any "layer 2."
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **A — полная автоматизация.** Отклонён: нет нового оракула (то же качество, но без рук) + долг
-  сопровождения исполняемого кода под дрейф Claude Code (нарушает ADR-001).
-- **B — MVP-Workflow.** Отклонён именно как «MVP»: митигации его обязательных дефектов (кривой тест в
-  loop; формальные rubber-stamp-чекпойнты) раздувают B до сложности A, так что «половинчатого» B не
-  существует.
-- **D — не строить.** Не выбираем проактивно: D оставляет дешёвый выигрыш в качестве (шаг-оракул) на
-  столе. Остаётся резервным исходом, если C+ не окупится за 2–3 фичи (см. «Риски и открытые
-  вопросы»).
+- **A — full automation.** Rejected: no new oracle (same quality, minus the human) + maintenance
+  debt for executable code against Claude Code drift (violates ADR-001).
+- **B — MVP Workflow.** Rejected precisely as an "MVP": mitigations for its inherent defects (a bad
+  test in the loop; formal rubber-stamp checkpoints) inflate B to A's complexity, so there is no
+  "half-measure" B.
+- **D — don't build.** Not proactively chosen: D leaves a cheap quality gain (the oracle step) on
+  the table. It remains a fallback outcome if C+ doesn't pay off across 2–3 features (see "Risks
+  and open questions").

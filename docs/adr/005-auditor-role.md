@@ -1,89 +1,97 @@
-# ADR-005: Роль Auditor — дормантный read-only health-map, цифра под гейт
+# ADR-005: The Auditor role — a dormant read-only health map, the number under a gate
 
 Date: 2026-06-27
-Status: Accepted (роль + субагент `.claude/agents/auditor.md` реализованы дормантно; числовая активация цифры 8 остаётся открытой — под стоп-условием)
+Status: Accepted (the role + the `.claude/agents/auditor.md` subagent are implemented dormant;
+numeric activation of the digit 8 remains open — under a stop condition)
 
-> Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md).
+> Decision reached by running the adversarial panel (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md).
 
-Применяет норму [ADR-004](004-second-model-designer.md) / [ADR-003](003-first-km-intake.md): capability активируется числом под гейтом ретро, а не на спекуляции.
+Applies the norm of [ADR-004](004-second-model-designer.md) / [ADR-003](003-first-km-intake.md): a capability is activated with a number under a retrospective gate, not on speculation.
 
-## Коротко
+## In short
 
-Оператор запросил роль, которая холистически оценивает состояние всего проекта и выдаёт карту
-больных мест. Такой роли не было: reviewer смотрит код per-task, а статус архитектора смотрит на
-полстраницы вперёд. Уникальный предмет Auditor — **межзадачный архитектурный дрейф**: нарушение,
-которое верно в каждой отдельной задаче, но накапливается за N задач. Роль построена **дормантно** и
-**аппаратно read-only** (Read/Grep/Glob, без Bash), доступна ad-hoc прямо сейчас. Числовую активацию
-(цифра 8) отложили под гейт: её дадут после первого подтверждённого уникального перехвата дрейфа.
+The operator requested a role that holistically assesses the state of the entire project and
+produces a map of its pain points. No such role existed: reviewer looks at code per-task, and the
+architect's status looks half a page ahead. Auditor's unique subject matter is **cross-task
+architectural drift**: a violation that holds true in each individual task but accumulates across N
+tasks. The role is built **dormant** and **hardware-enforced read-only** (Read/Grep/Glob, no Bash),
+available ad-hoc right now. Numeric activation (the digit 8) is deferred under a gate: it will be
+granted after the first confirmed, unique catch of drift.
 
-## Контекст
+## Context
 
-Оператор (соло) запросил «аудит-панель» — оценку состояния проекта и больных мест — как отдельную
-**числовую роль** (не скилл, не режим architect), через панель. Сегодня это покрыто лишь частично:
-architect даёт статус (взгляд на полстраницы вперёд), reviewer — per-task код. Инструмента
-холистической назад-смотрящей оценки всего проекта нет — а именно это оператор делал руками, когда
-аудировал сам пакет.
+The operator (solo) requested an "audit panel" — an assessment of the project's state and pain
+points — as a separate **numeric role** (not a skill, not an architect mode), run through the
+panel. Today this is only partially covered: architect gives a status (a half-page-ahead look),
+reviewer covers per-task code. There is no tool for a holistic, backward-looking assessment of the
+whole project — and that's exactly what the operator was doing by hand when auditing the package
+itself.
 
-## Решение
+## Decision
 
-**Строим роль дормантно (read-only), а цифру — под гейт.** Вердикт арбитра: роль реальна и
-уникальна, но немедленная числовая активация нарушила бы собственный прецедент пакета.
+**We build the role dormant (read-only), and put the number under a gate.** The arbiter's
+verdict: the role is real and unique, but immediate numeric activation would violate the package's
+own precedent.
 
-**Построено сейчас** (дормантно, ноль runtime-долга):
+**Built now** (dormant, zero runtime debt):
 
-- `roles/auditor.md` — дормантный регламент (как у designer): **нет в `roles.json`**, доступен ad-hoc.
-- `.claude/agents/auditor.md` — субагент с **аппаратным read-only** (`Read, Grep, Glob`; Bash снят).
-  Прецедент диспатча без цифры уже есть — это red-team / blue-team / arbiter.
-- **Уникальный предмет:** межзадачный архитектурный дрейф — нарушение, верное в каждой отдельной
-  задаче, но накопленное за N задач. Структурно оно вне reviewer (тот заперт per-task) и
-  статуса-архитектора (тот ограничен взглядом вперёд). Это отдельный актор, а не режим, — выбор
-  оператора технически верен.
-- **Против шума:** bounded-контекст (fan-out по модулям), правило «file:line или выброшено»
-  (PR-NN-03), обязательный проход второй модели (codex) на high-stakes находках поверх opt-in
+- `roles/auditor.md` — a dormant regimen (like designer's): **not in `roles.json`**, available
+  ad-hoc.
+- `.claude/agents/auditor.md` — a subagent with **hardware-enforced read-only** access (`Read,
+  Grep, Glob`; Bash removed). A precedent for dispatch without a number already exists — that's
+  red team / blue team / arbiter.
+- **Unique subject matter:** cross-task architectural drift — a violation that's true in each
+  individual task but accumulates across N tasks. Structurally it sits outside reviewer (locked to
+  per-task) and the architect's status (limited to a forward-looking view). It's a separate actor,
+  not a mode — the operator's choice is technically correct.
+- **Against noise:** a bounded context (fan-out by module), the "file:line or discarded" rule
+  (PR-NN-03), a mandatory second-model (codex) pass on high-stakes findings on top of the opt-in
   `core/second-model.md`.
-- **Форсированный потребитель результата:** карта пишется в `docs/PROJECT-STATE.md` (разделы Риски /
-  Open questions / Следующий день), откуда architect берёт срез для гайдов дня. Auditor не чинит —
-  документирует.
-- **Граница ответственности:** репортит паттерн, пересекающий ≥2 модуля / коммита / day-task **или**
-  нарушающий ADR/инвариант; одиночный локальный баг — это к reviewer/debugger.
+- **A forced consumer of the result:** the map is written into `docs/PROJECT-STATE.md` (the Risks /
+  Open questions / Next day sections), from which the architect draws the slice for day guides.
+  Auditor doesn't fix — it documents.
+- **Scope of responsibility:** it reports a pattern spanning ≥2 modules / commits / day-tasks **or**
+  violating an ADR/invariant; a single local bug goes to reviewer/debugger.
 
-**Под гейтом (не сейчас):** активация цифры 8 (правки в `roles.json`,
-`sync-roles`, `task-protocol`, генераторе, selftest-инварианте). Цифра 8 — предложение, не бронь:
-designer ([ADR-004](004-second-model-designer.md), гейт O1-D) тоже активируется свободной цифрой; если
-он активируется первым, конкретный номер разводится в `roles.json` при активации (дубль механически
-ловит `sync-roles.py` `validate()`).
+**Under a gate (not now):** activating the digit 8 (edits to `roles.json`, `sync-roles`,
+`task-protocol`, the generator, the self-test invariant). The digit 8 is a proposal, not a
+reservation: designer ([ADR-004](004-second-model-designer.md), gate O1-D) is also activated with
+a free digit; if it activates first, the specific number is resolved in `roles.json` at
+activation time (a duplicate is mechanically caught by `sync-roles.py`'s `validate()`).
 
-## Что выброшено (фатально, по решению панели)
+## What was discarded (fatal, per the panel's decision)
 
-- Немедленная цифра 8 (противоречит прецеденту ADR-003/004).
-- Общий Bash в read-only роли (превращал бы аппаратный замок в дисциплину-по-промпту).
-- Аудит «весь проект разом» без bounded-retrieval (противоречит минимальному контексту; шум и
-  галлюцинации).
+- Immediate digit 8 (contradicts the ADR-003/004 precedent).
+- General Bash access in a read-only role (would turn a hardware lock into a prompt-level
+  discipline).
+- Auditing "the whole project at once" without bounded retrieval (contradicts minimal context;
+  noise and hallucinations).
 
-## Последствия
+## Consequences
 
-**Плюсы:** оператор получает реального Auditor немедленно (ad-hoc, аппаратный read-only); уникальный
-перехват (дрейф) с форсированным потребителем; ноль runtime-долга; нормы ADR-001/003/004 целы; цифры
-ролей 0–7 не тронуты.
+**Pros:** the operator gets a real Auditor immediately (ad-hoc, hardware-enforced read-only); a
+unique catch (drift) with a forced consumer; zero runtime debt; the ADR-001/003/004 norms stay
+intact; role numbers 0–7 are untouched.
 
-**Риски и открытые вопросы:**
+**Risks and open questions:**
 
-- [ ] **Стоп-условие активации цифры аудитора.** Цифру 8 активировать после **первого
-      подтверждённого уникального actionable-дрейфа**: Auditor нашёл реальный межзадачный дрейф,
-      пропущенный reviewer и architect, и тот заведён в PROJECT-STATE / гайд дня. Не любой finding —
-      именно уникальный перехват. Этот гейт легче, чем у designer (там 2–3 старта): технической
-      пробоины нет, а потребность уже наблюдалась.
-- [ ] **Доля ложных срабатываний (false positives).** На первом реальном аудите замерить долю false
-      positives после PR-NN-03 + второй модели. Высокая → сузить линзы или усилить bounded-retrieval
-      перед активацией.
-- [ ] **Граница «дрейф vs per-task».** Правило «≥2 модуля/коммита/day-task или ADR»
-      проверяется прогоном, а не дебатом; уточнить, если на практике размывается.
+- [ ] **Stop condition for activating the auditor's digit.** Activate digit 8 after **the first
+      confirmed, unique, actionable drift**: Auditor found real cross-task drift missed by reviewer
+      and architect, and it was logged into PROJECT-STATE / a day guide. Not just any finding —
+      specifically a unique catch. This gate is lighter than designer's (2–3 starts there): there's
+      no technical gap here, and the need has already been observed.
+- [ ] **False-positive rate.** On the first real audit, measure the false-positive rate after
+      PR-NN-03 + the second model. High → narrow the lenses or strengthen bounded retrieval before
+      activation.
+- [ ] **The "drift vs. per-task" boundary.** The rule "≥2 modules/commits/day-tasks or an ADR" is
+      verified by running it, not by debate; refine it if it blurs in practice.
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **Числовая роль 8 сразу (v1).** Отклонён: противоречит прецеденту гейта (ADR-003/004); Bash ломал
-  read-only; аудит всего проекта без bounded-retrieval даёт шум.
-- **Режим deep-audit внутри architect.** Отклонён и оператором, и панелью: межзадачный дрейф
-  конфликтует с forward-cap и hot-path статуса; отдельный актор чище.
-- **Тонкий скилл `/audit` без роли.** Поглощён дормантной формой: тот же read-only метод, но как
-  роль/субагент (оператор выбрал роль; tool-scoping даёт аппаратный read-only).
+- **Numeric role 8 immediately (v1).** Rejected: contradicts the gate precedent (ADR-003/004);
+  Bash broke read-only; auditing the whole project without bounded retrieval produces noise.
+- **A deep-audit mode inside architect.** Rejected by both the operator and the panel: cross-task
+  drift conflicts with the forward cap and the hot path of the status; a separate actor is cleaner.
+- **A thin `/audit` skill without a role.** Absorbed into the dormant form: the same read-only
+  method, but as a role/subagent (the operator chose a role; tool scoping gives hardware-enforced
+  read-only).

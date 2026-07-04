@@ -1,155 +1,73 @@
-# ADR-013: Feature-discovery — активный pre-code триггер + правило AskUserQuestion (форма-движок остаётся под гейтом O1)
+# ADR-013: Feature discovery — active pre-code trigger + the AskUserQuestion rule (the form-engine remains under gate O1)
 
 Date: 2026-06-29
-Status: Accepted (применено)
+Status: Accepted (applied)
 
-> Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md). Связан с [ADR-003](003-first-km-intake.md) и [ADR-007](007-kickoff-pipeline.md): не отменяет их и уважает гейт O1.
+> Decision made via an adversarial panel run (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md). Related to [ADR-003](003-first-km-intake.md) and [ADR-007](007-kickoff-pipeline.md): does not overrule them and respects gate O1.
 
-## Коротко
+## In short
 
-Триггер: повторный анализ скилла `brainstorming` из плагина superpowers (обязательная «дверь» перед
-любой фичей: HARD-gate «нет кода без одобренного дизайна» + интеррогация пользователя). Возник вопрос:
-вживить ли такой feature-discovery gate в пакет, на уровне ролей BA/SA, с опросом через нативный
-`AskUserQuestion`.
+Trigger: a re-analysis of the `brainstorming` skill from the superpowers plugin (a mandatory "door" before any feature: a HARD gate of "no code without an approved design" + user interrogation). The question raised: should such a feature-discovery gate be grafted into the package, at the BA/SA role level, with a Q&A via the native `AskUserQuestion`.
 
-Панель постановила: **решение-как-новый-gate мертво** — оно повторно литигирует уже-загейченный
-объект (интейк-как-движок, отложенный под O1 в ADR-003/007) без новой эмпирики, и три из четырёх его
-компонентов дублируют уже существующее (SA-discovery, фазы-контракты STOP, kickoff-routing). Но
-**выживают две тонкие правки**, которые предыдущие ADR не зафиксировали и которые не требуют снятия
-O1: (D1) активация пассивного фазового контракта в один **условный** pre-code self-stop на
-доменно-необратимой оси; (D2) правило использования `AskUserQuestion` — легитимен на фазе **схождения/
-approve**, запрещён как движок **раскрытия**. Форма-косметика апстрима (по 1 вопросу / MC-как-discovery
-/ лимит слов), per-feature интейк-машинерия, BA-как-держатель и visual companion — отклонены или
-остаются под O1, как и раньше.
+The panel ruled: **the decision-as-a-new-gate is dead** — it re-litigates an object already gated (intake-as-engine, deferred under O1 in ADR-003/007) without new empirics, and three of its four components duplicate what already exists (SA discovery, phase-contract STOPs, kickoff routing). But **two thin amendments survive**, which prior ADRs did not record and which do not require lifting O1: (D1) activating the passive phase contract into one **conditional** pre-code self-stop on the domain-nontrivial-or-irreversible axis; (D2) a rule for using `AskUserQuestion` — legitimate at the **convergence/approve** phase, forbidden as the engine of **divergence**. The upstream form-cosmetics (one question at a time / MC-as-discovery / word limits), per-feature intake machinery, BA-as-holder, and the visual companion — are rejected or remain under O1, as before.
 
-## Контекст
+## Context
 
-Был задан вопрос: нужен ли в пакете опросный gate перед фичей, по образцу того, как
-kickoff/brainstorming у плагина superpowers опрашивает пользователя. Исходное предложение (v1)
-состояло из шести тезисов:
+The question was raised: does the package need a Q&A gate before a feature, modeled on how the superpowers plugin's kickoff/brainstorming interrogates the user. The original proposal (v1) consisted of six theses:
 
-1. есть дыра: нет явного feature-discovery gate;
-2. место gate — на уровне ролей BA/SA;
-3. опрос через `AskUserQuestion` (выбор из вариантов + авто-Other), отвергая подход апстрима
-   «один открытый вопрос за сообщение»;
-4. HARD-gate (нет дизайн→код без одобренной спеки) на BA/SA;
-5. перенести anti-«too simple to need a design» + «чеклист-как-задачи» в `quality-gates.md`;
-6. НЕ портировать visual companion.
+1. there's a gap: no explicit feature-discovery gate;
+2. the gate belongs at the BA/SA role level;
+3. Q&A via `AskUserQuestion` (pick from options + auto-Other), rejecting the upstream approach of "one open question per message";
+4. a HARD gate (no design→code without an approved spec) at BA/SA;
+5. port the anti-"too simple to need a design" + "checklist-as-tasks" rules into `quality-gates.md`;
+6. do NOT port the visual companion.
 
-**Ground truth пакета, вскрытый при разборе:**
+**Ground truth of the package, uncovered during the analysis:**
 
-- **Discovery уже существует** структурно: `roles/sa.md` (§Discovery process) ведёт Socratic-опрос
-  open → happy path → edge → constraints → success → open questions; пишет `docs/specs/<feature>.md`.
-- **HARD-gate уже существует** как «Фазы-контракты (нет входного артефакта → STOP)»
-  ([core/pipeline.md](../../core/pipeline.md)): нет артефакта предыдущей фазы → СТОП, не имитировать.
-- **Этот же исходник уже разбирался** в [ADR-003](003-first-km-intake.md) / [ADR-007](007-kickoff-pipeline.md):
-  интейк-как-движок и канон-артефакты (roadmap/brief/backlog) отложены под **эмпирический гейт «O1»** —
-  строить их только после ретро 2–3 реальных стартов проекта с измеренной потерей на входе. Форма-косметика
-  brainstorming там прямо отклонена (структурный discovery уже есть в `sa.md`; апстрим вдобавок сам
-  коммитит spec — против правила `task-protocol.md` «агент не коммитит»). Субагент design-review назван
-  кандидат-митигацией `(O3)` под отдельной панелью, тоже под O1.
+- **Discovery already exists** structurally: `roles/sa.md` (§Discovery process) runs a Socratic Q&A open → happy path → edge → constraints → success → open questions; writes `docs/specs/<feature>.md`.
+- **A HARD gate already exists** as "phase contracts (no input artifact → STOP)" ([core/pipeline.md](../../core/pipeline.md)): no artifact from the previous phase → STOP, do not simulate one.
+- **This same source material has already been analyzed** in [ADR-003](003-first-km-intake.md) / [ADR-007](007-kickoff-pipeline.md): intake-as-engine and canon artifacts (roadmap/brief/backlog) are deferred under the **empirical gate "O1"** — build them only after a retro on 2–3 real project starts with measured intake loss. The brainstorming form-cosmetics are directly rejected there (structural discovery already exists in `sa.md`; the upstream approach additionally self-commits the spec — against the `task-protocol.md` rule "the agent does not commit"). The design-review subagent is named a candidate mitigation `(O3)` under a separate panel, also under O1.
 
-## Решение
+## Decision
 
-**Строим две тонкие правки (D1, D2) + фиксируем инвариант (D3). Всё, что есть форма-движок или
-канон-артефакт, остаётся под гейтом O1 без изменения статуса.**
+**We build two thin amendments (D1, D2) + record an invariant (D3). Anything that is a form-engine or a canon artifact remains under gate O1 with no change of status.**
 
-**Построено сейчас** (чистые текстовые правки существующих контрактов, 0 новых артефактов):
+**Built now** (pure text edits to existing contracts, 0 new artifacts):
 
-- **D1 — активный условный pre-code self-stop.** В developer-контракте фазовая запись `developer |
-  day-guide (+ spec/design)` ([pipeline.md](../../core/pipeline.md), таблица фаз-контрактов) сегодня
-  пассивна, а `spec/design` стоят в скобках = опциональны; на solo-дефолте (SA схлопнут в developer)
-  ничто не **обязывает** завести discovery до кода. Правка: для задачи с **доменно-нетривиальной или
-  необратимой** ценой developer перед кодом обязан либо иметь достаточный существующий вход (day-guide
-  / `docs/specs/` / design / ADR / PROJECT-STATE), либо остановиться и маршрутизировать в существующую
-  discovery-фазу (route to SA, если развёрнут; иначе self-discovery) либо к пользователю. **Это
-  условный STOP-триггер, НЕ universal pre-code gate** — он не применяется к локальным, технически
-  очевидным, легко обратимым задачам. Ось — та же, что у адверсивной панели и spec-driven C+ (цена
-  ошибки × необратимость), а не «каждая фича» и не «класс сложности проекта».
+- **D1 — an active conditional pre-code self-stop.** In the developer contract the phase entry `developer | day-guide (+ spec/design)` ([pipeline.md](../../core/pipeline.md), phase-contracts table) is today passive, and `spec/design` are parenthesized = optional; under the solo default (SA collapsed into developer) nothing **requires** discovery to happen before code. Amendment: for a task with a **domain-nontrivial or irreversible** cost, the developer must, before writing code, either have a sufficient existing input (day guide / `docs/specs/` / design / ADR / PROJECT-STATE), or stop and route to the existing discovery phase (route to SA, if deployed; otherwise self-discovery) or to the user. **This is a conditional STOP trigger, NOT a universal pre-code gate** — it does not apply to local, technically obvious, easily reversible tasks. The axis is the same one used by the adversarial panel and spec-driven C+ (cost of error × irreversibility), not "every feature" and not "the project's complexity class."
 
-- **D2 — правило `AskUserQuestion`: схождение, не раскрытие.** Discovery = две фазы. **Раскрытие**
-  (выявление неизвестного) требует открытого диалога / SA-discovery — пиклист тут вреден, т.к.
-  требует знать варианты заранее. **Схождение/approve** (выбор между уже выявленными опциями,
-  подтверждение дизайна) — закрытое множество + Other; здесь `AskUserQuestion` (пик + авто-Other,
-  multiSelect) строго лучше free-text. **Tie-breaker:** если множество вариантов ещё не выявлено ИЛИ
-  агент не может обосновать его полноту → стадия считается **раскрытием** (открытый вопрос). `Other`
-  — escape-hatch, не замена раскрытия. Это уточняет (не противоречит) отклонение «MC-косметики» в
-  [ADR-003](003-first-km-intake.md): там отвергнут MC-как-discovery, здесь легитимирован MC-как-approve.
+- **D2 — the `AskUserQuestion` rule: convergence, not divergence.** Discovery = two phases. **Divergence** (surfacing the unknown) requires open dialogue / SA discovery — a pick-list is harmful here, since it requires knowing the options in advance. **Convergence/approve** (choosing among already-surfaced options, confirming a design) is a closed set + Other; here `AskUserQuestion` (pick + auto-Other, multiSelect) is strictly better than free text. **Tie-breaker:** if the set of options has not yet been surfaced, OR the agent cannot justify its completeness → the stage counts as **divergence** (an open question). `Other` is an escape hatch, not a substitute for divergence. This clarifies (does not contradict) the rejection of "MC cosmetics" in [ADR-003](003-first-km-intake.md): that ADR rejects MC-as-discovery, this one legitimizes MC-as-approve.
 
-- **D3 — инвариант «активный триггер ≠ интейк-движок под O1».** Зафиксировать границу: правка
-  discovery, **не** создающая owned PM-артефакт (roadmap/brief/backlog/интейк-движок), — вне O1;
-  создающая — под O1. D1 и D2 ни одного нового canonical-артефакта не вводят (D1 правит существующий
-  контракт, D2 — правило проводки `AskUserQuestion`). Инвариант защищает будущие точечные правки
-  discovery от ложного утопления в O1 И защищает O1 от размывания.
+- **D3 — the invariant "an active trigger ≠ an intake engine under O1".** Record the boundary: a discovery amendment that does **not** create an owned PM artifact (roadmap/brief/backlog/intake engine) is outside O1; one that does create such an artifact falls under O1. D1 and D2 introduce zero new canonical artifacts (D1 amends an existing contract, D2 is a wiring rule for `AskUserQuestion`). The invariant protects future targeted discovery amendments from being falsely drowned in O1 AND protects O1 from dilution.
 
-**Что НЕ строим** (мертво или под O1 — статус не меняется относительно ADR-003/007):
+**What we do NOT build** (dead or under O1 — status unchanged relative to ADR-003/007):
 
-- Feature-discovery **как новый канонический gate / per-feature интейк-машинерия** — повторная
-  литигация O1 без эмпирики; запрещено собственным gate-протоколом пакета (снятие O1 — только ретро
-  2–3 стартов, не дебат моделей).
-- **`AskUserQuestion` как движок РАСКРЫТИЯ** (замена open-диалога на пиклист в дискавери) — убивает
-  discovery (пик требует знать неизвестное заранее).
-- **BA как держатель pre-code gate** — BA по контракту post-code (`roles/ba.md`: читает уже
-  написанный код), логически не может быть pre-code воротами.
-- **anti-«too simple» как non-negotiable + «каждая фича»** — церемония против осознанного
-  lightweight-дефолта ([ADR-001](001-scope-process-overlay.md) / [ADR-003](003-first-km-intake.md)).
-- **Форма-косметика апстрима** (по 1 вопросу / лимит слов / spec-самокоммит) — уже отклонена в
-  [ADR-003](003-first-km-intake.md).
-- **Visual companion** (браузерный HTTP-сервер) — чужероден CLI-модели; визуальный канал уже есть
-  как dormant-роль `designer` / вайрфрейм-как-код под своим гейтом ([ADR-004](004-second-model-designer.md)).
-  Тезис 6 переформулирован: не «визуал отвергнут», а «визуал уже есть под своим гейтом».
+- Feature discovery **as a new canonical gate / per-feature intake machinery** — a re-litigation of O1 without new empirics; forbidden by the package's own gate protocol (lifting O1 requires only a retro on 2–3 starts, not a model debate).
+- **`AskUserQuestion` as the engine of DIVERGENCE** (replacing the open dialogue with a pick-list in discovery) — kills discovery (a pick-list requires knowing the unknown in advance).
+- **BA as the holder of the pre-code gate** — BA is post-code by contract (`roles/ba.md`: reads already-written code), so it logically cannot be a pre-code gate.
+- **anti-"too simple" as non-negotiable + "every feature"** — ceremony working against the deliberate lightweight default ([ADR-001](001-scope-process-overlay.md) / [ADR-003](003-first-km-intake.md)).
+- **Upstream form-cosmetics** (one question at a time / word limits / spec self-commit) — already rejected in [ADR-003](003-first-km-intake.md).
+- **Visual companion** (a browser HTTP server) — foreign to the CLI model; a visual channel already exists as the dormant `designer` role / wireframe-as-code under its own gate ([ADR-004](004-second-model-designer.md)). Thesis 6 is reframed: not "visual is rejected" but "visual already exists under its own gate."
 
-**Решающий критерий (одной фразой):** из шести тезисов v1 выжили два тонких уточнения существующих
-контрактов; всё сверх этого либо дублирует уже построенное, либо есть тот самый объект, что пакет
-сознательно отложил под эмпирический гейт O1.
+**Deciding criterion (in one phrase):** of the six v1 theses, two thin refinements to existing contracts survived; everything beyond that either duplicates what is already built, or is exactly the object the package deliberately deferred under the empirical gate O1.
 
-## Последствия
+## Consequences
 
-**Плюсы:** триггерная дыра «на solo ничто не обязывает завести discovery до кода на доменно-необратимой
-задаче» закрыта без нового артефакта и без owned-долга (охват ADR-001 цел); проводка `AskUserQuestion`
-получила исполнимое правило вместо стихийного применения; граница триггер↔движок зафиксирована как
-переиспользуемый инвариант; гейт O1 не тронут; lightweight-дефолт не сдвинут (D1 условный, escape-hatch
-встроен). Независимый прогон панели сошёлся с выводом более раннего разбора того же исходника —
-конвергенция повышает доверие к границе O1.
+**Upsides:** the trigger gap "in solo mode nothing requires starting discovery before code on a domain-irreversible task" is closed without a new artifact and without owned debt (ADR-001's scope stays intact); `AskUserQuestion` wiring got an enforceable rule instead of ad-hoc use; the trigger↔engine boundary is recorded as a reusable invariant; gate O1 is untouched; the lightweight default is not shifted (D1 is conditional, an escape hatch is built in). An independent panel run converged with the conclusion of an earlier analysis of the same source material — convergence raises confidence in the O1 boundary.
 
-**Риски и открытые вопросы:**
+**Risks and open questions:**
 
-- [ ] **Solo self-gate (остаток `(O3)`).** В solo-режиме держатель D1 — сам developer. Независимой
-      pre-code проверки нет: D1 повышает **видимость** пропуска discovery, но не устраняет
-      самопроштамповку. Независимость появляется только при маршрутизации к SA / design-review /
-      пользователю. Это свойство solo-режима, не дефект правки — то же ограничение, что зафиксировано
-      как нерешённый пункт `(НП2)` в [ADR-001](001-scope-process-overlay.md).
-- [ ] **Субъективность оси триггера.** «Доменно-нетривиальная / необратимая» — суждение developer в
-      solo, не автомат. Та же субъективность, что у оси запуска адверсивной панели; приемлемый остаток,
-      проверяется на практике.
-- [ ] **Граница D2 раскрытие↔схождение.** Это правило, не автомат; агент может ошибиться фазой.
-      Tie-breaker (неизвестно, полно ли множество вариантов → считаем раскрытием) снижает риск, но не
-      снимает. Уточнить, если на практике граница размывается.
-- [ ] **Гейт O1 (зеркало [ADR-003](003-first-km-intake.md) / [ADR-007](007-kickoff-pipeline.md)).**
-      Канонический интейк (файлы roadmap/brief, интейк-движок) и **операционализация замера потери на
-      входе** — строить только после ретро 2–3 реальных стартов проекта. Без метода замера O1 рискует
-      стать вечным вето — операционализация самого замера тоже остаётся открытой задачей. Один анекдот
-      гейт не снимает.
-- [ ] **Субагент design-review (под отдельной панелью).** Кандидат-митигация рисков solo self-gate /
-      `(O3)` (вторая пара глаз pre-code) — здесь не расширяется; остаётся под O1 и отдельной панелью/ADR.
+- [ ] **Solo self-gate (the residual `(O3)`).** In solo mode, D1's holder is the developer themself. There is no independent pre-code check: D1 raises the **visibility** of skipping discovery, but does not eliminate self-rubber-stamping. Independence only appears when routing to SA / design-review / the user. This is a property of solo mode, not a defect of the amendment — the same limitation recorded as unresolved item `(NP2)` in [ADR-001](001-scope-process-overlay.md).
+- [ ] **Subjectivity of the trigger axis.** "Domain-nontrivial / irreversible" is the developer's judgment in solo mode, not an automatic check. The same subjectivity as the adversarial panel's launch axis; an acceptable residual, to be checked in practice.
+- [ ] **The D2 divergence↔convergence boundary.** This is a rule, not an automatic check; the agent can misjudge the phase. The tie-breaker (unknown whether the option set is complete → treat as divergence) lowers the risk but does not remove it. Refine if the boundary blurs in practice.
+- [ ] **Gate O1 (mirrors [ADR-003](003-first-km-intake.md) / [ADR-007](007-kickoff-pipeline.md)).** Canonical intake (roadmap/brief files, intake engine) and **operationalizing the measurement of intake loss** — build only after a retro on 2–3 real project starts. Without a measurement method, O1 risks becoming a permanent veto — operationalizing the measurement itself also remains an open task. A single anecdote does not lift the gate.
+- [ ] **The design-review subagent (under a separate panel).** A candidate mitigation for the solo self-gate / `(O3)` risks (a second pair of eyes pre-code) — not expanded here; remains under O1 and a separate panel/ADR.
 
-**Форма правок.** D1 — правка `core/pipeline.md` (фазы-контракты + строка developer-контракта:
-активный условный pre-code self-stop). D2 — правка `core/task-protocol.md` (правило проводки
-`AskUserQuestion`: схождение, не раскрытие). Инвариант D3 — рядом со ссылкой на O1. Тег переносимости
-`origin: process-convention` (D1) + `origin: harness:claude-code` для проводки `AskUserQuestion` (D2),
-помечено согласно [core/portability.md](../../core/portability.md).
+**Form of the amendments.** D1 — an edit to `core/pipeline.md` (phase contracts + the developer-contract line: an active conditional pre-code self-stop). D2 — an edit to `core/task-protocol.md` (the wiring rule for `AskUserQuestion`: convergence, not divergence). Invariant D3 — next to the O1 reference. The portability tag `origin: process-convention` (D1) + `origin: harness:claude-code` for `AskUserQuestion` wiring (D2), tagged per [core/portability.md](../../core/portability.md).
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **v1 — feature-discovery как новый canonical gate на BA/SA + `AskUserQuestion`-движок опроса.**
-  Отклонён: повторная литигация O1 без эмпирики; дублирует SA-discovery + фазы-контракты; BA не может
-  быть pre-code держателем; пиклист-как-discovery убивает раскрытие; «каждая фича» против
-  lightweight-дефолта.
-- **Плоская STOP-строка** — «фича без spec/design → не кодить, route to SA».
-  Признана выжившей, но D1/D2 честно отстаивают **больше** этого минимума (условная ось + правило
-  AskUserQuestion), оставаясь под O1.
-- **Полный порт brainstorming (HARD-gate + one-question-at-a-time + visual companion).** Отклонён:
-  форма-косметика уже отклонена в [ADR-003](003-first-km-intake.md); visual companion чужероден CLI;
-  HARD-gate уже есть как фазы-контракты.
-- **Ничего не фиксировать (всё под O1).** Рассмотрен: панель = валидация уже принятого. Отклонён в
-  пользу фиксации D1/D2 как genuinely новых, дешёвых, не-O1 уточнений.
+- **v1 — feature discovery as a new canonical gate at BA/SA + an `AskUserQuestion`-driven Q&A engine.** Rejected: re-litigates O1 without new empirics; duplicates SA discovery + phase contracts; BA cannot be a pre-code holder; pick-list-as-discovery kills divergence; "every feature" works against the lightweight default.
+- **A flat STOP line** — "a feature with no spec/design → do not code, route to SA." Recognized as a survivor, but D1/D2 honestly claim **more** than this minimum (a conditional axis + the AskUserQuestion rule), while staying under O1.
+- **A full port of brainstorming (HARD gate + one-question-at-a-time + visual companion).** Rejected: form-cosmetics already rejected in [ADR-003](003-first-km-intake.md); the visual companion is foreign to the CLI; the HARD gate already exists as phase contracts.
+- **Record nothing (everything stays under O1).** Considered: the panel = validation of what was already decided. Rejected in favor of recording D1/D2 as genuinely new, cheap, non-O1 refinements.

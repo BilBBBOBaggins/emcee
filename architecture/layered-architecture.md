@@ -1,10 +1,10 @@
-# Layered Architecture — общий паттерн слоёв
+# Layered Architecture — general layer pattern
 
-Разделение кода на слои с чётким направлением зависимостей. Один из самых фундаментальных архитектурных паттернов — применим в любом типе приложения.
+Splitting code into layers with a clear direction of dependencies. One of the most fundamental architectural patterns — applicable to any type of application.
 
-## Базовый принцип
+## Basic principle
 
-Код организован в слои, зависимости между ними **однонаправленные**:
+Code is organized into layers, dependencies between them are **one-directional**:
 
 ~~~
 Layer N   ↓
@@ -13,45 +13,45 @@ Layer N-1 ↓
 Layer 1
 ~~~
 
-Каждый слой может использовать слои **ниже**, но не слои **выше**. Обратные импорты — запрещены.
+Each layer can use the layers **below** it, but not the layers **above** it. Reverse imports are forbidden.
 
-Это единственный инвариант паттерна. Количество слоёв, их назначение, конкретные названия — варьируются по проектам.
+This is the pattern's only invariant. The number of layers, their purpose, specific names — vary by project.
 
-## Когда применять
+## When to apply
 
-Почти всегда. Layered architecture — настолько фундаментальный паттерн что почти не является выбором.
+Almost always. Layered architecture is such a fundamental pattern that it's almost not a choice.
 
-**Не применять** имеет смысл только в:
+**Not applying it** makes sense only for:
 
-- Простые скрипты (< 100 строк)
-- Чистые библиотеки с единственной функцией
-- Prototype/throwaway код
+- Simple scripts (< 100 lines)
+- Pure libraries with a single function
+- Prototype/throwaway code
 
-Для всего остального — слои.
+For everything else — layers.
 
-## Количество слоёв
+## Number of layers
 
-Зависит от сложности и типа проекта. Типичные варианты:
+Depends on complexity and project type. Typical variants:
 
-### 2 слоя — для простых приложений
+### 2 layers — for simple applications
 
 ~~~
 Application Logic
 Data Access
 ~~~
 
-Или:
+Or:
 
 ~~~
 Handlers / Entry Points
 Business Logic
 ~~~
 
-Подходит для: CLI tools, simple APIs, scripts с persistence.
+Suitable for: CLI tools, simple APIs, scripts with persistence.
 
-### 3 слоя — самый распространённый вариант
+### 3 layers — the most common variant
 
-Классическое разделение:
+The classic split:
 
 ~~~
 Presentation   (UI / API handlers / CLI commands)
@@ -59,9 +59,9 @@ Business       (Domain logic, use cases)
 Persistence    (Data access, external services)
 ~~~
 
-Подходит для: большинства business applications, backend services, web apps.
+Suitable for: most business applications, backend services, web apps.
 
-### 4 слоя — с явным domain слоем
+### 4 layers — with an explicit domain layer
 
 ~~~
 Presentation   (UI / API)
@@ -70,31 +70,31 @@ Domain         (Business rules, entities)
 Infrastructure (Persistence, external)
 ~~~
 
-Разница с 3-слойной — application слой оркестрирует use cases, а domain слой содержит pure business rules без зависимостей. Это структура близкая к Clean Architecture и Hexagonal.
+The difference from the 3-layer version — the application layer orchestrates use cases, and the domain layer contains pure business rules with no dependencies. This structure is close to Clean Architecture and Hexagonal.
 
-Подходит для: сложные business applications, проекты с rich domain model, long-lived enterprise systems.
+Suitable for: complex business applications, projects with a rich domain model, long-lived enterprise systems.
 
-### 5+ слоёв — обычно over-engineering
+### 5+ layers — usually over-engineering
 
-Исключение — specialized systems (финансовые системы с несколькими slice'ами compliance, multi-tenant SaaS с явными tenant-level concerns).
+Exception — specialized systems (financial systems with several compliance slices, multi-tenant SaaS with explicit tenant-level concerns).
 
-Для большинства проектов 5+ слоёв — сигнал что структура слишком сложная и нужен рефакторинг.
+For most projects, 5+ layers is a signal that the structure is too complex and needs refactoring.
 
-## Направление зависимостей
+## Direction of dependencies
 
-Главное правило: зависимости идут **вниз**, не вверх.
+The main rule: dependencies go **down**, not up.
 
-Что это значит на практике:
+What this means in practice:
 
-- Presentation импортирует Business, но не наоборот
-- Business импортирует Persistence (через интерфейсы), но не наоборот
-- Domain не знает о существовании Presentation
+- Presentation imports Business, not the other way around
+- Business imports Persistence (through interfaces), not the other way around
+- Domain doesn't know Presentation exists
 
 ### Dependency Inversion
 
-Чтобы Business мог использовать Persistence не зависая от конкретной реализации — Dependency Inversion через интерфейсы:
+For Business to be able to use Persistence without depending on a specific implementation — Dependency Inversion through interfaces:
 
-Business layer определяет интерфейс что ему нужно:
+Business layer defines the interface it needs:
 
 ~~~go
 // internal/business/user_service.go
@@ -104,7 +104,7 @@ type UserRepository interface {
 }
 ~~~
 
-Persistence layer реализует этот интерфейс:
+Persistence layer implements this interface:
 
 ~~~go
 // internal/persistence/postgres_user_repo.go
@@ -117,11 +117,11 @@ func (r *PostgresUserRepository) FindByID(ctx context.Context, id UserID) (*User
 }
 ~~~
 
-Результат — Business не импортирует Persistence. Интерфейс определён в Business, реализация — в Persistence. Зависимость инвертирована.
+Result — Business doesn't import Persistence. The interface is defined in Business, the implementation is in Persistence. The dependency is inverted.
 
-## Конкретные варианты структуры
+## Concrete structure variants
 
-### Для backend API (Go/Node/Python)
+### For a backend API (Go/Node/Python)
 
 ~~~
 handlers/          # HTTP handlers, request/response
@@ -130,7 +130,7 @@ repository/        # Data access
 model/             # Domain entities, shared types
 ~~~
 
-### Для fullstack web app
+### For a fullstack web app
 
 ~~~
 frontend/
@@ -144,9 +144,9 @@ backend/
   repository/      # Data access
 ~~~
 
-Frontend и backend — разные physical layers (разные процессы), каждый со своими логическими слоями.
+Frontend and backend are different physical layers (different processes), each with its own logical layers.
 
-### Для CLI tool
+### For a CLI tool
 
 ~~~
 cmd/               # Command parsing, entry points
@@ -155,11 +155,11 @@ domain/            # Core entities, rules
 infra/             # File system, network, APIs
 ~~~
 
-### Для desktop app с native UI и declarative UI
+### For a desktop app with native UI and declarative UI
 
-Специальный случай — см. [three-tier-with-bridge.md](three-tier-with-bridge.md). Паттерн включает middle layer (bridge/adapter) между native code и declarative UI.
+A special case — see [three-tier-with-bridge.md](three-tier-with-bridge.md). The pattern includes a middle layer (bridge/adapter) between native code and declarative UI.
 
-### Для игры
+### For a game
 
 ~~~
 engine/            # Game engine, rendering
@@ -168,7 +168,7 @@ scripting/         # Scripted content
 content/           # Assets
 ~~~
 
-### Для ML pipeline
+### For an ML pipeline
 
 ~~~
 ingestion/         # Data collection
@@ -178,54 +178,54 @@ inference/         # Model serving
 api/               # External API
 ~~~
 
-## Правила слоёв
+## Layer rules
 
-### Слой делает одну вещь
+### A layer does one thing
 
-Каждый слой имеет чёткую ответственность:
+Each layer has a clear responsibility:
 
-- Presentation — трансформация input/output (HTTP → domain, domain → HTTP)
-- Business — enforcement бизнес-правил
-- Persistence — сохранение и загрузка данных
+- Presentation — transforming input/output (HTTP → domain, domain → HTTP)
+- Business — enforcement of business rules
+- Persistence — saving and loading data
 
-Если слой делает несколько не связанных вещей — возможно нужно разделить на два слоя или выделить отдельный компонент.
+If a layer does several unrelated things — it may need to be split into two layers or a separate component extracted.
 
-### Слой не знает о слоях выше
+### A layer doesn't know about layers above it
 
-Business не знает про HTTP. Domain не знает про UI. Persistence не знает про use cases.
+Business doesn't know about HTTP. Domain doesn't know about UI. Persistence doesn't know about use cases.
 
-Это даёт свойства:
+This gives the following properties:
 
-- Business logic тестируется без HTTP
-- Domain тестируется без БД
-- Persistence может быть заменена (PostgreSQL → MongoDB) без изменения Business
+- Business logic is tested without HTTP
+- Domain is tested without a DB
+- Persistence can be replaced (PostgreSQL → MongoDB) without changing Business
 
-### DTOs на границе слоёв
+### DTOs at layer boundaries
 
-Объекты которые пересекают границу слоёв — DTOs (Data Transfer Objects), не domain entities.
+Objects that cross layer boundaries are DTOs (Data Transfer Objects), not domain entities.
 
-Почему:
+Why:
 
-- Domain entity имеет бизнес-методы которые не нужны снаружи
-- DTO — простая структура, легко serializable
-- Изменение domain entity не ломает external API
+- A domain entity has business methods that aren't needed outside
+- A DTO is a simple structure, easily serializable
+- Changing a domain entity doesn't break the external API
 
 ### Anti-corruption layer
 
-Между доменом и внешними системами (third-party APIs, legacy systems) — anti-corruption layer:
+Between the domain and external systems (third-party APIs, legacy systems) — an anti-corruption layer:
 
-- Трансформирует внешние модели в domain модели
-- Защищает domain от изменений во внешних системах
-- Localizes знание о внешнем формате в одном месте
+- Transforms external models into domain models
+- Protects the domain from changes in external systems
+- Localizes knowledge of the external format in one place
 
 ## Anti-patterns
 
 ### Leaky abstraction
 
-Верхний слой знает детали реализации нижнего:
+The upper layer knows implementation details of the lower layer:
 
 ~~~go
-// BAD: business code работает с SQL exceptions
+// BAD: business code works with SQL exceptions
 func (s *UserService) Register(ctx context.Context, email string) error {
     err := s.repo.Save(ctx, user)
     if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
@@ -234,62 +234,62 @@ func (s *UserService) Register(ctx context.Context, email string) error {
 }
 ~~~
 
-Решение: Persistence преобразует SQL errors в domain errors.
+Solution: Persistence converts SQL errors into domain errors.
 
 ### God layer
 
-Один слой разросся, делает всё:
+One layer has grown to do everything:
 
-- "Service layer" из 1000 LOC содержит и business logic, и HTTP handling, и caching, и retry logic
+- A "service layer" of 1000 LOC contains business logic, HTTP handling, caching, and retry logic
 
-Решение: разделить на более мелкие слои или компоненты с чёткими responsibilities.
+Solution: split into smaller layers or components with clear responsibilities.
 
 ### Bypassing layers
 
-Presentation напрямую дёргает Persistence минуя Business:
+Presentation directly reaches into Persistence, bypassing Business:
 
 ~~~go
-// BAD: controller напрямую запрашивает БД
+// BAD: controller directly queries the DB
 func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
-    user := h.db.QueryUserByID(userID)  // обходит service
+    user := h.db.QueryUserByID(userID)  // bypasses service
     json.NewEncoder(w).Encode(user)
 }
 ~~~
 
-Решение: все запросы через Business layer.
+Solution: all requests go through the Business layer.
 
 ### Cyclic dependencies
 
-Business импортирует Persistence, Persistence импортирует Business. Нарушает фундаментальный принцип.
+Business imports Persistence, Persistence imports Business. Violates the fundamental principle.
 
-Решение: Dependency Inversion через интерфейсы.
+Solution: Dependency Inversion through interfaces.
 
 ### Shared utilities that grow into god modules
 
-"Utils" или "Common" который импортируется всеми. Становится высоко-coupled.
+"Utils" or "Common" imported by everyone. Becomes highly coupled.
 
-Решение: мелкие специализированные модули, каждый про одну тему.
+Solution: small specialized modules, each about one topic.
 
-## Проверка правильности разделения
+## Checking correctness of the split
 
-Вопросы себе:
+Questions to ask yourself:
 
-1. Могу ли я протестировать Business без Persistence и без HTTP?
-2. Могу ли я заменить БД (PostgreSQL → SQLite для тестов) не меняя Business?
-3. Знает ли Domain слой про HTTP или БД? (Не должен)
-4. Сколько файлов надо изменить чтобы добавить новое поле в entity? (Должно быть 2-3, не 10+)
+1. Can I test Business without Persistence and without HTTP?
+2. Can I replace the DB (PostgreSQL → SQLite for tests) without changing Business?
+3. Does the Domain layer know about HTTP or the DB? (It shouldn't)
+4. How many files need to change to add a new field to an entity? (Should be 2-3, not 10+)
 
-Если ответы "нет" или "много" — слои разделены неправильно.
+If the answers are "no" or "many" — the layers are split incorrectly.
 
-## Эволюция паттерна
+## Evolution of the pattern
 
-Layered architecture — не догма. По мере роста проекта возможны адаптации:
+Layered architecture isn't dogma. As the project grows, adaptations are possible:
 
-- **Hexagonal / Ports and Adapters** — обобщение layered с несколькими входными и выходными портами
-- **Clean Architecture** — Uncle Bob формализация с жёсткими правилами зависимостей
-- **Onion Architecture** — похожа на Clean, с domain в центре и слоями вокруг
-- **Vertical slicing / Feature folders** — альтернатива, где вместо слоёв — vertical slices по features
+- **Hexagonal / Ports and Adapters** — a generalization of layered with several input and output ports
+- **Clean Architecture** — Uncle Bob's formalization with strict dependency rules
+- **Onion Architecture** — similar to Clean, with domain at the center and layers around it
+- **Vertical slicing / Feature folders** — an alternative where instead of layers there are vertical slices by features
 
-Все эти паттерны — variations на ту же тему однонаправленных зависимостей. Изучать их стоит когда базовый layered approach начинает ограничивать.
+All these patterns are variations on the same theme of one-directional dependencies. Worth studying when the basic layered approach starts limiting you.
 
-Для большинства проектов — классический 3-4 слой с Dependency Inversion достаточен на годы вперёд.
+For most projects, a classic 3-4 layer split with Dependency Inversion is sufficient for years ahead.

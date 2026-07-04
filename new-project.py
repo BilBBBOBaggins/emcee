@@ -1,33 +1,34 @@
 #!/usr/bin/env python3
 """
-new-project.py — генератор проекта из emcee (cookie-cutter).
+new-project.py — project generator from emcee (cookie-cutter).
 
-Собирает свежий проект: копирует core/ + roles/, выбранные stack/architecture/domain,
-заполняет что может в CLAUDE.md, бутстрапит docs/, опционально кладёт .claude/-обвязку,
-и — главное — если выбранный стек ещё НЕ описан, генерирует скелет stack/<name>.md
-по контракту (с обязательным разделом «Чистая сборка») и выдаёт промпт для дозаполнения.
+Assembles a fresh project: copies core/ + roles/, the chosen stack/architecture/domain,
+fills in what it can in CLAUDE.md, bootstraps docs/, optionally lays down the .claude/ wiring,
+and — most importantly — if the chosen stack is NOT yet described, generates a skeleton
+stack/<name>.md per the contract (with a mandatory "Clean build" section) and prints a
+prompt to finish filling it in.
 
-Примеры:
+Examples:
   ./new-project.py --list
   ./new-project.py --name "Acme Teams" --dir ../acme \
       --backend go --frontend react-nextjs \
       --arch modular-monolith,multi-tenant --domain b2b-saas \
       --testing bdd --wiring yes
   ./new-project.py --name "Edge Proxy" --dir ../edge --backend rust --frontend none
-      # rust ещё не описан -> создаст stack/rust.md скелет
+      # rust isn't described yet -> creates a stack/rust.md skeleton
 
-Без флагов в терминале — спросит интерактивно.
+No flags in a terminal — asks interactively.
 """
 from __future__ import annotations
 import argparse, os, re, shutil, sys
 
 PACK = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PACK)
-# Общие примитивы (находка #4; консолидация C1 аудита 2026-07-03)
+# Shared primitives (finding #4; consolidation C1 of the 2026-07-03 audit)
 from _pack_lib import LINK, md_files, local_target, target_exists, iter_lines, count_placeholders, read
 
 SKIP_TOP = {"new-project.py", "examples", "README.md", ".git", ".gitignore", "docs"}
-TESTING = {"bdd": "Вариант 1", "test-along": "Вариант 2", "tdd": "Вариант 3"}
+TESTING = {"bdd": "Option 1", "test-along": "Option 2", "tdd": "Option 3"}
 
 
 def slugify(s: str) -> str:
@@ -56,7 +57,7 @@ def ask_multi(prompt: str, options: list[str]) -> list[str]:
     print(f"\n{prompt}")
     for i, o in enumerate(options, 1):
         print(f"  {i}. {o}")
-    raw = ask("Выбери номера через запятую (пусто = ничего)")
+    raw = ask("Pick numbers, comma-separated (empty = none)")
     out = []
     for tok in raw.split(","):
         tok = tok.strip()
@@ -73,9 +74,9 @@ def write(p, t):
 
 
 def neutralize_dead_links(target: str) -> int:
-    """[text](path) -> text для ссылок, чья цель не существует в сгенерированном
-    проекте (ссылки на модули, которые не выбрали). Обход .md, fence-трекинг и предикат
-    резолва — общие примитивы _pack_lib (те же, что в selftest.py/regimen-doctor.py)."""
+    """[text](path) -> text for links whose target doesn't exist in the generated
+    project (links to modules that weren't chosen). .md traversal, fence-tracking and the
+    resolution predicate — shared _pack_lib primitives (same as selftest.py/regimen-doctor.py)."""
     fixed = 0
     for p in md_files(target):
         d = os.path.dirname(p)
@@ -92,7 +93,7 @@ def neutralize_dead_links(target: str) -> int:
                 if tt is None or target_exists(d, tt):
                     return m.group(0)
                 changed = True
-                return m.group(1)  # мёртвая ссылка -> оставить только текст
+                return m.group(1)  # dead link -> keep only the text
 
             out_lines.append(LINK.sub(repl, line))
         if changed:
@@ -106,45 +107,45 @@ def neutralize_dead_links(target: str) -> int:
 def fill_claude(text: str, name: str, stacks: list[str], testing: str, warns: list[str]) -> str:
     text = text.replace("{{PROJECT_NAME}}", name)
 
-    # Стек: заменить блок между "## Стек" и "## Архитектура"
+    # Stack: replace the block between "## Stack" and "## Architecture"
     try:
-        bullets = "\n".join(f"- {s}" for s in stacks) or "- {{стек проекта}}"
-        text = re.sub(r"(## Стек\n).*?(\n## Архитектура)",
+        bullets = "\n".join(f"- {s}" for s in stacks) or "- {{project stack}}"
+        text = re.sub(r"(## Stack\n).*?(\n## Architecture)",
                       lambda m: m.group(1) + "\n" + bullets + "\n" + m.group(2),
                       text, count=1, flags=re.S)
     except Exception:
-        warns.append("не смог заполнить секцию '## Стек' — заполни вручную")
+        warns.append("couldn't fill in the '## Stack' section — fill it in by hand")
 
-    # Testing philosophy: оставить выбранный вариант
+    # Testing philosophy: keep only the chosen option
     if testing in TESTING:
         keep = TESTING[testing]
         try:
-            m = re.search(r"(## Testing philosophy\n).*?(\n## Специфика проекта)", text, flags=re.S)
+            m = re.search(r"(## Testing philosophy\n).*?(\n## Project specifics)", text, flags=re.S)
             if m:
-                variants = re.split(r"(?=### Вариант )", m.group(0))
+                variants = re.split(r"(?=### Option )", m.group(0))
                 head = variants[0]
-                head = re.sub(r"\{\{Выбери один из трёх[^}]*\}\}\n*", "", head)
+                head = re.sub(r"\{\{Pick one of the three[^}]*\}\}\n*", "", head)
                 chosen = [v for v in variants[1:] if v.startswith(f"### {keep}")]
                 newblock = head + ("".join(chosen) if chosen else "")
                 text = text[:m.start()] + newblock + text[m.end():]
         except Exception:
-            warns.append("не смог сократить 'Testing philosophy' до одного варианта — оставлены все")
+            warns.append("couldn't trim 'Testing philosophy' down to one option — left all of them")
     return text
 
 
-# ---------- per-harness вход (ADR-012) ----------
+# ---------- per-harness entry (ADR-012) ----------
 
 ENTRY_BODY_MARK = "<!-- ENTRY-BODY:START"
 
 
 def assemble_codex_entry(filled_entry: str, warns: list[str]) -> str:
-    """ADR-012: codex-вход `AGENTS.md` = title/desc + codex-delta-хедер + ОБЩЕЕ ТЕЛО (ENTRY-BODY) из
-    заполненного шаблона входа. Тело — единственный источник (то же, что у CLAUDE.md), хедер —
-    per-harness. Так codex-проект получает нативный вход С КОНТЕНТОМ, без файла CLAUDE.md и без
-    указателя «читай CLAUDE.md»."""
+    """ADR-012: the codex entry `AGENTS.md` = title/desc + codex-delta header + the SHARED BODY (ENTRY-BODY)
+    from the filled-in entry template. The body is the single source (same as CLAUDE.md's), the header is
+    per-harness. This way a codex project gets a native entry WITH CONTENT, no CLAUDE.md file and no
+    "read CLAUDE.md" pointer."""
     header_path = os.path.join(PACK, "overlays", "codex", "_agents-header.md")
     if ENTRY_BODY_MARK not in filled_entry or not os.path.exists(header_path):
-        warns.append("codex-вход: нет ENTRY-BODY-маркера или _agents-header.md — AGENTS.md = тело как есть")
+        warns.append("codex entry: no ENTRY-BODY marker or _agents-header.md — AGENTS.md = body as-is")
         return filled_entry
     head, _, body_rest = filled_entry.partition(ENTRY_BODY_MARK)
     body = ENTRY_BODY_MARK + body_rest
@@ -154,84 +155,84 @@ def assemble_codex_entry(filled_entry: str, warns: list[str]) -> str:
 
 # ---------- docs/ bootstrap ----------
 
-DAY_GUIDE_STUB = """# День 1 — <<NAME>>
+DAY_GUIDE_STUB = """# Day 1 — <<NAME>>
 
-**Цель дня:** {{первая фича/итерация}}.
+**Goal for the day:** {{first feature/iteration}}.
 
-> Формат и рабочий пример — в emcee/examples/docs/day-1-guide.example.md.
-> Числовые команды (`R D T`) и имена артефактов — в core/task-protocol.md.
+> Format and a working example — in emcee/examples/docs/day-1-guide.example.md.
+> Numeric commands (`R D T`) and artifact names — in core/task-protocol.md.
 
-## Задача 1 — {{название}}
+## Task 1 — {{name}}
 
-**Затронутые файлы:** {{...}}
+**Affected files:** {{...}}
 
-### Промпт для Claude Code
+### Prompt for Claude Code
 
 ~~~
-{{Точное ТЗ для developer: контракт, требования, какие файлы, какие тесты.}}
+{{Exact spec for the developer: contract, requirements, which files, which tests.}}
 ~~~
 
-### После выполнения
+### After completion
 
 ~~~bash
-{{build+test команда с сохранением лога}}
+{{build+test command, saving the log}}
 ~~~
 
-### Коммит
+### Commit
 
 ~~~bash
-git add {{файлы}}
-git commit -m "{{тип}}: {{описание}}"
+git add {{files}}
+git commit -m "{{type}}: {{description}}"
 ~~~
 """
 
 PROJECT_STATE_STUB = """# PROJECT-STATE — <<NAME>>
 
-**Снимок текущего состояния, не журнал.** Architect читает на входе в день и
-перезаписывает на месте в конце дня: решённое — убирает, устаревшее — затирает.
-История («что и когда сделано») живёт в git (`git log`), решения «почему» — в
-`docs/adr/`. Здесь — только то, что нужно, чтобы продолжить СЕЙЧАС. Цель ≤ ~1 экран.
+**A snapshot of the current state, not a journal.** The architect reads this on entering a day and
+overwrites it in place at the end of the day: removes what's resolved, wipes what's stale.
+History ("what was done and when") lives in git (`git log`); "why" decisions live in
+`docs/adr/`. This holds only what's needed to continue RIGHT NOW. Target ≤ ~1 screen.
 
 Last updated: {{YYYY-MM-DD}}
 
-## Снимок
-- Фаза: старт.
-- Стек/команды — во входном файле регламента (здесь не дублировать).
+## Snapshot
+- Phase: start.
+- Stack/commands — in the regimen entry file (don't duplicate here).
 
 ## Frozen scope (QG-NN-05)
-<!-- Заполняет architect при заморозке среза (core/quality-gates.md §Достижимость):
-     пункты «- `SCOPE-ID` — атомарный критерий»; в assembled-тесте — аннотация @qg:SCOPE-ID.
-     Сверка наличия evidence: python3 regimen-doctor.py (строгий done-гейт: --qg). -->
-- Shipping root(s): {{артефакт поставки → entry-point}}
-- {{SCOPE-ID и критерий}}
+<!-- Filled in by the architect when a slice is frozen (core/quality-gates.md §Reachability):
+     items «- `SCOPE-ID` — atomic criterion»; in the assembled test — annotation @qg:SCOPE-ID.
+     Evidence check: python3 regimen-doctor.py (strict done-gate: --qg). -->
+- Shipping root(s): {{delivery artifact → entry-point}}
+- {{SCOPE-ID and criterion}}
 
-## В работе
-- {{первая фича}}
+## In progress
+- {{first feature}}
 
-## Риски / блокеры
+## Risks / blockers
 - {{...}}
 
 ## Open questions
 - [ ] {{...}}
 
-## Следующий день
+## Next day
 - {{...}}
 """
 
-# Делегирующая инициализация: команды стандартных тулов, а не сохранённый scaffold —
-# актуальная версия тула всегда свежее зашитой копии (см. docs/adr/001-scope-process-overlay.md).
+# Delegating init: standard-tool commands, not a stored scaffold — the tool's current
+# version is always fresher than a baked-in copy (see docs/adr/001-scope-process-overlay.md).
 INIT_CMDS = {
     "go": "go mod init <module-path>",
-    "python": "uv init   # или: python -m venv .venv && . .venv/bin/activate && pip install -e .",
+    "python": "uv init   # or: python -m venv .venv && . .venv/bin/activate && pip install -e .",
     "react-nextjs": "npx create-next-app@latest .",
     "rust": "cargo init",
     "node": "npm init -y",
     "svelte": "npx sv create .",
 }
 
-# glob-паттерны для path-scoped активации стек-скиллов (`paths:` во frontmatter скилла).
-# Срабатывают НАДЁЖНО на матчащих файлах (в отличие от model-decided `description` ~50%).
-# Неизвестный стек -> нет paths (остаётся только description). См. docs Claude Code → skills/memory.
+# glob patterns for path-scoped activation of stack skills (`paths:` in the skill frontmatter).
+# Fire RELIABLY on matching files (unlike the model-decided `description`, ~50%).
+# Unknown stack -> no paths (only description remains). See Claude Code docs → skills/memory.
 STACK_PATHS = {
     "go": "**/*.go, go.mod, go.sum",
     "python": "**/*.py, pyproject.toml",
@@ -245,51 +246,51 @@ STACK_PATHS = {
 def init_commands_for(stacks: list[str]) -> str:
     lines = []
     for s in stacks:
-        cmd = INIT_CMDS.get(slugify(s), f"# TODO: инициализируй {s} стандартным тулом этого стека")
+        cmd = INIT_CMDS.get(slugify(s), f"# TODO: initialize {s} with that stack's standard tool")
         lines.append(f"  {cmd}")
-    return "\n".join(lines) or "  # TODO: инициализируй проект стандартным тулом выбранного стека"
+    return "\n".join(lines) or "  # TODO: initialize the project with the chosen stack's standard tool"
 
 
-DAY0_GUIDE_STUB = """# День 0 — инициализация проекта <<NAME>>
+DAY0_GUIDE_STUB = """# Day 0 — initializing project <<NAME>>
 
-**Цель:** превратить пустой каталог в собранный каркас приложения, на котором `{{test-command}}`
-зелёный, ПРЕЖДЕ чем брать День 1. Пакет даёт регламент, но НЕ владеет тулчейном —
-инициализацию делегируем стандартным тулам (их актуальная версия всегда свежее зашитого скелета).
+**Goal:** turn an empty directory into an assembled application scaffold on which `{{test-command}}`
+is green, BEFORE taking on Day 1. The package provides the regimen but does NOT own the toolchain —
+init is delegated to standard tools (their current version is always fresher than a baked-in skeleton).
 
-> Запусти как developer: `1 0 1`. Имена артефактов и числовые команды — core/task-protocol.md.
+> Run as developer: `1 0 1`. Artifact names and numeric commands — core/task-protocol.md.
 
-## Задача 1 — инициализировать стек и получить зелёный baseline
+## Task 1 — initialize the stack and get a green baseline
 
-### Промпт для Claude Code
+### Prompt for Claude Code
 
 ~~~
-Инициализируй проект стандартными тулами под выбранный стек, затем впиши во входной файл регламента
-фактические команды сборки/тестов вместо {{build-command}}/{{test-command}}. Шаги:
+Initialize the project with standard tools for the chosen stack, then write the actual
+build/test commands into the regimen entry file in place of {{build-command}}/{{test-command}}. Steps:
 
 <<INIT_COMMANDS>>
 
-Затем: добавь .gitignore под стек; создай минимальный «hello world» + один проходящий тест,
-чтобы появился зелёный baseline. Убедись, что clean build (stack/<stack>.md → «Чистая сборка»)
-проходит без warnings.
+Then: add a .gitignore for the stack; create a minimal "hello world" + one passing test,
+so a green baseline appears. Make sure the clean build (stack/<stack>.md → "Clean build")
+passes with no warnings.
 ~~~
 
-### После выполнения
+### After completion
 
 ~~~bash
-{{build+test команда}}   # должна быть зелёной — это baseline, от которого стартует День 1
+{{build+test command}}   # must be green — this is the baseline Day 1 starts from
 ~~~
 
-### Коммит
+### Commit
 
 ~~~bash
 git add -A
-git commit -m "chore: инициализация каркаса проекта (День 0)"
+git commit -m "chore: initialize project scaffold (Day 0)"
 ~~~
 """
 
 
 def safe_copy_file(src: str, dst: str, overlay: bool, skipped: list[str], target: str) -> bool:
-    """Копирует файл. В overlay-режиме НЕ перезаписывает существующий — копит в skipped."""
+    """Copies a file. In overlay mode, does NOT overwrite an existing one — accumulates it in skipped."""
     if overlay and os.path.exists(dst):
         skipped.append(os.path.relpath(dst, target))
         return False
@@ -299,7 +300,7 @@ def safe_copy_file(src: str, dst: str, overlay: bool, skipped: list[str], target
 
 
 def safe_copy_tree(src_dir: str, dst_dir: str, overlay: bool, skipped: list[str], target: str):
-    """Рекурсивно копирует дерево, не затирая существующие файлы в overlay-режиме."""
+    """Recursively copies a tree, without overwriting existing files in overlay mode."""
     for root, _, files in os.walk(src_dir):
         rel = os.path.relpath(root, src_dir)
         for fn in files:
@@ -308,7 +309,7 @@ def safe_copy_tree(src_dir: str, dst_dir: str, overlay: bool, skipped: list[str]
 
 
 def safe_write(path: str, text: str, overlay: bool, skipped: list[str], target: str) -> bool:
-    """Пишет сгенерированный файл. В overlay не затирает существующий."""
+    """Writes a generated file. In overlay mode, doesn't overwrite an existing one."""
     if overlay and os.path.exists(path):
         skipped.append(os.path.relpath(path, target))
         return False
@@ -317,22 +318,22 @@ def safe_write(path: str, text: str, overlay: bool, skipped: list[str], target: 
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Генератор проекта из emcee")
-    ap.add_argument("--list", action="store_true", help="показать доступные модули и выйти")
+    ap = argparse.ArgumentParser(description="emcee project generator")
+    ap.add_argument("--list", action="store_true", help="show available modules and exit")
     ap.add_argument("--name")
-    ap.add_argument("--dir", help="каталог нового проекта (не должен существовать или пуст)")
-    ap.add_argument("--backend", default=None, help="имя стека бэкенда (или новое имя -> сгенерится скелет; none)")
-    ap.add_argument("--frontend", default=None, help="имя стека фронта (или новое имя; none)")
-    ap.add_argument("--arch", default=None, help="архитектуры через запятую")
-    ap.add_argument("--domain", default=None, help="домены через запятую")
+    ap.add_argument("--dir", help="new project directory (must not exist or must be empty)")
+    ap.add_argument("--backend", default=None, help="backend stack name (or a new name -> generates a skeleton; none)")
+    ap.add_argument("--frontend", default=None, help="frontend stack name (or a new name; none)")
+    ap.add_argument("--arch", default=None, help="architectures, comma-separated")
+    ap.add_argument("--domain", default=None, help="domains, comma-separated")
     ap.add_argument("--testing", choices=list(TESTING), default=None)
-    ap.add_argument("--wiring", choices=["yes", "no"], default=None, help="класть исполняемую обвязку рантайма")
+    ap.add_argument("--wiring", choices=["yes", "no"], default=None, help="lay down executable runtime wiring")
     ap.add_argument("--harness", choices=["claude-code", "codex"], default=None,
-                    help="целевой рантайм: claude-code (дефолт, обвязка в .claude/) или codex "
-                         "(AGENTS.md + .codex/ из overlays/codex/). Статическое копирование git-дерева.")
+                    help="target runtime: claude-code (default, wiring in .claude/) or codex "
+                         "(AGENTS.md + .codex/ from overlays/codex/). Static copy of the git tree.")
     ap.add_argument("--mode", choices=["new", "overlay"], default=None,
-                    help="new = кикстарт нового проекта (пустой каталог + Day-0 init); "
-                         "overlay = наложить регламент на существующий проект (не затирая файлы)")
+                    help="new = kickstart a new project (empty directory + Day-0 init); "
+                         "overlay = lay the regimen onto an existing project (without overwriting files)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -348,55 +349,55 @@ def main():
     if not sys.stdin.isatty():
         missing = [f for f, v in (("--name", a.name), ("--dir", a.dir)) if v is None]
         if missing:
-            print(f"✗ В неинтерактивном режиме обязательны: {', '.join(missing)}.", file=sys.stderr)
+            print(f"✗ Required in non-interactive mode: {', '.join(missing)}.", file=sys.stderr)
             return 1
 
-    name = a.name or ask("Название проекта", "My Project")
-    target = a.dir or ask("Каталог проекта", f"../{slugify(name)}")
+    name = a.name or ask("Project name", "My Project")
+    target = a.dir or ask("Project directory", f"../{slugify(name)}")
     target = os.path.abspath(target)
 
     def pick_stack(role, flag):
         if flag is not None:
             return flag
-        v = ask(f"{role} стек (из [{', '.join(stacks_av)}], новое имя, или none)", "none")
+        v = ask(f"{role} stack (from [{', '.join(stacks_av)}], a new name, or none)", "none")
         return v
 
     backend = pick_stack("Backend", a.backend)
     frontend = pick_stack("Frontend", a.frontend)
 
-    archs = (a.arch.split(",") if a.arch is not None else ask_multi("Архитектурные паттерны:", arch_av))
+    archs = (a.arch.split(",") if a.arch is not None else ask_multi("Architectural patterns:", arch_av))
     archs = [x.strip() for x in archs if x.strip()]
-    doms = (a.domain.split(",") if a.domain is not None else ask_multi("Домены:", dom_av))
+    doms = (a.domain.split(",") if a.domain is not None else ask_multi("Domains:", dom_av))
     doms = [x.strip() for x in doms if x.strip()]
-    # Дефолт — test-along (лёгкий solo-режим): заявленная аудитория пакета — solo/small team,
-    # для которой полный BDD-конвейер (SA→BA→QA-UAT→QA-E2E) — оверхед. BDD за явным выбором.
-    # (ADR об охвате: docs/adr/001-scope-process-overlay.md)
+    # Default is test-along (a light solo mode): the package's declared audience is a solo/small
+    # team, for which the full BDD pipeline (SA→BA→QA-UAT→QA-E2E) is overhead. BDD is opt-in.
+    # (Scope ADR: docs/adr/001-scope-process-overlay.md)
     testing = a.testing or ask(f"Testing philosophy ({'/'.join(TESTING)})", "test-along")
-    harness = a.harness or ask("Целевой рантайм (claude-code/codex)", "claude-code")
+    harness = a.harness or ask("Target runtime (claude-code/codex)", "claude-code")
     if harness not in ("claude-code", "codex"):
-        print(f"⚠ неизвестный рантайм '{harness}', использую 'claude-code'", file=sys.stderr)
+        print(f"⚠ unknown runtime '{harness}', using 'claude-code'", file=sys.stderr)
         harness = "claude-code"
     _wlabel = ".claude/" if harness == "claude-code" else ".codex/"
-    wiring = (a.wiring or ask(f"Класть опциональную {_wlabel} обвязку? (yes/no)", "yes")) == "yes"
-    # Режим: new = кикстарт (пустой каталог + Day-0 init-guide); overlay = наложить регламент
-    # на существующий проект, ничего не затирая (см. docs/adr/001-scope-process-overlay.md).
-    mode = a.mode or ask("Режим (new = новый проект / overlay = существующий)", "new")
+    wiring = (a.wiring or ask(f"Lay down optional {_wlabel} wiring? (yes/no)", "yes")) == "yes"
+    # Mode: new = kickstart (empty directory + Day-0 init guide); overlay = lay the regimen onto
+    # an existing project, without overwriting anything (see docs/adr/001-scope-process-overlay.md).
+    mode = a.mode or ask("Mode (new = new project / overlay = existing)", "new")
     if mode not in ("new", "overlay"):
-        print(f"⚠ неизвестный режим '{mode}', использую 'new'", file=sys.stderr)
+        print(f"⚠ unknown mode '{mode}', using 'new'", file=sys.stderr)
         mode = "new"
     overlay = mode == "overlay"
 
-    # валидация выборов
+    # validate choices
     for x in archs:
         if x not in arch_av:
-            print(f"⚠ архитектура '{x}' не найдена, пропускаю", file=sys.stderr)
+            print(f"⚠ architecture '{x}' not found, skipping", file=sys.stderr)
     for x in doms:
         if x not in dom_av:
-            print(f"⚠ домен '{x}' не найден, пропускаю", file=sys.stderr)
+            print(f"⚠ domain '{x}' not found, skipping", file=sys.stderr)
     archs = [x for x in archs if x in arch_av]
     doms = [x for x in doms if x in dom_av]
 
-    # классификация стеков: нормализуем имя, матчим существующие по slug, дедупим по slug
+    # stack classification: normalize the name, match existing ones by slug, dedupe by slug
     existing_by_slug = {slugify(x): x for x in stacks_av}
     existing_stacks, new_stacks, seen_slugs = [], [], set()
     for s in (backend, frontend):
@@ -407,43 +408,43 @@ def main():
             continue
         sl = slugify(s)
         if not sl:
-            print(f"⚠ стек '{s}' даёт пустой slug — пропускаю", file=sys.stderr)
+            print(f"⚠ stack '{s}' yields an empty slug — skipping", file=sys.stderr)
             continue
         if sl in seen_slugs:
-            print(f"⚠ стек '{s}' (slug '{sl}') дублирует уже выбранный — пропускаю", file=sys.stderr)
+            print(f"⚠ stack '{s}' (slug '{sl}') duplicates one already chosen — skipping", file=sys.stderr)
             continue
         seen_slugs.add(sl)
         if sl in existing_by_slug:
-            existing_stacks.append(existing_by_slug[sl])   # реальный пакетный стек
+            existing_stacks.append(existing_by_slug[sl])   # a real package stack
         else:
-            new_stacks.append(s)                            # будет скелет stack/<slug>.md
+            new_stacks.append(s)                            # will get a stack/<slug>.md skeleton
 
-    print("\n--- План ---")
-    print(f"  Проект:        {name}")
-    print(f"  Режим:         {mode}  ({'кикстарт нового' if not overlay else 'наложение на существующий, без затирания'})")
-    print(f"  Каталог:       {target}")
-    print(f"  Стек (есть):   {existing_stacks or '—'}")
-    print(f"  Стек (новый):  {new_stacks or '—'}  (будет создан скелет stack/<name>.md)")
-    print(f"  Архитектура:   {archs or '—'}")
-    print(f"  Домен:         {doms or '—'}")
+    print("\n--- Plan ---")
+    print(f"  Project:       {name}")
+    print(f"  Mode:          {mode}  ({'kickstart new' if not overlay else 'overlay onto existing, no overwrite'})")
+    print(f"  Directory:     {target}")
+    print(f"  Stack (have):  {existing_stacks or '—'}")
+    print(f"  Stack (new):   {new_stacks or '—'}  (a stack/<name>.md skeleton will be created)")
+    print(f"  Architecture:  {archs or '—'}")
+    print(f"  Domain:        {doms or '—'}")
     print(f"  Testing:       {testing}")
-    print(f"  Рантайм:       {harness}")
-    print(f"  Обвязка:       {('да' if wiring else 'нет')}  ({_wlabel})")
+    print(f"  Runtime:       {harness}")
+    print(f"  Wiring:        {('yes' if wiring else 'no')}  ({_wlabel})")
     if a.dry_run:
-        print("\n(dry-run — ничего не записано)")
+        print("\n(dry-run — nothing written)")
         return 0
 
     if os.path.exists(target) and not os.path.isdir(target):
-        print(f"\n✗ {target} существует и это не каталог. Останавливаюсь.", file=sys.stderr)
+        print(f"\n✗ {target} exists and is not a directory. Stopping.", file=sys.stderr)
         return 1
-    # new требует пустой каталог; overlay сознательно пишет в существующий проект (не затирая).
+    # new requires an empty directory; overlay deliberately writes into an existing project (no overwrite).
     if not overlay and os.path.isdir(target) and os.listdir(target):
-        print(f"\n✗ {target} существует и не пуст (режим new). Для существующего проекта: --mode overlay.",
+        print(f"\n✗ {target} exists and is not empty (mode new). For an existing project: --mode overlay.",
               file=sys.stderr)
         return 1
 
     warns: list[str] = []
-    skipped: list[str] = []                      # overlay: файлы, которые уже были — не тронули
+    skipped: list[str] = []                      # overlay: files that already existed — left untouched
     created_target = not os.path.isdir(target)
     stack_bullets = existing_stacks + [slugify(s) for s in new_stacks]
     try:
@@ -451,7 +452,7 @@ def main():
         safe_copy_tree(os.path.join(PACK, "core"), os.path.join(target, "core"), overlay, skipped, target)
         safe_copy_tree(os.path.join(PACK, "roles"), os.path.join(target, "roles"), overlay, skipped, target)
 
-        # 2) стеки
+        # 2) stacks
         for s in existing_stacks:
             safe_copy_file(os.path.join(PACK, "stack", f"{s}.md"),
                            os.path.join(target, "stack", f"{s}.md"), overlay, skipped, target)
@@ -468,9 +469,10 @@ def main():
             safe_copy_file(os.path.join(PACK, "domain", f"{x}.md"),
                            os.path.join(target, "domain", f"{x}.md"), overlay, skipped, target)
 
-        # 4) Вход регламента — per-harness нативный файл С КОНТЕНТОМ (ADR-012). Общее тело (ENTRY-BODY)
-        #    одно (в шаблоне CLAUDE.md); генератор рендерит в нативное имя: claude-code → CLAUDE.md;
-        #    codex → AGENTS.md (title + codex-delta-хедер + то же тело), и CLAUDE.md в codex НЕ кладётся.
+        # 4) Regimen entry — a per-harness native file WITH CONTENT (ADR-012). The shared body
+        #    (ENTRY-BODY) is one (in the CLAUDE.md template); the generator renders it to the native
+        #    name: claude-code → CLAUDE.md; codex → AGENTS.md (title + codex-delta header + the same
+        #    body), and CLAUDE.md is NOT placed in a codex project.
         entry_filled = fill_claude(read(os.path.join(PACK, "CLAUDE.md")), name, stack_bullets, testing, warns)
         if harness == "codex":
             entry_text, entry_name = assemble_codex_entry(entry_filled, warns), "AGENTS.md"
@@ -480,25 +482,25 @@ def main():
         if overlay and os.path.exists(entry_path):
             regimen_name = entry_name.replace(".md", ".regimen.md")
             write(os.path.join(target, regimen_name), entry_text)
-            warns.append(f"{entry_name} уже существует — регламент сохранён как {regimen_name}, слей вручную")
+            warns.append(f"{entry_name} already exists — the regimen was saved as {regimen_name}, merge by hand")
         else:
             write(entry_path, entry_text)
 
-        # 4b) единый источник карты ролей + синхронизатор (нужны и в прозовом режиме:
-        #     таблица ролей в CLAUDE.md генерируется из roles.json через sync-roles.py).
+        # 4b) single source of the role map + synchronizer (needed even in prose mode:
+        #     the role table in CLAUDE.md is generated from roles.json via sync-roles.py).
         for tool in ("roles.json", "sync-roles.py", "regimen-doctor.py", "_pack_lib.py"):
             src = os.path.join(PACK, tool)
             if os.path.exists(src):
                 safe_copy_file(src, os.path.join(target, tool), overlay, skipped, target)
 
-        # 5) Обвязка рантайма — СТАТИЧЕСКОЕ КОПИРОВАНИЕ git-дерева выбранного оверлея (по --harness),
-        #    БЕЗ парсинга меток origin: и без манифеста (стоп-условие ADR-009/010/011). Общее ядро
-        #    выше идентично для обоих рантаймов; здесь — только плумбинг.
-        #    - claude-code: .claude/ (нативная позиция дефолтного рантайма = концептуальный
-        #      overlays/claude-code/; см. overlays/README.md → documented mapping).
-        #    - codex: вход AGENTS.md уже собран в секции 4 (ADR-012); здесь — только overlays/codex/.codex/
-        #      обвязка (под --wiring). Файл CLAUDE.md в codex-проект НЕ кладётся.
-        skills_dir = ".claude"  # куда генератор эмитит авто-скиллы стека/арх/домена
+        # 5) Runtime wiring — STATIC COPY of the chosen overlay's git tree (per --harness),
+        #    WITHOUT parsing origin: markers and without a manifest (stop condition ADR-009/010/011).
+        #    The shared core above is identical for both runtimes; here — only plumbing.
+        #    - claude-code: .claude/ (the default runtime's native position = conceptual
+        #      overlays/claude-code/; see overlays/README.md → documented mapping).
+        #    - codex: the AGENTS.md entry is already assembled in section 4 (ADR-012); here — only
+        #      overlays/codex/.codex/ wiring (under --wiring). CLAUDE.md is NOT placed in a codex project.
+        skills_dir = ".claude"  # where the generator emits auto-skills for stack/arch/domain
         if harness == "codex":
             skills_dir = ".codex"
             if wiring:
@@ -509,51 +511,52 @@ def main():
             if wiring and os.path.isdir(os.path.join(PACK, ".claude")):
                 safe_copy_tree(os.path.join(PACK, ".claude"), os.path.join(target, ".claude"), overlay, skipped, target)
 
-        # 5b) Авто-скиллы под выбранные модули (часть обвязки рантайма). Аддитивно: скилл — тонкий
-        #     триггер с описанием, указывает на канонический файл (без дублей). Универсальные
-        #     скиллы ядра (debugging/code-quality/memory/spec-driven) приехали выше с обвязкой.
-        #     Роли, числовые команды и панель НЕ затрагиваются — это отдельный примитив. Формат
-        #     SKILL.md идентичен на Claude Code и Codex; различается только каталог discovery
-        #     (.claude/skills/ vs .codex/skills/).
+        # 5b) Auto-skills for the chosen modules (part of the runtime wiring). Additive: a skill is a
+        #     thin trigger with a description, pointing at the canonical file (no duplication). The
+        #     universal core skills (debugging/code-quality/memory/spec-driven) arrived above with the
+        #     wiring. Roles, numeric commands and the panel are NOT touched — that's a separate
+        #     primitive. SKILL.md format is identical on Claude Code and Codex; only the discovery
+        #     directory differs (.claude/skills/ vs .codex/skills/).
         if wiring:
             def emit_skill(skill_name, canonical, desc, summary, paths=None):
                 fm = f"---\nname: {skill_name}\ndescription: {desc}\n"
-                # paths: — path-scoped glob-триггер. ПОДДЕРЖИВАЕТ ТОЛЬКО Claude Code (офиц. docs,
-                # SKILL.md frontmatter: «glob patterns that limit when skill is activated»). Codex
-                # skill-creator: «name + description — the only fields Codex reads; do not include
-                # any other fields» → на Codex paths: не эмитим (неподдерживаемый ключ, утечка
-                # Claude-изма + риск отлупа валидатором). Discovery у Codex — по description (C1 аудита).
+                # paths: — a path-scoped glob trigger. SUPPORTED ONLY BY Claude Code (official docs,
+                # SKILL.md frontmatter: "glob patterns that limit when skill is activated"). Codex
+                # skill-creator: "name + description — the only fields Codex reads; do not include
+                # any other fields" → we don't emit paths: on Codex (an unsupported key, a leak of
+                # Claude-isms + risk of the validator rejecting it). Discovery on Codex is by
+                # description (C1 of the audit).
                 if paths and skills_dir == ".claude":
                     fm += f"paths: {paths}\n"
                 fm += "---\n"
                 body = (f"{fm}\n{summary}\n\n"
-                        f"Полные правила — в `{canonical}` (от корня проекта). Прочитай файл целиком.\n")
+                        f"Full rules are in `{canonical}` (from the project root). Read the whole file.\n")
                 safe_write(os.path.join(target, skills_dir, "skills", skill_name, "SKILL.md"),
                            body, overlay, skipped, target)
             for s in stack_bullets:
                 emit_skill(s, f"stack/{s}.md",
-                           f"Конвенции стека {s} в этом проекте: структура, обработка ошибок, тесты, "
-                           f"чистая сборка. Используй, когда пишешь или ревьюишь {s}-код.",
-                           f"Правила работы со стеком {s}.",
+                           f"Conventions of the {s} stack in this project: structure, error handling, tests, "
+                           f"clean build. Use when writing or reviewing {s} code.",
+                           f"Rules for working with the {s} stack.",
                            paths=STACK_PATHS.get(s))
             for x in archs:
                 emit_skill(x, f"architecture/{x}.md",
-                           f"Архитектурный паттерн «{x}»: границы модулей, направление зависимостей, "
-                           f"антипаттерны. Используй при проектировании или ревью структуры, "
-                           f"затрагивающей этот паттерн.",
-                           f"Архитектурный паттерн «{x}».")
+                           f"Architectural pattern \"{x}\": module boundaries, dependency direction, "
+                           f"antipatterns. Use when designing or reviewing structure "
+                           f"that touches this pattern.",
+                           f"Architectural pattern \"{x}\".")
             for x in doms:
                 emit_skill(x, f"domain/{x}.md",
-                           f"Доменные правила «{x}»: специфика, ограничения, compliance. Используй "
-                           f"при работе с фичами этого домена.",
-                           f"Домен «{x}».")
+                           f"Domain rules for \"{x}\": specifics, constraints, compliance. Use "
+                           f"when working on features in this domain.",
+                           f"Domain \"{x}\".")
 
         # 6) docs/ bootstrap
         stacks_str = ", ".join(stack_bullets) or "—"
         safe_write(os.path.join(target, "docs", "PROJECT-STATE.md"),
                    PROJECT_STATE_STUB.replace("<<NAME>>", name).replace("<<STACKS>>", stacks_str),
                    overlay, skipped, target)
-        # Day-0 (делегирующий init) — только для кикстарта нового проекта.
+        # Day-0 (delegating init) — only for kickstarting a new project.
         if not overlay:
             day0 = DAY0_GUIDE_STUB.replace("<<NAME>>", name).replace(
                 "<<INIT_COMMANDS>>", init_commands_for(stack_bullets))
@@ -563,84 +566,84 @@ def main():
         for sub in ("adr", "specs"):
             safe_write(os.path.join(target, "docs", sub, ".gitkeep"), "", overlay, skipped, target)
 
-        # 7) проектный README — только для нового проекта (у существующего свой, не трогаем)
+        # 7) project README — only for a new project (an existing one has its own, don't touch it)
         if not overlay:
             write(os.path.join(target, "README.md"),
-                  f"# {name}\n\nСгенерирован из emcee. Правила агента и команды — в [{entry_name}]({entry_name}).\n")
+                  f"# {name}\n\nGenerated from emcee. Agent rules and commands are in [{entry_name}]({entry_name}).\n")
 
-        # 8) почистить ссылки на невыбранные модули
+        # 8) clean up links to unselected modules
         cleaned = neutralize_dead_links(target)
     except Exception as e:
         if created_target:
             shutil.rmtree(target, ignore_errors=True)
-        print(f"\n✗ ошибка генерации: {e}"
-              + (" (частичный результат удалён)" if created_target else
-                 " (overlay — частичный результат оставлен, проверь вручную)"), file=sys.stderr)
+        print(f"\n✗ generation error: {e}"
+              + (" (partial result removed)" if created_target else
+                 " (overlay — partial result left in place, check by hand)"), file=sys.stderr)
         return 1
 
-    # ---------- отчёт ----------
-    print("\n✓ Регламент наложен на:" if overlay else "\n✓ Проект создан:", target)
+    # ---------- report ----------
+    print("\n✓ Regimen laid onto:" if overlay else "\n✓ Project created:", target)
     if overlay and skipped:
-        print(f"\n  ⚠ overlay: {len(skipped)} существующих файлов НЕ тронуты:")
+        print(f"\n  ⚠ overlay: {len(skipped)} existing files NOT touched:")
         for rel in sorted(skipped)[:12]:
             print(f"     • {rel}")
         if len(skipped) > 12:
-            print(f"     … ещё {len(skipped) - 12}")
-        print("     Если нужна свежая версия из пакета — сравни вручную (diff) и слей.")
-    print("\nДальше:")
-    print(f"  1. Заполни специфику в {entry_name} (архитектура, команды сборки/тестов, '## Специфика проекта').")
+            print(f"     … {len(skipped) - 12} more")
+        print("     If you need the fresh package version — diff by hand and merge.")
+    print("\nNext:")
+    print(f"  1. Fill in the specifics in {entry_name} (architecture, build/test commands, '## Project specifics').")
     if warns:
-        print("     ⚠ авто-заполнение частично:")
+        print("     ⚠ auto-fill was partial:")
         for w in warns:
             print("       -", w)
 
     if new_stacks:
-        print("\n  2. НОВЫЕ СТЕКИ (создан скелет — дозаполни обязательно раздел «Чистая сборка»):")
+        print("\n  2. NEW STACKS (a skeleton was created — you MUST finish filling in the \"Clean build\" section):")
         for s in new_stacks:
             f = f"stack/{slugify(s)}.md"
             print(f"     • {f}")
-            print(f"       Промпт для Claude Code:")
-            print(f'       «Заполни {f} по структуре stack/go.md и stack/python.md, но для {s}.')
-            print(f'        ОБЯЗАТЕЛЬНО раздел «Чистая сборка»: какие команды значат clean build для {s}')
-            print(f'        (компилятор/typecheck/линтер) — на него ссылается core/quality-gates.md.')
-            print(f'        Удали неприменимые секции и верхний блок-предупреждение.»')
+            print(f"       Prompt for Claude Code:")
+            print(f'       "Fill in {f} following the structure of stack/go.md and stack/python.md, but for {s}.')
+            print(f'        The \"Clean build\" section is MANDATORY: which commands mean a clean build for {s}')
+            print(f'        (compiler/typecheck/linter) — core/quality-gates.md references it by name.')
+            print(f'        Remove sections that don\'t apply and the warning block at the top."')
 
-    # оставшиеся плейсхолдеры (семантика count_placeholders — та же, что у regimen-doctor:
-    # списки «шаг 3» генератора и 🔴 доктора не должны расходиться)
+    # remaining placeholders (count_placeholders semantics — same as regimen-doctor's:
+    # the generator's "step 3" list and the doctor's 🔴 must not diverge)
     left = []
     for p in md_files(target):
         n = count_placeholders(read(p))
         if n:
             left.append((os.path.relpath(p, target), n))
     if left:
-        print("\n  3. Незаполненные {{...}} плейсхолдеры:")
+        print("\n  3. Unfilled {{...}} placeholders:")
         for rel, n in sorted(left, key=lambda x: -x[1]):
             print(f"     {n:3}  {rel}")
-        print("     Перечислить: grep -rn '{{' . --include='*.md'")
+        print("     List them: grep -rn '{{' . --include='*.md'")
 
-    # ссылки на невыбранные модули — нейтрализованы автоматически
+    # links to unselected modules — neutralized automatically
     if cleaned:
-        print(f"\n  4. Ссылки на невыбранные модули нейтрализованы в {cleaned} файл(ах) "
-              f"([текст](битый-путь) → текст). Висячих ссылок не осталось.")
+        print(f"\n  4. Links to unselected modules were neutralized in {cleaned} file(s) "
+              f"([text](dead-path) → text). No dangling links remain.")
 
     if overlay:
-        print(f"\n  5. Регламент лёг рядом с твоим кодом. Команды сборки/тестов в {entry_name} укажи "
-              "фактические (проект уже инициализирован). Затем опиши docs/day-1-guide.md и запусти: '1 1 1'.")
+        print(f"\n  5. The regimen was laid alongside your code. Give the actual build/test commands in "
+              f"{entry_name} (the project is already initialized). Then describe docs/day-1-guide.md and run: '1 1 1'.")
     else:
-        print("\n  5. Сначала День 0 (инициализация каркаса): запусти '1 0 1' по docs/day-0-guide.md — "
-              "агент инициализирует стек стандартным тулом и получит зелёный baseline. "
-              "Потом опиши docs/day-1-guide.md и запусти '1 1 1'.")
-    print("\n  6. Перед первой реальной задачей прогони гейт готовности: python3 regimen-doctor.py "
-          "(🟢 = регламент дозаполнен; 🔴 = плейсхолдеры/ссылки/команды чинить). Запускай повторно по мере правок.")
+        print("\n  5. First, Day 0 (scaffold init): run '1 0 1' per docs/day-0-guide.md — "
+              "the agent will initialize the stack with a standard tool and get a green baseline. "
+              "Then describe docs/day-1-guide.md and run '1 1 1'.")
+    print("\n  6. Before the first real task, run the readiness gate: python3 regimen-doctor.py "
+          "(🟢 = the regimen is filled in; 🔴 = fix placeholders/links/commands). Rerun as you make edits.")
     if wiring:
         if harness == "codex":
-            print("     Обвязка .codex/ скопирована (агенты-роли + скиллы). Вход рантайма — AGENTS.md "
-                  "(Codex авто-читает). Хуки (опт-ин, KL-7-pending): см. .codex/hooks.json.example.")
+            print("     .codex/ wiring copied (agent roles + skills). Runtime entry — AGENTS.md "
+                  "(Codex auto-reads it). Hooks (opt-in, KL-7-pending): see .codex/hooks.json.example.")
         else:
-            print("     Обвязка .claude/ скопирована (субагенты + /role). Хуки: mv .claude/settings.json.example .claude/settings.json")
+            print("     .claude/ wiring copied (subagents + /role). Hooks: mv .claude/settings.json.example .claude/settings.json")
     elif harness == "codex":
-        print("     Прозовый режим Codex: AGENTS.md (вход) скопирован, .codex/ обвязки нет — "
-              "роли как промпты (читай roles/<роль>.md), числовые команды R D T печатной конвенцией.")
+        print("     Codex prose mode: AGENTS.md (entry) copied, no .codex/ wiring — "
+              "roles as prompts (read roles/<role>.md), numeric commands R D T by typed convention.")
     return 0
 
 

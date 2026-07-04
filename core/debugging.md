@@ -1,110 +1,135 @@
-# Дебаг сломанного поведения
+# Debugging broken behavior
 
-Отдельный файл потому что дебаг — самая частая причина плохого поведения агентов. Правильный процесс принципиально важен.
+A separate file because debugging is the most frequent cause of bad agent behavior. Getting the
+process right matters fundamentally.
 
-## Пользователь сообщил баг — это факт
+## The user reported a bug — that's a fact
 
-Если пользователь говорит "X не работает" — X не работает. Это не обсуждается, это данность.
+If the user says "X doesn't work" — X doesn't work. This isn't up for debate, it's a given.
 
-Но **причина** бага — это гипотеза которая требует верификации. Пользователь видит симптом, не причину.
+But the bug's **cause** is a hypothesis that requires verification. The user sees the symptom, not
+the cause.
 
-Правильное начало: "Понял, X не работает. Проверяю причину." — и начинается процесс ниже.
+The right opening: "Got it, X doesn't work. Checking the cause." — and the process below begins.
 
-Неправильное начало: "X не работает? Странно, должно работать, возможно..." — это спор с пользователем о его опыте.
+The wrong opening: "X doesn't work? Strange, it should work, maybe..." — that's arguing with the
+user about their own experience.
 
-## Одновременный сбор информации со всех слоёв
+## Simultaneous information gathering across every layer
 
-Главный принцип эффективного дебага. Антипаттерн — вертикальный поиск по одному слою за раз.
+The core principle of effective debugging. The antipattern is a vertical search, one layer at a
+time.
 
-Плохой процесс (типичный агентский фейл):
+Bad process (a typical agent failure):
 
-1. Смотрю UI-логи — ничего не вижу
-2. Смотрю Bridge-логи — ничего не вижу
-3. Смотрю Core-логи — ничего не вижу
-4. Смотрю логи внешнего сервиса — вот тут ошибка
+1. Check the UI logs — see nothing
+2. Check the Bridge logs — see nothing
+3. Check the Core logs — see nothing
+4. Check the external service's logs — there's the error
 
-Это 3-5 итераций впустую, плюс контекст загружен обрывками из разных мест, плюс фрустрация.
+That's 3-5 wasted iterations, plus a context loaded with scraps from different places, plus
+frustration.
 
-Правильный процесс:
+The right process:
 
-1. **Идентифицировать всю цепочку** через которую проходит операция. Для текущего бага — какие слои задействованы, какие модули, какие внешние зависимости.
-2. **Для каждого звена цепочки понять где его логи/телеметрия/метрики**. Если где-то логов нет — добавить логирование на этом уровне.
-3. **Собрать логи всех звеньев одновременно** за тот же временной интервал когда произошёл баг. Если баг не воспроизводится — воспроизвести и собрать.
-4. **Коррелировать по времени**. Смотреть что происходило на каждом слое в момент бага параллельно, не последовательно.
-5. **Найти разрыв** — где в цепочке данные потерялись, трансформировались неправильно, или вызов вообще не дошёл.
-6. Только после этого формулировать гипотезу о причине.
+1. **Identify the whole chain** the operation passes through. For the current bug — which layers
+   are involved, which modules, which external dependencies.
+2. **For every link in the chain, work out where its logs/telemetry/metrics live**. If logs are
+   missing somewhere — add logging at that level.
+3. **Collect the logs of every link at once**, for the same time interval the bug occurred in. If
+   the bug doesn't reproduce — reproduce it and collect.
+4. **Correlate by time.** Look at what was happening on every layer at the moment of the bug, in
+   parallel, not sequentially.
+5. **Find the break** — where in the chain the data got lost, got transformed wrong, or the call
+   never arrived at all.
+6. Only after this, formulate a hypothesis about the cause.
 
-## Связанные модули и сервисы
+## Related modules and services
 
-Баг часто выходит за границы одного модуля. Если баг в модуле X, но X зависит от Y и Z — логи Y и Z тоже нужны.
+A bug often crosses the boundary of a single module. If the bug is in module X, but X depends on Y
+and Z — the logs of Y and Z are needed too.
 
-Особенно критично для:
+Especially critical for:
 
-- **Событийных систем** (pub/sub, queues, signals/slots) — source и consumer в разных модулях
-- **Асинхронных операций** — инициатор и обработчик в разных потоках/процессах
-- **Распределённых систем** — разные сервисы
-- **Layered architectures** — действие проходит через несколько слоёв последовательно
+- **Event-driven systems** (pub/sub, queues, signals/slots) — source and consumer in different
+  modules
+- **Asynchronous operations** — the initiator and the handler in different threads/processes
+- **Distributed systems** — different services
+- **Layered architectures** — the action passes through several layers in sequence
 
-Правило: изоляция "только X" приводит к слепым пятнам. Всегда расширять scope до связанных модулей с которыми X взаимодействует в рамках текущей операции.
+Rule: isolating to "just X" produces blind spots. Always widen the scope to the modules X interacts
+with within the current operation.
 
-## Запрет на угадывание
+## Prohibition on guessing
 
-Повторение из principles.md, но в контексте дебага это особенно важно.
+A repeat from principles.md, but it matters especially in the debugging context.
 
-Запрещённые формулировки в процессе дебага:
+Forbidden phrasings during debugging:
 
-- "Скорее всего проблема в X"
-- "Возможно это связано с Y"
-- "Наверное, баг где-то здесь"
-- "Попробую изменить Z и посмотрю"
+- "Most likely the problem is in X"
+- "Possibly this is related to Y"
+- "Probably the bug is somewhere here"
+- "I'll try changing Z and see"
 
-Если агент ловит себя на таких формулировках — значит не прочитал достаточно. Возвращаться к шагу "собрать логи всех слоёв".
+If the agent catches itself in phrasings like these — it hasn't read enough. Go back to the
+"collect the logs of every layer" step.
 
-Разрешённая формулировка: "Прочитал X.cpp:120-150 и лог Y за момент бага. Вижу что вызов из A не доходит до B. Причина — в строке 135 условие isEnabled() возвращает false когда ожидается true. Проверяю почему."
+Allowed phrasing: "Read X.cpp:120-150 and the Y log for the moment of the bug. I see the call from A
+never reaches B. The cause: at line 135, the condition isEnabled() returns false when true is
+expected. Checking why."
 
-## Локализация изменений при фиксе
+## Localizing changes when fixing
 
-Фикс для конкретного protocol / feature / provider не должен трогать общий код.
+A fix for a specific protocol / feature / provider must not touch shared code.
 
-Пример: баг в синхронизации EWS-календаря. Неправильно — менять общий `CalendarController` "потому что так чище". Правильно — фиксить в EWS-specific ветке (`if (providerType == "ews")`, или внутри `EwsCalendarProvider`).
+Example: a bug in EWS calendar sync. Wrong — change the shared `CalendarController` "because it's
+cleaner that way." Right — fix it in the EWS-specific branch (`if (providerType == "ews")`, or
+inside `EwsCalendarProvider`).
 
-Только если при фиксе подтверждается что изменение нужно всем protocol'ам — свести в общий код. До подтверждения — protocol-specific.
+Only if the fix confirms the change is needed by every protocol — fold it into shared code. Until
+confirmed — keep it protocol-specific.
 
-Это же правило для:
+The same rule applies to:
 
-- Багов на определённой платформе — fix в platform-specific ветке
-- Багов с определёнными данными — fix в обработчике этого формата
-- Багов в edge case — fix в ветке edge case, не в основном path
+- Bugs on a specific platform — fix in a platform-specific branch
+- Bugs with specific data — fix in that format's handler
+- Bugs in an edge case — fix in the edge-case branch, not in the main path
 
-Общий код меняется только когда явно подтверждено что это нужно всем.
+Shared code changes only once it's explicitly confirmed everyone needs it.
 
-## Правило "три попытки"
+## The "three attempts" rule
 
-Если один и тот же баг не чинится после трёх содержательных попыток — остановиться.
+If the same bug still isn't fixed after three substantive attempts — stop.
 
-Признаки что попытки содержательные: каждая основана на новом понимании проблемы из логов и кода, не на случайном изменении.
+Signs the attempts are substantive: each is based on a new understanding of the problem drawn from
+logs and code, not on a random change.
 
-Признаки что попытки бессодержательные: меняешь случайные места надеясь что сработает, откатываешь и пробуешь другое случайное место. Это уже не дебаг, это гадание.
+Signs the attempts aren't substantive: you change random spots hoping it'll work, roll back, and
+try another random spot. That's no longer debugging — it's guessing.
 
-Действие при трёх попытках: остановиться, сформулировать что известно и что непонятно, описать пользователю, дождаться помощи.
+Action at three attempts: stop, state what's known and what isn't, describe it to the user, wait
+for help.
 
-## Формат баг-репорта при дебаге
+## Bug-report format during debugging
 
-Когда проблема найдена, отчёт включает:
+Once the problem is found, the report includes:
 
 ~~~
-ПРОБЛЕМА: краткое описание
-ФАЙЛ:СТРОКА: где именно
-РАЗРЫВ ЦЕПОЧКИ: [слой A] → [слой B] (где данные теряются)
-ДОКАЗАТЕЛЬСТВО:
-  - Лог/код что проверено → что обнаружено
+PROBLEM: brief description
+FILE:LINE: exactly where
+CHAIN BREAK: [layer A] → [layer B] (where the data is lost)
+EVIDENCE:
+  - Log/code checked → what was found
   - ...
-ПРИЧИНА: конкретное объяснение в терминах кода
-ФИКС: что изменяется и почему это решит проблему
+CAUSE: a concrete explanation in terms of the code
+FIX: what changes and why it resolves the problem
 ~~~
 
-Формат одинаков для internal debugging и для взаимодействия QA с разработчиком.
+The format is the same for internal debugging and for QA-to-developer handoff.
 
-## Связанные правила
+## Related rules
 
-Гигиена работы с тестами при дебаге — в [quality-gates.md](quality-gates.md): «не теряй логи» (не перезапускать упавший тест без анализа лога) и «не бисектить тесты» (первый упавший прогон — это факт, анализируй его, не гоняй 10 раз). Запрет на угадывание выше — повтор из [principles.md](principles.md).
+Test hygiene during debugging — in [quality-gates.md](quality-gates.md): "don't lose the logs"
+(don't rerun a failed test without analyzing its log) and "don't bisect tests" (the first failing
+run is a fact — analyze it, don't run it 10 times). The prohibition on guessing above is a repeat
+from [principles.md](principles.md).

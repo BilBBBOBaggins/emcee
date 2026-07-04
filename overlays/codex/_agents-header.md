@@ -1,34 +1,38 @@
-<!-- CODEX-DELTA-HEADER — генератор вставляет этот блок между title и общим телом входа (ENTRY-BODY общего шаблона) при сборке AGENTS.md. НЕ полный вход; полное тело (Стек, Команды, Обязательно читать, По ситуации, Testing) — общее, приезжает из тела. -->
+<!-- CODEX-DELTA-HEADER — the generator inserts this block between the title and the shared entry body (ENTRY-BODY of the shared template) when assembling AGENTS.md. NOT the full entry file; the full body (Stack, Commands, Required reading, Situational, Testing) is shared and comes from the body. -->
 
-> **Это `AGENTS.md` — вход регламента на рантайме Codex.** Codex авто-читает `AGENTS.md` в начале
-> сессии (аналог авточтения `CLAUDE.md` у Claude Code). Ниже — **общее тело регламента** (проектная
-> специфика + роутеры в нейтральное методическое ядро `core/`); этот верхний блок фиксирует только то,
-> что на Codex **отличается** от Claude Code. Корпус методов/ролей не дублируется — он в `core/`/`roles/`.
+> **This is `AGENTS.md` — the regimen entry file on the Codex runtime.** Codex auto-reads `AGENTS.md` at
+> the start of a session (the analog of Claude Code's auto-read of `CLAUDE.md`). Below is the **shared
+> body of the regimen** (project specifics + routers into the neutral methodological core `core/`); this
+> header block above records only what **differs** on Codex from Claude Code. The body of
+> methods/roles is not duplicated — it lives in `core/`/`roles/`.
 
-## Что на Codex иначе, чем на Claude Code (харнесс-дельта)
+## What differs on Codex vs. Claude Code (harness delta)
 
-- **Slash-команд нет.** `/role`, `/panel`, `/kickoff` ниже — примитив Claude Code. На Codex числовая
-  грамматика `R D T` остаётся **печатной конвенцией**: пишешь «5 3 24» текстом, и Codex входит в роль,
-  читая `.codex/agents/<агент>.toml` + канонический `roles/<роль>.md`. Сознательная прозовая
-  деградация (матрица гарантий её фиксирует), не потеря метода.
-- **Роли — кастомные агенты Codex** `.codex/agents/<имя>.toml` (`sandbox_mode` +
-  `developer_instructions`-указатель в `roles/*`). Карта `R → роль` — в теле ниже («Маппинг ролей»);
-  файл `.codex/agents/<agent>.toml` — sandbox-профиль этой роли. Tool-scoping → тиром песочницы:
-  read-only (reviewer/auditor) и workspace-write (developer/qa-e2e/debugger/devops) — **аппаратно**;
-  docs-only (ba/qa-uat/sa/architect) и scratchpad-only (red/blue/arbiter) — **проза** (`workspace-write`
-  + honor; G2 RED: per-path карв-аут на Codex недостижим, cwd всегда писибелен).
-- **Скиллы — `.codex/skills/<имя>/SKILL.md`** (формат идентичен Claude Code; тело — указатель в `core/*.md`).
-- **Хуки-гейты = accountability.** KL-7 (живой `codex exec`): хуки из конфига в headless не срабатывают
-  → для жёсткого гейта на Codex CI/pre-commit, не рантайм-хуки. Опт-ин пример — `.codex/hooks.json.example`.
-- **Память** — у Codex свой механизм (`AGENTS.md`-иерархия + Codex memories opt-in), не Claude-Code-иерархия `CLAUDE.md`; дисциплина памяти (`core/memory.md`) переносится как есть.
-- **Вторая модель для панели** (`core/adversarial-panel.md`): на рантайме Codex ты сам — Codex, поэтому
-  второй парой глаз бери **иную** модель (Claude/иной профиль), не себя. Нет второй модели → честный фолбэк.
+- **No slash commands.** `/role`, `/panel`, `/kickoff` below are a Claude Code primitive. On Codex the
+  numeric grammar `R D T` remains a **printed convention**: you type "5 3 24" as text, and Codex enters
+  the role by reading `.codex/agents/<agent>.toml` + the canonical `roles/<role>.md`. A deliberate prose
+  degradation (the guarantee matrix records it), not a loss of method.
+- **Roles are custom Codex agents** `.codex/agents/<name>.toml` (`sandbox_mode` + a
+  `developer_instructions` pointer into `roles/*`). The `R → role` map is in the body below ("Role
+  map"); the file `.codex/agents/<agent>.toml` is that role's sandbox profile. Tool-scoping → by sandbox
+  tier: read-only (reviewer/auditor) and workspace-write (developer/qa-e2e/debugger/devops) —
+  **hardware**; docs-only (ba/qa-uat/sa/architect) and scratchpad-only (red/blue/arbiter) — **prose**
+  (`workspace-write` + honor; G2 RED: a per-path carve-out is unreachable on Codex, cwd is always writable).
+- **Skills — `.codex/skills/<name>/SKILL.md`** (format identical to Claude Code; body — a pointer into `core/*.md`).
+- **Hook gates = accountability.** KL-7 (live `codex exec`): hooks from config do not fire in headless
+  mode → for a hard gate on Codex use CI/pre-commit, not runtime hooks. Opt-in example —
+  `.codex/hooks.json.example`.
+- **Memory** — Codex has its own mechanism (`AGENTS.md` hierarchy + Codex memories opt-in), not the
+  Claude-Code `CLAUDE.md` hierarchy; the memory discipline (`core/memory.md`) carries over as-is.
+- **Second model for the panel** (`core/adversarial-panel.md`): on the Codex runtime you yourself are
+  Codex, so for the second pair of eyes use a **different** model (Claude/another profile), not
+  yourself. No second model → honest fallback.
 
-<!-- Этот файл — фрагмент, который генератор вставляет в AGENTS.md в КОРНЕ проекта; ссылки в нём
-     относительны корню проекта (напр. `core/portability.md`), а не каталогу overlays/codex/.
-     Линк-чеки пакета (selftest/regimen-doctor) пропускают файл по маркеру CODEX-DELTA-HEADER
-     в первой строке (_pack_lib.dangling): в материализованном AGENTS.md ссылки резолвятся.
-     На `../../` НЕ менять. -->
-Полная матрица «роль × рантайм × аппаратно/проза» — [core/portability.md](core/portability.md).
+<!-- This file is a fragment that the generator inserts into AGENTS.md at the project ROOT; links in it
+     are relative to the project root (e.g. `core/portability.md`), not to the overlays/codex/ directory.
+     The package's link checks (selftest/regimen-doctor) skip this file via the CODEX-DELTA-HEADER marker
+     on the first line (_pack_lib.dangling): in the materialized AGENTS.md the links resolve.
+     Do NOT change `../../`. -->
+Full "role × runtime × hardware/prose" matrix — [core/portability.md](core/portability.md).
 
 ---

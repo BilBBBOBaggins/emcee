@@ -1,67 +1,78 @@
-# Spec-driven (C+) — контракт-первый цикл для жёстких контрактов
+# Spec-driven (C+) — the contract-first cycle for hard contracts
 
-Метод для задач с **жёстким контрактом**: спека = проверяемый контракт, тест пишется ДО кода и
-**независимым** автором, а сами тесты проходят адверсивную вычитку. Цель — добавить **новый угол
-проверки** (oracle), а не автоматизировать прохождение гейтов. Вердикт и стопы — [ADR-002](../docs/adr/002-spec-driven-cplus.md).
+A method for tasks with a **hard contract**: the spec is a verifiable contract, the test is written
+BEFORE the code by an **independent** author, and the tests themselves go through an adversarial
+review pass. The goal is to add a **new verification angle** (an oracle), not to automate passing
+gates. The verdict and stop conditions — [ADR-002](../docs/adr/002-spec-driven-cplus.md).
 
-Это **методология, не исполняемый слой**: роли по-прежнему дёргаются вручную (`R D T`), per-task
-human-commit сохраняется. Workflow/skill-оркестратора в репозитории НЕТ (ADR-001/002).
+This is a **methodology, not an executable layer**: roles are still invoked manually (`R D T`),
+per-task human-commit is preserved. There is NO workflow/skill orchestrator in the repository
+(ADR-001/002).
 
-C+ ничего не изобретает — это **композиция известных практик** под агентный конвейер: contract-first
-testing (тест-как-контракт до кода), independent QA (автор тестов ≠ реализатор), mutation/adversarial
-mindset (атакуем покрытие, а не код). «C+» / «три oracle» — лишь локальные ярлыки для этой связки,
-не новая дисциплина.
+C+ invents nothing — it's a **composition of known practices** for an agentic pipeline:
+contract-first testing (test-as-contract before code), independent QA (test author ≠ implementer),
+a mutation/adversarial mindset (attack the coverage, not the code). "C+" / "three oracles" are just
+local labels for this combination, not a new discipline.
 
-## Когда применять (и когда НЕ применять)
+## When to apply it (and when NOT to)
 
-- **ДА — только жёсткие контракты:** парсеры/сериализаторы, вычислительные функции, валидаторы,
-  трансформации данных, протоколы. Это «Вариант 3: Classic TDD» из секции Testing philosophy входного файла регламента.
-- **НЕТ — живые продуктовые домены:** там спека дрейфует по ходу; замороженный тест закрепит
-  устаревшее ожидание (код подгонят под кривой тест). Для них — обычный Test-along/BDD-конвейер.
+- **YES — only hard contracts:** parsers/serializers, computational functions, validators, data
+  transformations, protocols. This is "Option 3: Classic TDD" from the Testing philosophy section
+  of the regimen entry file.
+- **NO — live product domains:** there the spec drifts as you go; a frozen test locks in a stale
+  expectation (the code gets bent to fit a broken test). For those — the regular Test-along/BDD
+  pipeline.
 
-Не уверен, жёсткий ли контракт → спроси пользователя, не применяй C+ по умолчанию.
+Not sure whether the contract is hard → ask the user, don't apply C+ by default.
 
-## Почему это даёт качество (а не «то же без рук»)
+## Why this delivers quality (not "the same thing without the effort")
 
-Manual-конвейер (qa-uat + reviewer) уже ловит много. C+ добавляет **три независимых oracle**, которых
-в обычном цикле нет:
+The manual pipeline (qa-uat + reviewer) already catches a lot. C+ adds **three independent
+oracles** that the regular cycle doesn't have:
 
-1. **Independent test-author ≠ implementer.** Тесты-контракт пишет НЕ тот, кто реализует —
-   отдельный вызов (developer-instance/qa-e2e) с чистым контекстом. Реализатор получает RED-тесты как
-   данность. Это убирает слепую зону «кодил и сам себе написал удобный тест».
-2. **Adversarial test-review.** Перед имплементацией — red-линза на САМИ тесты: «что эти тесты НЕ
-   ловят?» (граничные, отрицательные, режимы отказа). Атакуется покрытие, а не код. Выполняет
-   reviewer или роль red-team применительно к тестам (на Claude Code — субагент; на другом рантайме — прозовый прогон роли).
-3. **Codex-сверка контракта** на high-stakes — вторая независимая модель валидирует спеку/контракт
-   (команда — канонически в [second-model.md](second-model.md) §Как звать; при недоступности — фолбэк
-   усиленного self-critique с пометкой).
+1. **Independent test-author ≠ implementer.** The contract tests are written by someone OTHER than
+   the implementer — a separate invocation (a developer instance/qa-e2e) with clean context. The
+   implementer receives the RED tests as a given. This removes the blind spot of "coded it and
+   wrote themselves a convenient test."
+2. **Adversarial test-review.** Before implementation — a red lens on the tests THEMSELVES: "what do
+   these tests NOT catch?" (boundaries, negative cases, failure modes). The coverage is attacked,
+   not the code. Performed by reviewer or the red-team role applied to the tests (on Claude Code —
+   a subagent; on another runtime — a prose run of the role).
+3. **Codex contract cross-check** on high-stakes work — a second, independent model validates the
+   spec/contract (the command is canonically in [second-model.md](second-model.md) §How to call it;
+   if unavailable — the fallback is reinforced self-critique with a flag).
 
-## Цикл
+## The cycle
 
-1. **Spec-as-contract.** SA/architect доводят `docs/specs/<feature>.md` до проверяемого контракта:
-   вход/выход, инварианты, граничные случаи, режимы отказа — однозначно, без «и т.п.».
-2. **RED — независимый автор.** Отдельный вызов пишет падающие тесты строго по контракту. Тесты
-   должны падать по правильной причине (не из-за компиляции).
-3. **Adversarial test-review.** «Что контракт/тесты упускают?» Найденные пробелы → дописать тесты
-   (вернуться к шагу 2) ДО кода. На high-stakes — codex-сверка контракта здесь же.
-4. **GREEN — реализатор.** developer доводит до зелёного. **Не редактирует RED-тесты**, чтобы
-   «позеленело» (см. ниже). Меняется код, не контракт-тест.
-5. **Exit.** Constitution exit ([constitution.md](constitution.md)) + per-task human-commit, как обычно.
+1. **Spec-as-contract.** SA/architect bring `docs/specs/<feature>.md` to a verifiable contract:
+   input/output, invariants, boundary cases, failure modes — unambiguously, with no "and so on."
+2. **RED — the independent author.** A separate invocation writes failing tests strictly to the
+   contract. The tests must fail for the right reason (not a compile error).
+3. **Adversarial test-review.** "What does the contract/tests miss?" Gaps found → add more tests
+   (go back to step 2) BEFORE the code. On high-stakes work — the codex contract cross-check happens
+   right here.
+4. **GREEN — the implementer.** developer drives it to green. **Doesn't edit the RED tests** to make
+   it "go green" (see below). The code changes, not the contract test.
+5. **Exit.** The constitution exit ([constitution.md](constitution.md)) + per-task human-commit, as
+   usual.
 
-## Защитные правила (иначе цикл вредит)
+## Guardrails (otherwise the cycle backfires)
 
-- **Не править RED-тест ради зелёного.** Тест неверен → это дефект контракта: вернуться к шагу 1
-  (спека) и согласовать, а не подгонять тест под код или код под кривой тест.
-- **Правило трёх попыток** ([debugging.md](debugging.md)): не сходится за 3 содержательные попытки →
-  стоп, эскалация (архитектурный блок — к architect; баг — к debugger), не крутить loop вслепую.
-- **Маленький diff.** Если доведение до GREEN раздувает diff — это сигнал, что задача больше
-  контракта: остановиться, вернуть на декомпозицию (architect), а не наращивать.
+- **Don't edit the RED test to make it green.** A wrong test is a contract defect: go back to step 1
+  (the spec) and reconcile it, rather than bending the test to the code or the code to a broken
+  test.
+- **The three-attempt rule** ([debugging.md](debugging.md)): doesn't converge in 3 substantive
+  attempts → stop, escalate (an architectural blocker — to architect; a bug — to debugger), don't
+  spin the loop blind.
+- **Small diff.** If driving to GREEN balloons the diff — that's a signal the task is bigger than
+  the contract: stop, send it back for decomposition (architect), rather than piling on.
 
-## Стопы (из ADR-002)
+## Stop conditions (from ADR-002)
 
-- Применять C+ 2-3 реальные фичи и замерить: ловит ли **adversarial test-review** классы дефектов
-  сверх qa-uat+reviewer. Не ловит за 3 старта → откатить C+ (метод не окупился). **Чтобы замер был
-  фактом, а не интуицией** — веди opt-in лог перехватов `docs/PROCESS-METRICS.md` (шаблон —
-  `examples/docs/PROCESS-METRICS.example.md`): одна строка на пойманный дефект + вердикт по СТОП-3.
-- Исполняемый слой (Workflow/оркестратор) — НЕ строить, пока не назван и не достигнут порог боли
-  (ADR-002, СТОП-1/2).
+- Apply C+ to 2-3 real features and measure: does **adversarial test-review** catch classes of
+  defects beyond qa-uat+reviewer. Doesn't catch any in 3 starts → roll back C+ (the method didn't
+  pay for itself). **For the measurement to be a fact, not intuition** — keep an opt-in catch log at
+  `docs/PROCESS-METRICS.md` (template — `examples/docs/PROCESS-METRICS.example.md`): one line per
+  caught defect + a verdict against STOP-3.
+- The executable layer (a workflow/orchestrator) — do NOT build it until the pain threshold is
+  named and reached (ADR-002, STOP-1/2).

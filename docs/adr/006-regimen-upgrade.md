@@ -1,89 +1,96 @@
-# ADR-006: Обновление устаревшего регламента — делегирующая роль, а не код-движок
+# ADR-006: Upgrading a stale regimen — a delegating role, not a code engine
 
 Date: 2026-06-27
-Status: Accepted (реализовано: делегирующая roles/upgrader.md, report-first)
+Status: Accepted (implemented: delegating roles/upgrader.md, report-first)
 
-> Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md).
+> Decision reached by running the adversarial panel (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md).
 
-Решение прямо применяет решающий критерий [ADR-001](001-scope-process-overlay.md): делегирующая команда — да, сохранённый owned-результат — нет.
+The decision directly applies the decisive criterion from [ADR-001](001-scope-process-overlay.md): a delegating command — yes, a stored owned result — no.
 
-## Коротко
+## In short
 
-Кто принял пакет со старой версии, отстаёт: `--mode overlay` не перезатирает существующие файлы,
-поэтому старый регламент сам не обновляется. Очевидное решение — `--mode upgrade` с
-авто-перезаписью — отвергнуто: «package-owned vs user-owned» не делится по строке (`core/*.md` и
-`roles/*.md` несут ваши заполненные `{{placeholders}}`), а owned merge-движок — это ровно тот
-версионный долг, что запрещён ADR-001. Вместо движка — **дормантная роль `upgrader`**: агент
-обновляет регламент по git-диффу report-first, авто-применяет правки только к чистым файлам, а
-человек ревьюит и коммитит.
+Whoever adopted the package from an old version falls behind: `--mode overlay` doesn't
+overwrite existing files, so a stale regimen doesn't update itself. The obvious solution —
+`--mode upgrade` with auto-overwrite — was rejected: "package-owned vs. user-owned" doesn't split
+cleanly by file (`core/*.md` and `roles/*.md` carry your filled-in `{{placeholders}}`), and an
+owned merge engine is exactly the version debt that ADR-001 forbids. Instead of an engine —
+a **dormant `upgrader` role**: an agent updates the regimen from a git diff, report-first,
+auto-applies edits only to clean files, and a human reviews and commits.
 
-## Контекст
+## Context
 
-Тот, кто принял emcee со старой версии, отстаёт: `new-project.py --mode overlay` не
-перезатирает существующие файлы, поэтому старый регламент сам не обновляется. Нужен путь апгрейда.
-Наивная идея (`--mode upgrade` с авто-перезаписью package-owned) столкнулась с двумя фактами:
+Whoever adopted emcee from an old version falls behind: `new-project.py --mode overlay` doesn't
+overwrite existing files, so a stale regimen doesn't update itself. An upgrade path is needed. The
+naive idea (`--mode upgrade` with auto-overwrite of package-owned files) ran into two facts:
 
-1. **«package-owned vs user-owned» не делится по строке.** Файлы `core/*.md` и `roles/*.md` несут
-   заполняемые пользователем `{{placeholders}}` (в core: quality-gates, code-quality, principles,
-   task-protocol; в roles: qa-e2e/qa-uat по 8 штук и др.). Наивный `cp -r core/*` их сотрёт.
-2. **Зато граница вычислима по файлу.** Часть `core/` идёт без `{{` (это чистый package-owned), и
-   вся `.claude/agents|commands|hooks` — тоже без `{{`.
+1. **"package-owned vs. user-owned" doesn't split cleanly by file.** The files `core/*.md` and
+   `roles/*.md` carry user-filled `{{placeholders}}` (in core: quality-gates, code-quality,
+   principles, task-protocol; in roles: qa-e2e/qa-uat with 8 each, and others). A naive `cp -r
+   core/*` would erase them.
+2. **But the boundary is computable per file.** Part of `core/` ships without `{{` (that's pure
+   package-owned), and the whole `.claude/agents|commands|hooks` tree is also without `{{`.
 
-## Решение
+## Decision
 
-**Обновление — делегирующая роль `roles/upgrader.md`** (как День-0 делегирует init), **а не
-код-фича генератора. Owned-кода ноль.**
+**The upgrade is a delegating role, `roles/upgrader.md`** (the way Day 0 delegates init), **not
+a generator code feature. Zero owned code.**
 
-- **Не строим** `new-project.py --mode upgrade` с manifest/хэшами/3-way merge-движком: это
-  сохранённый версионный owned-результат + его миграции — ровно то, что запретил ADR-001 (тем же
-  тестом, что зарубил app-scaffold). Не строим и зависимость от copier/cruft: у ранних
-  overlay-проектов нет provenance-файла, а ретро-внедрить его = та же миграция.
-- **`roles/upgrader.md` (дормантная, ad-hoc):** агент обновляет регламент сам, по такому контракту:
-  - **кандидат-база из git:** свежий регламент генерируется во временный каталог теми же опциями
-    (подтвердить у оператора, не угадывать) — это реконструкция, а не сохранённый provenance; на
-    спорных option-зависимых файлах авто-применять нельзя;
-  - **классификация по файлу:** чистый package-owned (без `{{`) → можно авто; mixed/user (`CLAUDE.md`,
-    `roles.json`, `docs/`, файлы с заполненными `{{}}`) → авто не трогать;
-  - **report-first обязателен:** показать дрейф (`git diff`) + новые файлы + ADR-дельту **до** любых
-    правок;
-  - **авто только на чистых файлах** (запись в working tree); **никогда не авто-3-way на mixed**
-    (clean-but-wrong merge проходит молча, а regimen-doctor смысл нормы не проверяет);
-  - **человек ревьюит `git diff` и коммитит сам** (агент не коммитит).
+- **We don't build** `new-project.py --mode upgrade` with a manifest/hashes/3-way merge engine:
+  that's a stored, versioned, owned result + its migrations — exactly what ADR-001 forbids (by the
+  same test that killed the app scaffold). We also don't build a dependency on copier/cruft: early
+  overlay projects have no provenance file, and retrofitting one is the same migration.
+- **`roles/upgrader.md` (dormant, ad-hoc):** the agent updates the regimen itself, under this
+  contract:
+  - **a candidate baseline from git:** a fresh regimen is generated into a temp directory with the
+    same options (confirmed with the operator, not guessed) — this is a reconstruction, not stored
+    provenance; on files that depend on contested options, auto-apply is not allowed;
+  - **classification per file:** clean package-owned (no `{{`) → can be automatic;
+    mixed/user (`CLAUDE.md`, `roles.json`, `docs/`, files with filled-in `{{}}`) → automation
+    leaves them alone;
+  - **report-first is mandatory:** show the drift (`git diff`) + new files + the ADR delta
+    **before** any edits;
+  - **automatic only on clean files** (a write to the working tree); **never auto 3-way merge on
+    mixed files** (a clean-but-wrong merge would pass silently, and regimen-doctor doesn't check
+    the meaning of the norm);
+  - **the human reviews the `git diff` and commits themselves** (the agent doesn't commit).
 
-**Чинится немедленно и независимо** (баги, найденные панелью):
+**Fixed immediately and independently** (bugs found by the panel):
 
-- **`QUICKSTART.md`, трек А2:** инструкция `cp -r core/*` стирала заполненные `{{}}`. Переписана на
-  безопасный рецепт (авто только на чистых, mixed — через git diff) + указатель на upgrader.
-- **Латентный баг doctor у источника.** Генерик-ссылки `stack/{{stack}}.md` / `{{stack-file}}` /
-  `{{layers}}` ловились `regimen-doctor` как недозаполненные → проект никогда не становился зелёным.
-  Исправлено **нотацией**, а не allowlist'ом в коде (allowlist не привязан к пути и потому небезопасен):
-  генерик-метапеременные переведены в `<stack>` / `<stack-file>` (как уже принято для `<D>` / `<T>` /
-  `<slug>`), а `{{layers}}` заменён конкретным примером. Теперь `{{...}}` — исключительно сигнал
-  user-fill, и doctor корректен без изменений кода.
+- **`QUICKSTART.md`, track A2:** the `cp -r core/*` instruction erased filled-in `{{}}`. Rewritten
+  into a safe recipe (automatic only on clean files, mixed files via git diff) + a pointer to
+  upgrader.
+- **A latent doctor bug at the source.** Generic references `stack/{{stack}}.md` / `{{stack-file}}`
+  / `{{layers}}` were caught by `regimen-doctor` as unfilled → the project could never turn green.
+  Fixed by **notation**, not a code allowlist (an allowlist isn't tied to a path and is therefore
+  unsafe): generic meta-variables were converted to `<stack>` / `<stack-file>` (as already adopted
+  for `<D>` / `<T>` / `<slug>`), and `{{layers}}` was replaced with a concrete example. Now
+  `{{...}}` is exclusively a user-fill signal, and doctor is correct with no code changes.
 
-## Последствия
+## Consequences
 
-**Плюсы:** оператор получает рабочий upgrade немедленно (ad-hoc upgrader); ноль owned-кода и долга
-(охват ADR-001/003 цел); устранены два реальных бага; `{{...}}` снова чистый сигнал user-fill →
-regimen-doctor может достичь 🟢 на заполненном проекте.
+**Pros:** the operator gets a working upgrade immediately (ad-hoc upgrader); zero owned code and
+debt (the ADR-001/003 scope stays intact); two real bugs are fixed; `{{...}}` is once again a clean
+user-fill signal → regimen-doctor can reach 🟢 on a filled-in project.
 
-**Риски и открытые вопросы:**
+**Risks and open questions:**
 
-- [ ] Кандидат-база может оказаться неточной: реконструкция опций генерации из текущего дерева
-      может разойтись с фактическим происхождением проекта. Поэтому на файлах, зависящих от опций,
-      upgrader не авто-применяет правки, а выносит их на ручной merge. Остаточный риск принят
-      (manifest версии ради точности не строим).
-- [ ] Частота upgrade-эпизодов неизвестна: если апгрейды окажутся частыми и болезненными —
-      решение пересмотреть (но оно всё равно останется делегирующим, а не owned-движком).
+- [ ] The candidate baseline may turn out inaccurate: reconstructing generation options from the
+      current tree may diverge from the project's actual provenance. That's why, on files that
+      depend on options, upgrader doesn't auto-apply edits and instead routes them to a manual
+      merge. The residual risk is accepted (we don't build a version manifest for the sake of
+      accuracy).
+- [ ] The frequency of upgrade episodes is unknown: if upgrades turn out to be frequent and
+      painful, revisit the decision (but it will still remain delegating, not an owned engine).
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **`--mode upgrade` (owned merge + manifest).** Отклонён: сохранённый версионный owned-результат
-  противоречит ADR-001; манифеста версии + хэшей недостаточно для 3-way (нужен полный
-  answer-context = заново `.copier-answers.yml`); авто-3-way на регламенте даёт clean-but-wrong
-  молча.
-- **Зависимость copier/cruft.** Отклонён: ретро-внедрение provenance ранним проектам = та же
-  миграция; для соло избыточно. Упомянуто в `roles/upgrader.md` как опция для тех, кто сам хочет
-  тулинг.
-- **Allowlist `{{stack}}` в regimen-doctor.** Отклонён в пользу нотации `<stack>`: токен-allowlist
-  не привязан к пути, поэтому может скрыть реальный недозаполненный `{{}}` в `docs/` или `CLAUDE.md`.
+- **`--mode upgrade` (owned merge + manifest).** Rejected: a stored, versioned, owned result
+  contradicts ADR-001; a version manifest + hashes are not enough for a 3-way merge (a full
+  answer-context is needed — effectively a fresh `.copier-answers.yml`); auto 3-way merging on the
+  regimen produces clean-but-wrong results silently.
+- **A copier/cruft dependency.** Rejected: retrofitting provenance onto early projects is the same
+  migration; excessive for solo use. Mentioned in `roles/upgrader.md` as an option for those who
+  want their own tooling.
+- **An `{{stack}}` allowlist in regimen-doctor.** Rejected in favor of the `<stack>` notation: a
+  token allowlist isn't tied to a path, so it could hide a genuinely unfilled `{{}}` in `docs/` or
+  `CLAUDE.md`.

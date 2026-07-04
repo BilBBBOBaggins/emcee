@@ -1,93 +1,96 @@
-# Конституция — несущие non-negotiable правила проекта
+# Constitution — the project's load-bearing non-negotiable rules
 
-Короткий **индекс** несущих запретов, которые нельзя нарушать молча. Это НЕ источник правил —
-текст каждого правила живёт в каноническом файле (ID-тег стоит прямо у него). Здесь — только список,
-тип гейта и протокол сверки. Читается каждую сессию (см. входной файл регламента → «Обязательно читать»).
+A short **index** of load-bearing prohibitions that may not be silently violated. This is NOT the source of
+the rules — the text of each rule lives in its canonical file (the ID tag sits right next to it). Here —
+only the list, gate type, and check protocol. Read every session (see the regimen entry file →
+"Required reading").
 
-**Тип гейта:**
-- **mechanical** — проверяется хуком/командой (объективно).
-- **accountability** — суждение агента; «enforced» через **видимый контракт**: агент обязан явно
-  отчитаться о применимых правилах и отступлениях (см. протокол ниже). Сам себе судья — но под запись.
-- **Деградация (мультирантайм):** на рантайме, где у mechanical-гейта **нет энфорсера** (хука/
-  команды), он деградирует в accountability — агент подтверждает под запись, **обязательство не
-  исчезает**, меняется только класс принуждения. Какой гейт на каком рантайме аппаратен — в матрице
-  гарантий ([ADR-010](../docs/adr/010-multimodel-core-overlays.md)/[ADR-011](../docs/adr/011-process-layer-and-multimodel-build.md)).
+**Gate type:**
+- **mechanical** — checked by a hook/command (objectively).
+- **accountability** — agent judgment; "enforced" via a **visible contract**: the agent must explicitly
+  report on applicable rules and deviations (see the protocol below). Judge of itself — but on the record.
+- **Degradation (multi-runtime):** on a runtime where a mechanical gate has **no enforcer** (hook/
+  command), it degrades to accountability — the agent confirms on the record, **the obligation doesn't
+  vanish**, only the class of enforcement changes. Which gate is hardware-backed on which runtime — in the
+  guarantee matrix ([ADR-010](../docs/adr/010-multimodel-core-overlays.md)/[ADR-011](../docs/adr/011-process-layer-and-multimodel-build.md)).
 
-## Реестр
+## Registry
 
-| ID | Правило (кратко) | Канон | Гейт |
+| ID | Rule (brief) | Canon | Gate |
 |----|------------------|-------|------|
-| QG-NN-01 | Все тесты зелёные при завершении | [quality-gates.md](quality-gates.md) | mechanical: тест-раннер |
-| QG-NN-02 | Чистая сборка без warnings | [quality-gates.md](quality-gates.md) + `stack/*` «Чистая сборка» | mechanical: компилятор/линтер |
-| QG-NN-03 | LOC-пороги: перешёл → обоснуй цельность или split | [quality-gates.md](quality-gates.md) | accountability (warn: `.claude/hooks/check-loc.sh`) |
-| QG-NN-04 | «Сломал — чини»: не отключать/скипать/ослаблять тесты | [quality-gates.md](quality-gates.md) | accountability |
-| QG-NN-05 | Каждый атомарный критерий frozen scope наблюдаем **эффектом** в сборе (объявленный shipping-root, без bespoke-инъекции; state-selection — можно, outcome/wiring-ручка — нет) — [ADR-015](../docs/adr/015-assembled-reachability-gate.md) | [quality-gates.md](quality-gates.md) | accountability (warn-слот: static-adjunct per-stack) |
-| CQ-NN-01 | Без TODO/FIXME | [code-quality.md](code-quality.md) | mechanical(opt): `.claude/hooks/check-no-todo.sh` |
-| CQ-NN-02 | Слои однонаправленно, без обратных импортов | [code-quality.md](code-quality.md) | accountability |
-| CQ-NN-03 | Без закомментированного кода | [code-quality.md](code-quality.md) | accountability |
-| CQ-NN-04 | Security-минимум: секреты не в коде/логах, prepared statements | [code-quality.md](code-quality.md) | accountability |
-| PR-NN-01 | Не трогать вне задачи; запрещённые git-операции (stash/reset --hard/checkout --/bisect/rebase -i) | [principles.md](principles.md) | accountability |
-| PR-NN-02 | Не принимать арх-решения единолично; не коммитить за пользователя; не завершать сессию самому | [principles.md](principles.md) | accountability |
-| PR-NN-03 | Verification pass на любых находках (проверить каждый файл:строку до показа) | [principles.md](principles.md) | accountability |
+| QG-NN-01 | All tests green at completion | [quality-gates.md](quality-gates.md) | mechanical: test runner |
+| QG-NN-02 | Clean build with no warnings | [quality-gates.md](quality-gates.md) + `stack/*` "Clean build" | mechanical: compiler/linter |
+| QG-NN-03 | LOC thresholds: crossed → justify cohesion or split | [quality-gates.md](quality-gates.md) | accountability (warn: `.claude/hooks/check-loc.sh`) |
+| QG-NN-04 | "Broke it — fix it": don't disable/skip/weaken tests | [quality-gates.md](quality-gates.md) | accountability |
+| QG-NN-05 | Every atomic frozen-scope criterion is observable by effect under assembled reachability (declared shipping root, no bespoke injection; state-selection is allowed, an outcome/wiring handle is not) — [ADR-015](../docs/adr/015-assembled-reachability-gate.md) | [quality-gates.md](quality-gates.md) | accountability (warn slot: static-adjunct per-stack) |
+| CQ-NN-01 | No TODO/FIXME | [code-quality.md](code-quality.md) | mechanical(opt): `.claude/hooks/check-no-todo.sh` |
+| CQ-NN-02 | Layers unidirectional, no back-imports | [code-quality.md](code-quality.md) | accountability |
+| CQ-NN-03 | No commented-out code | [code-quality.md](code-quality.md) | accountability |
+| CQ-NN-04 | Security minimum: secrets not in code/logs, prepared statements | [code-quality.md](code-quality.md) | accountability |
+| PR-NN-01 | Don't touch what's outside the task; forbidden git operations (stash/reset --hard/checkout --/bisect/rebase -i) | [principles.md](principles.md) | accountability |
+| PR-NN-02 | Don't make architectural decisions unilaterally; don't commit for the user; don't end the session yourself | [principles.md](principles.md) | accountability |
+| PR-NN-03 | Verification pass on any findings (check every file:line before showing it) | [principles.md](principles.md) | accountability |
 
-Гейт-колонка называет энфорсер на **Claude Code** (`.claude/hooks/*`); на Codex эти mechanical-гейты
-энфорсера из конфига не имеют (KL-7: хуки в headless не срабатывают) → деградируют в accountability или
-выносятся в **CI/pre-commit**. Какой гейт где аппаратен — матрица гарантий ([portability.md](portability.md)).
+The gate column names the enforcer on **Claude Code** (`.claude/hooks/*`); on Codex these mechanical gates
+have no enforcer from config (KL-7: hooks don't fire in headless mode) → they degrade to accountability or
+get moved out to **CI/pre-commit**. Which gate is hardware-backed where — the guarantee matrix
+([portability.md](portability.md)).
 
-`stack/*`-конституции (специфика стека) и доменные non-negotiables (`domain/*`) — добавляй сюда же
-строками, ссылаясь на соответствующий файл. Список курируемый: 8–15 несущих, не свалка всех правил.
+`stack/*` constitutions (stack specifics) and domain non-negotiables (`domain/*`) — add them here too, as
+rows, linking to the corresponding file. The list is curated: 8–15 load-bearing items, not a dump of every
+rule.
 
-## Протокол сверки (Phase −1 и выход)
+## Check protocol (Phase −1 and exit)
 
-**Preflight (до имплементации задачи)** — короткий блок в начале работы:
+**Preflight (before task implementation)** — a short block at the start of the work:
 
 ~~~
 Constitution preflight:
-- Применимо: QG-NN-01, CQ-NN-02, PR-NN-01   (только релевантные задаче)
-- Планируемые отступления: нет
+- Applicable: QG-NN-01, CQ-NN-02, PR-NN-01   (only what's relevant to the task)
+- Planned deviations: none
 ~~~
 
-**Отступление от non-negotiable планируется?** → СТОП, согласовать с пользователем ДО имплементации
-(см. [task-protocol.md](task-protocol.md) → протокол при неоднозначности). Молча отступать нельзя.
+**Is a deviation from a non-negotiable planned?** → STOP, align with the user BEFORE implementation
+(see [task-protocol.md](task-protocol.md) → protocol for ambiguity). Silent deviation is not allowed.
 
-**Exit (перед отметкой «done»)** — в отчёте задачи:
+**Exit (before marking "done")** — in the task report:
 
 ~~~
 Constitution exit:
-- Mechanical: тесты ✓ · clean build ✓ · (TODO-hook ✓)
-- Accountability: scope не расширен · слои не нарушены · LOC-пороги (обоснованы/split) · без закомментированного кода · секретов нет
-- Отступления: нет
+- Mechanical: tests ✓ · clean build ✓ · (TODO hook ✓)
+- Accountability: scope not expanded · layers not violated · LOC thresholds (justified/split) · no commented-out code · no secrets
+- Deviations: none
 ~~~
 
-**Отступление, найденное только на выходе** = задача **НЕ done**, пока не исправлено ИЛИ пользователь
-явно не принял риск. Тихий «constitution OK» без конкретики — это не отчёт (= [principles.md](principles.md)
-→ PR-NN-03: без доказательств не считается).
+**A deviation found only at exit** = the task is **NOT done** until fixed OR the user explicitly accepts
+the risk. A silent "constitution OK" with no specifics is not a report (= [principles.md](principles.md) →
+PR-NN-03: without evidence it doesn't count).
 
-## Depth-тиры — церемония по размеру задачи (Inline / Atomic / Full)
+## Depth tiers — ceremony scaled to task size (Inline / Atomic / Full)
 
-Полный preflight/exit рассчитан на задачу-фичу; на мелочи он сам дороже работы. Три тира — вес сверки
-по тому, **что задача трогает** (не по числу строк):
+A full preflight/exit is sized for a feature-sized task; on small things it costs more than the work
+itself. Three tiers — how much check-in weight scales to **what the task touches** (not line count):
 
-- **Inline** — тривиальная правка: один файл, не трогает контракты/слои/схему/секреты/внешний
-  интерфейс, не добавляет зависимость, легко-revert (опечатка, текст в доке, одна строка,
-  переименование локальной переменной, формат-фикс). → **micro-exit одной строкой**:
+- **Inline** — a trivial edit: one file, doesn't touch contracts/layers/schema/secrets/external
+  interface, adds no dependency, easily reverted (a typo, doc text, one line, renaming a local variable, a
+  format fix). → **one-line micro-exit**:
   ~~~
-  Constitution micro-exit: тривиально (1 файл, контракты/слои/секреты не тронуты) · сборка/тест ✓ · отступлений нет
+  Constitution micro-exit: trivial (1 file, contracts/layers/secrets untouched) · build/test ✓ · no deviations
   ~~~
-- **Atomic** — одно сфокусированное изменение = логический юнит (может затронуть 2-3 связанных
-  файла), но **не вводит** новый контракт/слой/архитектуру/зависимость/внешний интерфейс. →
-  **лёгкий preflight** (одна строка: применимые правила + «отступлений нет») + **лёгкий exit**
-  (mechanical ✓ + одна строка accountability: scope не расширен, слои/секреты не тронуты).
-- **Full** — задача-фича: вводит или меняет контракт, слой, схему, внешний интерфейс, зависимость,
-  либо многофайловый рефактор. → **полный блок preflight + exit** (выше).
+- **Atomic** — one focused change = a logical unit (may touch 2-3 related files), but does **not
+  introduce** a new contract/layer/architecture/dependency/external interface. → **light preflight** (one
+  line: applicable rules + "no deviations") + **light exit** (mechanical ✓ + one accountability line:
+  scope not expanded, layers/secrets untouched).
+- **Full** — a feature-sized task: introduces or changes a contract, layer, schema, external interface,
+  dependency, or a multi-file refactor. → **full preflight + exit block** (above).
 
-Atomic = единица проверки «один логический юнит = один прогон» ([quality-gates.md](quality-gates.md)).
+Atomic = the unit of the "one logical unit = one run" check ([quality-gates.md](quality-gates.md)).
 
-Правила тиров (иначе они — лазейка):
-- **Mechanical-гейты НЕ ослабляются ни на одном тире:** тесты зелёные + чистая сборка (QG-NN-01/02)
-  обязательны везде — hard-гейт, не отчётность.
-- **Любой сигнал большего размера → поднимай тир** (Inline→Atomic→Full): всплыл контракт/слой/
-  секрет/внешний контур, правка поползла за рамки юнита, или планируется отступление от
-  non-negotiable. При сомнении «какой тир» — бери старший.
-- Это сокращение **отчёта**, не правил. Все non-negotiable действуют на каждом тире; короче только
-  их подтверждение.
+Tier rules (otherwise they're a loophole):
+- **Mechanical gates are NOT weakened at any tier:** green tests + clean build (QG-NN-01/02) are
+  mandatory everywhere — a hard gate, not a report.
+- **Any signal of larger size → raise the tier** (Inline→Atomic→Full): a contract/layer/secret/external
+  boundary surfaces, the edit creeps beyond the unit, or a deviation from a non-negotiable is planned. When
+  in doubt about "which tier" — take the higher one.
+- This shortens the **report**, not the rules. All non-negotiables apply at every tier; only their
+  confirmation is shorter.

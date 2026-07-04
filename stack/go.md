@@ -1,43 +1,43 @@
-# Go — правила работы со стеком
+# Go — stack rules
 
-Специфические правила для Go-кода. Общие принципы в [core/](../core/).
+Go-specific code rules. General principles are in [core/](../core/).
 
-## Версия и модули
+## Version and modules
 
-- Go 1.23+ (требуется для современных features и performance improvements)
-- `go.mod` — single source of truth для версий зависимостей
-- Запрет на `replace` directives в production — только для локальной разработки в заблокированных ветках
-- Запрет на vendoring (папка `vendor/`) если не требуется специально для air-gapped сред
-- Регулярное обновление `go.sum` — безопасность зависимостей проверяется через `govulncheck`
+- Go 1.23+ (required for modern features and performance improvements)
+- `go.mod` — single source of truth for dependency versions
+- `replace` directives forbidden in production — only for local development on locked branches
+- Vendoring (`vendor/` folder) forbidden unless specifically required for air-gapped environments
+- Keep `go.sum` regularly updated — dependency security is checked via `govulncheck`
 
-## Структура проекта
+## Project structure
 
-Стандартная layout:
+Standard layout:
 
 ~~~
-cmd/                    # entry points (main.go для каждого бинаря)
+cmd/                    # entry points (main.go for each binary)
   api/                  # HTTP API server
   worker/               # background worker
-internal/               # закрыто от внешних импортов
-  domain/               # domain entities и business rules
+internal/               # closed to external imports
+  domain/               # domain entities and business rules
   service/              # use cases
   repository/           # data access
   transport/            # HTTP handlers, middleware
-pkg/                    # публичный API, если проект как библиотека
+pkg/                    # public API, if the project is a library
 api/                    # OpenAPI specs, protobuf definitions
-migrations/             # SQL миграции
+migrations/             # SQL migrations
 ~~~
 
-Правила:
+Rules:
 
-- `internal/` — закрыт от внешних импортов, всё приватное кладётся сюда
-- `pkg/` — используется только если проект экспортирует библиотеку, не для "общего кода проекта"
-- `cmd/` — минимум кода, только wiring зависимостей и запуск
-- Бизнес-логика никогда не живёт в `cmd/`
+- `internal/` — closed to external imports, all private code lives here
+- `pkg/` — used only if the project exports a library, not for "shared project code"
+- `cmd/` — minimal code, only dependency wiring and startup
+- Business logic never lives in `cmd/`
 
-## Обработка ошибок
+## Error handling
 
-Native Go pattern с обязательным wrapping:
+Native Go pattern with mandatory wrapping:
 
 ~~~go
 if err != nil {
@@ -45,12 +45,12 @@ if err != nil {
 }
 ~~~
 
-Правила:
+Rules:
 
-- Каждая ошибка wrapped с контекстом (что делали, с какими параметрами)
-- `%w` для сохранения цепочки, не `%v` или `%s`
-- Sentinel errors через `errors.Is` и `errors.As`, не через строковое сравнение
-- Типизированные ошибки через custom error types для разных категорий:
+- Every error is wrapped with context (what was being done, with which parameters)
+- `%w` to preserve the chain, not `%v` or `%s`
+- Sentinel errors via `errors.Is` and `errors.As`, not string comparison
+- Typed errors via custom error types for different categories:
 
 ~~~go
 type ValidationError struct {
@@ -63,20 +63,20 @@ func (e *ValidationError) Error() string {
 }
 ~~~
 
-- `panic` запрещён в production коде кроме инициализации (init functions, startup validation)
-- `recover` используется только в top-level handlers (HTTP middleware, goroutine wrappers)
+- `panic` is forbidden in production code except during initialization (init functions, startup validation)
+- `recover` is used only in top-level handlers (HTTP middleware, goroutine wrappers)
 
 ## Concurrency
 
-Goroutines + channels как основной паттерн. Правила:
+Goroutines + channels as the primary pattern. Rules:
 
-- Запуск goroutine без способа её остановить — запрещён. Всегда `context.Context` для cancellation
-- `context.Context` — первый параметр в public методах которые делают IO или запускают горутины
-- Worker pool pattern для bounded concurrency, не unbounded spawning
-- Shared mutable state либо отсутствует (actor pattern через каналы), либо защищён `sync.RWMutex`
-- `go func() { ... }()` без обработки panic запрещён — каждая goroutine имеет recover в начале
+- Launching a goroutine with no way to stop it is forbidden. Always use `context.Context` for cancellation
+- `context.Context` — first parameter in public methods that do IO or launch goroutines
+- Worker pool pattern for bounded concurrency, not unbounded spawning
+- Shared mutable state either doesn't exist (actor pattern via channels) or is protected by `sync.RWMutex`
+- `go func() { ... }()` without panic handling is forbidden — every goroutine has a recover at the start
 
-Паттерн безопасной goroutine:
+Safe goroutine pattern:
 
 ~~~go
 func (s *Service) processAsync(ctx context.Context, task Task) {
@@ -94,53 +94,53 @@ func (s *Service) processAsync(ctx context.Context, task Task) {
 }
 ~~~
 
-## База данных
+## Database
 
-- **sqlc** для генерации типизированного кода из SQL
-- **Goose** для миграций
-- SQL в отдельных файлах, не inline в Go-коде
-- Запрет на ORM (GORM, Ent и подобные) — они скрывают performance issues, генерируют плохой SQL, усложняют дебаг
-- Prepared statements для всех запросов с user input — sqlc делает это автоматически
-- Транзакции через explicit `tx, err := db.Begin()` с обязательным `defer tx.Rollback()` и явным `tx.Commit()`
+- **sqlc** to generate typed code from SQL
+- **Goose** for migrations
+- SQL in separate files, not inline in Go code
+- ORMs forbidden (GORM, Ent, and similar) — they hide performance issues, generate bad SQL, complicate debugging
+- Prepared statements for all queries with user input — sqlc does this automatically
+- Transactions via explicit `tx, err := db.Begin()` with mandatory `defer tx.Rollback()` and explicit `tx.Commit()`
 
-Структура:
+Structure:
 
 ~~~
 internal/repository/
-  queries/              # .sql файлы для sqlc
+  queries/              # .sql files for sqlc
     user.sql
     order.sql
-  sqlc.yaml             # конфиг sqlc
-  db/                   # сгенерированный код (не редактируется вручную)
-  user_repo.go          # обёртка над сгенерированным кодом с бизнес-логикой
+  sqlc.yaml             # sqlc config
+  db/                   # generated code (not edited by hand)
+  user_repo.go          # wrapper over generated code with business logic
 migrations/
   001_initial.up.sql
   001_initial.down.sql
 ~~~
 
-## HTTP-фреймворк
+## HTTP framework
 
-Выбор в порядке предпочтения:
+Choice, in order of preference:
 
-1. **Echo** — быстрее Gin, меньше магии, хорошие middleware. Рекомендуется для большинства проектов.
-2. **Chi** — минималистичный, если не нужен богатый функционал Echo
-3. **Стандартная библиотека** (`net/http` + `http.ServeMux` из Go 1.22+) — для библиотек или максимального контроля
+1. **Echo** — faster than Gin, less magic, good middleware. Recommended for most projects.
+2. **Chi** — minimalist, if Echo's richer feature set isn't needed
+3. **Standard library** (`net/http` + `http.ServeMux` from Go 1.22+) — for libraries or maximum control
 
-Запрещено без явного обоснования:
+Forbidden without explicit justification:
 
-- Gin (больше магии чем нужно, performance уступает Echo в новых версиях)
-- Fiber (не стандартный `net/http`, проблемы с middleware ecosystem)
-- Beego (тяжеловесный, не Go-way)
+- Gin (more magic than needed, performance trails Echo in recent versions)
+- Fiber (not standard `net/http`, issues with the middleware ecosystem)
+- Beego (heavyweight, not Go-way)
 
-## Тесты
+## Tests
 
-- **testify** для assertions (`require` когда дальше нельзя продолжать тест, `assert` когда можно)
-- **gomock** или `testify/mock` для моков
-- Table-driven tests как стандарт для multiple cases
-- Integration tests в том же пакете что unit tests, разделение через build tags
-- Coverage-отчёт (диагностика дыр, не целевой процент — см. `roles/qa-e2e.md` §Coverage-диагностика): `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out`; HTML-карта — `go tool cover -html=coverage.out -o coverage.html`
+- **testify** for assertions (`require` when the test can't continue further, `assert` when it can)
+- **gomock** or `testify/mock` for mocks
+- Table-driven tests as the standard for multiple cases
+- Integration tests in the same package as unit tests, separated via build tags
+- Coverage report (diagnoses gaps, not a target percentage — see `roles/qa-e2e.md` §Coverage diagnostics): `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out`; HTML map — `go tool cover -html=coverage.out -o coverage.html`
 
-Паттерн table-driven:
+Table-driven pattern:
 
 ~~~go
 func TestValidateEmail(t *testing.T) {
@@ -167,7 +167,7 @@ func TestValidateEmail(t *testing.T) {
 }
 ~~~
 
-Build tags для разделения:
+Build tags for separation:
 
 ~~~go
 //go:build integration
@@ -175,32 +175,32 @@ Build tags для разделения:
 package repository_test
 ~~~
 
-Запуск:
+Run:
 
 ~~~bash
 go test ./...                          # unit tests
 go test -tags=integration ./...        # integration tests
 ~~~
 
-## Чистая сборка (clean build)
+## Clean build
 
-Конкретизация правила «без warnings» из [quality-gates.md](../core/quality-gates.md) для Go. «Чисто» = все команды зелёные:
+Concretization of the "no warnings" rule from [quality-gates.md](../core/quality-gates.md) for Go. "Clean" = all commands green:
 
 ~~~bash
-go build ./...                          # компиляция без ошибок
-go vet ./...                            # подозрительные конструкции
-golangci-lint run                       # линтеры (см. ниже) без нарушений
-test -z "$(gofmt -l .)"                 # 0 неотформатированных файлов
-go test ./...                           # unit-тесты зелёные
+go build ./...                          # compiles without errors
+go vet ./...                            # suspicious constructs
+golangci-lint run                       # linters (see below) with no violations
+test -z "$(gofmt -l .)"                 # 0 unformatted files
+go test ./...                           # unit tests green
 ~~~
 
-Любое из: ошибка компиляции, замечание `go vet`, нарушение линтера, неотформатированный файл, красный тест = задача не завершена. Подавление (`//nolint`, `//nolint:errcheck`) — только с причиной в комментарии рядом.
+Any of: a compile error, a `go vet` finding, a linter violation, an unformatted file, a red test = the task is not done. Suppression (`//nolint`, `//nolint:errcheck`) — only with a reason in a comment right next to it.
 
-## Логирование
+## Logging
 
-- **slog** из стандартной библиотеки (Go 1.21+)
-- Запрет на `logrus`, `zap`, `log/v2` и сторонние логгеры — стандарт языка достаточен
-- Structured logging через ключ-значение:
+- **slog** from the standard library (Go 1.21+)
+- `logrus`, `zap`, `log/v2`, and third-party loggers are forbidden — the language standard is sufficient
+- Structured logging via key-value:
 
 ~~~go
 logger.Info("order processed",
@@ -210,41 +210,41 @@ logger.Info("order processed",
 )
 ~~~
 
-- Уровни: Debug (dev-only), Info (normal operations), Warn (unusual but recoverable), Error (failures)
-- Запрет на логирование sensitive data: пароли, токены, ПД, номера карт. Если поле содержит что-то из этого — `[REDACTED]`
-- Context-aware logging через `slog.Default()` с context values (trace_id, tenant_id)
+- Levels: Debug (dev-only), Info (normal operations), Warn (unusual but recoverable), Error (failures)
+- Logging sensitive data is forbidden: passwords, tokens, PII, card numbers. If a field contains any of this — `[REDACTED]`
+- Context-aware logging via `slog.Default()` with context values (trace_id, tenant_id)
 
-## Линтинг
+## Linting
 
-**golangci-lint** с строгим конфигом. Обязательные линтеры:
+**golangci-lint** with a strict config. Required linters:
 
-- `errcheck` — необработанные ошибки
-- `govet` — подозрительные конструкции
+- `errcheck` — unhandled errors
+- `govet` — suspicious constructs
 - `staticcheck` — bugs, unused code, performance
-- `gofmt` / `goimports` — форматирование
+- `gofmt` / `goimports` — formatting
 - `gosec` — security issues
-- `ineffassign` — присваивания которые не используются
-- `unconvert` — ненужные type conversions
-- `misspell` — опечатки в строках и комментариях
-- `revive` — стилистические правила
+- `ineffassign` — assignments that are never used
+- `unconvert` — unnecessary type conversions
+- `misspell` — typos in strings and comments
+- `revive` — stylistic rules
 
-Warnings не допускаются — см. [quality-gates.md](../core/quality-gates.md).
+Warnings are not allowed — see [quality-gates.md](../core/quality-gates.md).
 
-Пример `.golangci.yml` в проекте.
+Example `.golangci.yml` in the project.
 
-## Специфические запреты
+## Specific prohibitions
 
-- `init()` функции — только для регистрации (database drivers, encoding formats). Никакой бизнес-логики, никаких side effects
-- Global state (global variables with business data) — запрещён. Всё через dependency injection
-- `reflect` — только для сериализации (JSON, protobuf). Не для "метапрограммирования"
-- `unsafe` — запрещён без явного обоснования и ADR
-- `iota` для non-sequential enumerations — избегать, писать явно
-- Named return values для функций длиннее 10 строк — затрудняет чтение
-- `interface{}` / `any` в public API — избегать, использовать generics или типизированные интерфейсы
+- `init()` functions — only for registration (database drivers, encoding formats). No business logic, no side effects
+- Global state (global variables with business data) — forbidden. Everything via dependency injection
+- `reflect` — only for serialization (JSON, protobuf). Not for "metaprogramming"
+- `unsafe` — forbidden without explicit justification and an ADR
+- `iota` for non-sequential enumerations — avoid, write explicitly
+- Named return values for functions longer than 10 lines — hurts readability
+- `interface{}` / `any` in public API — avoid, use generics or typed interfaces
 
-## Go-специфичные паттерны
+## Go-specific patterns
 
-**Dependency injection через struct embedding или explicit**:
+**Dependency injection via struct embedding or explicit construction**:
 
 ~~~go
 type OrderService struct {
@@ -258,8 +258,8 @@ func NewOrderService(repo OrderRepository, payments PaymentService, logger *slog
 }
 ~~~
 
-Запрет на DI-фреймворки (wire, fx) на старте — конструкторы достаточны.
+DI frameworks (wire, fx) are forbidden at the start — constructors are sufficient.
 
-**Interfaces определяются в месте использования**, не в месте реализации. Если `OrderService` использует `OrderRepository`, интерфейс `OrderRepository` объявлен рядом с `OrderService`, не рядом с конкретной реализацией.
+**Interfaces are defined at the point of use**, not at the point of implementation. If `OrderService` uses `OrderRepository`, the `OrderRepository` interface is declared next to `OrderService`, not next to the concrete implementation.
 
-**Ошибки пробрасываются, не обрабатываются молча**. `log.Println(err); return nil` — запрещено. Либо ошибка пробрасывается вверх, либо обрабатывается явно (retry, fallback, user notification).
+**Errors are propagated, not silently swallowed**. `log.Println(err); return nil` is forbidden. Either the error is propagated upward, or it's handled explicitly (retry, fallback, user notification).

@@ -1,110 +1,121 @@
-# ADR-003: «Первый километр» — чиним висящий вход правкой, интейк-пайплайн откладываем
+# ADR-003: The "first kilometer" — fix the dangling entry point with an edit, defer the intake pipeline
 
 Date: 2026-06-27
-Status: Accepted (реализовано: висящий вход закрыт правкой; канон-интейк остаётся под гейтом O1 — гейт открыт, это не блокер статуса)
+Status: Accepted (implemented: the dangling entry point is closed by the edit; canonical intake
+remains under gate O1 — the gate is open, this is not a status blocker)
 
-> Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md). Оно применяет нормы [ADR-001](001-scope-process-overlay.md) (process-overlay, не фреймворк управления проектами; без owned-долга) и [ADR-002](002-spec-driven-cplus.md) (не строить под неизмеренную боль) к «первому километру».
+> Decision reached by running the adversarial panel (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md). It applies the norms of [ADR-001](001-scope-process-overlay.md) (process overlay, not a project-management framework; no owned debt) and [ADR-002](002-spec-driven-cplus.md) (don't build for unmeasured pain) to the "first kilometer."
 
-## Коротко
+## In short
 
-«Первый километр» — это вход в проект: какую задачу взять первой. Аудит вскрыл дефект: роли
-обязывали архитектора «разбивать **roadmap**», но roadmap ничто не производит — это фантомный,
-несуществующий артефакт. Корневая дыра закрывается **правкой одной строки**: архитектор разбивает не
-roadmap, а «следующий срез» из уже существующего `docs/PROJECT-STATE.md`. Полноценный
-интейк-пайплайн (интервью → product-brief → roadmap → backlog) **не строим** — это разрастание
-охвата в сторону управления проектами, что запрещено охватом пакета. Нужен ли интейк вообще — решит
-ретроспектива 2–3 реальных стартов, а не дебат моделей.
+"The first kilometer" is the entry into a project: which task to take on first. An audit exposed
+a defect: the roles required the architect to "break down the **roadmap**," but a roadmap produces
+nothing — it's a phantom, non-existent artifact. The root hole is closed by a **one-line edit**: the
+architect breaks down not a roadmap, but the "next slice" from the already-existing
+`docs/PROJECT-STATE.md`. We do **not** build a full intake pipeline (interview → product brief →
+roadmap → backlog) — that would be scope creep toward project management, which the package's scope
+forbids. Whether intake is needed at all will be decided by a retrospective on 2–3 real starts, not
+by a debate between models.
 
-## Контекст
+## Context
 
-Аудит пакета на достаточность для соло выявил разрыв «первого километра». Файлы `roles/architect.md`
-и `core/task-protocol.md` обязывали архитектора «разбивать **roadmap**» в `docs/day-<N>-guide.md`,
-но **сам roadmap ничто не производит**, и его даже нет строкой в канонической таблице артефактов.
-Это фантомный вход: соло-оператор не знает, какая задача 1 правильная.
+An audit of the package's sufficiency for solo use revealed the "first kilometer" gap. The files
+`roles/architect.md` and `core/task-protocol.md` required the architect to "break down the
+**roadmap**" into `docs/day-<N>-guide.md`, but **the roadmap itself produces nothing**, and it isn't
+even a line in the canonical artifact table. This is a phantom entry point: the solo operator
+doesn't know which task 1 is the right one.
 
-В первом варианте (v1) предлагался интейк-процесс: архитектор интервьюирует пользователя и
-генерирует цепочку `docs/product-brief.md → roadmap.md → backlog.md → day-1-guide.md`, плюс
-классификация проекта по **сложности** (lightweight «бот-класс» vs full «SaaS-класс»),
-которую выбирает пользователь. Новые артефакты канонизируются в task-protocol и бутстрапятся
-генератором.
+The first draft (v1) proposed an intake process: the architect interviews the user and generates
+the chain `docs/product-brief.md → roadmap.md → backlog.md → day-1-guide.md`, plus a project
+classification by **complexity** (lightweight "bot class" vs. full "SaaS class") chosen by the
+user. New artifacts would be canonized in task-protocol and bootstrapped by the generator.
 
-Ground truth оператора (соло): вес процесса масштабируется по **сложности проекта**, а не по числу
-людей. Простой бот живёт в одном окне; сложный B2B-продукт без полного пайплайна вообще бы не появился.
+The operator's ground truth (solo): process weight scales with **project complexity**, not
+headcount. A simple bot lives in a single window; a complex B2B product wouldn't have come into
+being at all without the full pipeline.
 
-## Решение
+## Decision
 
-**Patch-only гибрид. Полный интейк-пайплайн (v1) не строим.** Вердикт арбитра: дыра реальна, но v1
-лечит её неверной осью, неверной гранулярностью и непропорционально тяжёлой реализацией.
+**A patch-only hybrid. We do not build the full intake pipeline (v1).** The arbiter's verdict:
+the hole is real, but v1 fixes it along the wrong axis, at the wrong granularity, and with a
+disproportionately heavy implementation.
 
-**Построено сейчас** (безусловно; это чистая текстовая правка существующих артефактов, 0 новых):
+**Built now** (unconditionally; a pure text edit of existing artifacts, 0 new ones):
 
-- В `core/task-protocol.md` (таблица) и `roles/architect.md` (строки 14, 42, 62, 64, 68) формулировка
-  «разбивает **roadmap**» заменена на «разбивает **следующий срез** из `docs/PROJECT-STATE.md`
-  (раздел «Следующий день» / Open questions) или `docs/specs/`». Источник среза реально существует:
-  стаб PROJECT-STATE в `new-project.py` уже несёт разделы «В работе» / «Следующий день» / «Open
-  questions». Долгосрочный план (roadmap) — опционален и за пользователем; архитектор его не
-  сочиняет, а лишь раскладывает уже расставленные пользователем приоритеты (см. `architect.md` →
-  бизнес-приоритеты; конституция PR-NN-02).
-- В `examples/docs/PROJECT-STATE.example.md` и `examples/README.md` убраны ссылки на «backlog» и
-  «разбивает roadmap».
+- In `core/task-protocol.md` (the table) and `roles/architect.md` (lines 14, 42, 62, 64, 68), the
+  wording "breaks down the **roadmap**" is replaced with "breaks down the **next slice** from
+  `docs/PROJECT-STATE.md` (the "Next day" / Open questions section) or `docs/specs/`." The source
+  of the slice actually exists: the PROJECT-STATE stub in `new-project.py` already carries "In
+  progress" / "Next day" / "Open questions" sections. A long-term plan (roadmap) is optional and up
+  to the user; the architect doesn't invent it, only lays out priorities the user has already set
+  (see `architect.md` → business priorities; constitution PR-NN-02).
+- In `examples/docs/PROJECT-STATE.example.md` and `examples/README.md`, references to "backlog" and
+  "breaks down the roadmap" are removed.
 
-**Что не строим** (зарублено панелью):
+**What we don't build** (killed by the panel):
 
-- `roadmap.md` / `backlog.md` / `product-brief.md` как **канонические артефакты** пакета. Это
-  разрастание охвата в сторону управления проектами и owned семантический долг, противоречащий
-  ADR-001; роли пакета намеренно не
-  определяют продуктовые приоритеты (`roles/sa.md`, `roles/architect.md`). Backlog к тому же мёртв —
-  его функцию уже несёт PROJECT-STATE.
-- **Классификацию проекта по сложности как жёсткий ярлык.** Каденция в пакете уже работает
-  per-decision: адверсивная панель триггерится на цене ошибки и необратимости, C+ — на жёстком
-  контракте. Per-project ярлык по «сложности» дублирует и огрубляет этот существующий механизм.
-- **Дефолт «не уверен → полный процесс».** Это против осознанного дефолта ADR-001 (test-along +
-  solo role-map). Дефолт остаётся lightweight; тяжёлый процесс — только за явным сигналом.
+- `roadmap.md` / `backlog.md` / `product-brief.md` as **canonical artifacts** of the package. This
+  is scope creep toward project management and owned semantic debt that contradicts ADR-001; the
+  package's roles deliberately do not define product priorities (`roles/sa.md`,
+  `roles/architect.md`). The backlog is also dead weight — PROJECT-STATE already carries its
+  function.
+- **A hard-label project classification by complexity.** The package's cadence already works
+  per-decision: the adversarial panel is triggered by the cost of error and irreversibility, C+ by
+  a hard contract. A per-project "complexity" label duplicates and coarsens this existing
+  mechanism.
+- **A default of "not sure → full process."** This runs against the deliberate ADR-001 default
+  (test-along + solo role map). The default remains lightweight; the heavy process only kicks in on
+  an explicit signal.
 
-**Решающий критерий (одной фразой):** корневая дыра закрывается правкой одной строки + патчем одной
-роли; всё сверх этого (интейк-интервью, route-hint) — это ставка на ценность, которую техника не
-разрешает, а разрешит только эмпирика реальных стартов.
+**Decisive criterion (in one sentence):** the root hole is closed by a one-line edit + a patch
+to one role; anything beyond that (an intake interview, a route hint) is a bet on value that
+architecture cannot settle — only empirical evidence from real starts can.
 
-## Последствия
+## Consequences
 
-**Плюсы:** висящий вход архитектора устранён без единого нового артефакта и без owned-долга (охват
-ADR-001 цел); охват не протёк в сторону управления проектами; per-decision каденция (панель / C+) не тронута и не задублирована;
-дефолт ADR-001 (lightweight) не сдвинут.
+**Pros:** the architect's dangling entry point is eliminated without a single new artifact and
+without owned debt (the ADR-001 scope stays intact); scope hasn't leaked toward project management;
+the per-decision cadence (panel / C+) is untouched and not duplicated; the ADR-001 default
+(lightweight) is unchanged.
 
-**Риски и открытые вопросы:**
+**Risks and open questions:**
 
-- [ ] **Нужен ли интейк-протокол вообще** (эмпирический гейт «O1»): закрывается ретроспективой 2–3
-      реальных стартов — если потери на входе не было, интейк-интервью не строить никогда. Дебат
-      моделей это не разрешает. Вопрос конкретно: была ли реальная потеря на «какая задача 1
-      правильная», или оператор держит срез в голове и нужна была только перенаправка входа (это та же
-      ретроспектива, что O2 в ADR-001).
-- [ ] Нужен ли route-hint при декомпозиции (анкер «O2») — рекомендация вида «много доменных стыков →
-      рассмотреть конвейер SA/BA/QA-UAT; мало → developer+reviewer в одном окне»? Здесь предиктор —
-      число доменных стыков, а не цена бага; вес верификации (панель/C+) не трогать; решает оператор.
-      Или хватает opt-in `--testing bdd` + интуиции оператора (она уже есть: бот-класс vs SaaS-класс).
-      Строить только под подтверждённую пользу, не проактивно.
-- [ ] Соло-проверка входа (анкер «O3»): если интейк будет построен (O1), один оператор не отличает
-      «гейт прочитан» от «гейт проштампован» без второй пары глаз — остаточный риск соло-режима (как
-      НП2 в ADR-001). Кандидат-митигация (из разбора superpowers): отдельный субагент design-review со
-      свежим контекстом как вторая пара глаз на сам срез **до** кода. Это **не** расширение текущего
-      `reviewer` (тот ревьюит код после developer, read-only) и не C+ (тот только для жёстких
-      контрактов, не для живого домена) — это новая pre-code роль проверки входа. Под тем же жёстким
-      стопом: строить только при подтверждённой пользе (O1) + отдельная панель/ADR на саму роль.
-      Косметику формы из апстрим-brainstorming (по 1 вопросу / multiple-choice / лимит слов) не берём:
-      структурный Socratic-discovery уже есть (`roles/sa.md`), а апстрим вдобавок сам коммитит spec,
-      что противоречит `core/task-protocol.md` («агент не коммитит»).
-- **Жёсткий стоп:** не вкладывать инженерные дни в интейк-интервью и route-hint до прохождения гейта
-      O1. Если ретроспектива покажет, что узкое место — отсутствие **приложения**, а не входа, это
-      сигнал к пересмотру ADR-001, а не к интейк-пайплайну.
+- [ ] **Whether an intake protocol is needed at all** (empirical gate "O1"): settled by a
+      retrospective on 2–3 real starts — if there was no loss at the entry point, never build the
+      intake interview. A debate between models doesn't settle this. The question specifically: was
+      there a real loss on "which task 1 is the right one," or does the operator already hold the
+      slice in their head and only the entry point needed redirecting (this is the same
+      retrospective as O2 in ADR-001).
+- [ ] Is a route hint needed during decomposition (anchor "O2") — a recommendation like "many domain
+      touchpoints → consider the SA/BA/QA-UAT pipeline; few → developer+reviewer in one window"?
+      Here the predictor is the number of domain touchpoints, not the cost of a bug; the
+      verification weight (panel/C+) is not to be touched; the operator decides. Or is the opt-in
+      `--testing bdd` + the operator's intuition enough (it already exists: bot-class vs. SaaS-class)?
+      Build only on confirmed benefit, not proactively.
+- [ ] Solo verification of the entry point (anchor "O3"): if intake is ever built (O1), a single
+      operator cannot distinguish "the gate was read" from "the gate was rubber-stamped" without a
+      second pair of eyes — a residual risk of solo mode (like NP2 in ADR-001). Candidate mitigation
+      (from the superpowers review): a separate design-review subagent with fresh context as a
+      second pair of eyes on the slice itself **before** code. This is **not** an extension of the
+      current `reviewer` (which reviews code after the developer, read-only) and not C+ (which is
+      only for hard contracts, not a live domain) — it's a new pre-code entry-verification role.
+      Under the same hard stop: build only on confirmed benefit (O1) + a separate panel/ADR on the
+      role itself. We don't adopt the cosmetic form from upstream brainstorming (1 question at a
+      time / multiple-choice / word limits): structured Socratic discovery already exists
+      (`roles/sa.md`), and upstream also commits the spec itself, which contradicts
+      `core/task-protocol.md` ("the agent doesn't commit").
+- **Hard stop:** don't invest engineering days in the intake interview and route hint before gate
+      O1 passes. If a retrospective shows the bottleneck is the absence of an **application**, not
+      the entry point, that's a signal to reconsider ADR-001, not to build the intake pipeline.
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **Полный интейк-пайплайн (v1).** Отклонён: неверная ось (сложность вместо «цена ошибки ×
-  необратимость»), неверная гранулярность (per-project вместо per-decision, который уже работает),
-  3 PM-артефакта + owned семантический API (противоречит ADR-001), галлюцинированный roadmap, молча
-  принятый соло (против principles «факт, не гипотеза» + PR-NN-02).
-- **Расщепление каденции на две оси** (сложность → декомпозиция, цена ошибки → верификация).
-  Признано реальным уточнением, но живёт лишь как опциональный route-hint (O2), а не как первичный
-  механизм: вес верификации уже покрыт панелью/C+ per-decision.
-- **Ничего не делать.** Отклонён: висящий вход — фактический дефект (roadmap как несуществующий
-  артефакт), и его правка безусловна и дёшева.
+- **The full intake pipeline (v1).** Rejected: wrong axis (complexity instead of "cost of error
+  × irreversibility"), wrong granularity (per-project instead of per-decision, which already
+  works), 3 PM artifacts + an owned semantic API (contradicts ADR-001), a hallucinated roadmap,
+  silently accepted solo (against the principles of "fact, not hypothesis" + PR-NN-02).
+- **Splitting the cadence into two axes** (complexity → decomposition, cost of error →
+  verification). Recognized as a real refinement, but it lives only as an optional route hint (O2),
+  not as a primary mechanism: verification weight is already covered by the panel/C+ per-decision.
+- **Do nothing.** Rejected: the dangling entry point is an actual defect (the roadmap as a
+  non-existent artifact), and fixing it is unconditional and cheap.

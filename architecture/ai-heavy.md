@@ -1,10 +1,10 @@
-# AI-heavy products — архитектура
+# AI-heavy products — architecture
 
-Для продуктов где AI — центральный компонент. Как правильно организовать LLM-слой чтобы он был поддерживаемым и не превратился в хаос промптов.
+For products where AI is a central component. How to organize the LLM layer so it stays maintainable and doesn't turn into a mess of prompts.
 
 ## Model-agnostic architecture
 
-AI-вызовы идут через единый интерфейс. Конкретная модель — деталь реализации.
+AI calls go through a single interface. The specific model is an implementation detail.
 
 ~~~go
 type LLMClient interface {
@@ -16,18 +16,18 @@ type CompletionRequest struct {
     Prompt      string
     MaxTokens   int
     Temperature float32
-    Metadata    RequestMetadata  // tenant_id, feature, version промпта
+    Metadata    RequestMetadata  // tenant_id, feature, prompt version
 }
 ~~~
 
-Реализации:
+Implementations:
 
-- OpenAI / Anthropic / Google через их API
-- Local models через Ollama
-- Self-hosted через vLLM
-- Mock implementation для тестов
+- OpenAI / Anthropic / Google via their APIs
+- Local models via Ollama
+- Self-hosted via vLLM
+- Mock implementation for tests
 
-Переключение между ними — конфигурация, не изменение бизнес-кода:
+Switching between them — configuration, not a change to business code:
 
 ~~~yaml
 # config.yaml
@@ -39,16 +39,16 @@ llm:
 
 ## Prompt management
 
-### Промпты живут в отдельных файлах
+### Prompts live in separate files
 
-Не inline в коде. Не в конфиг-файлах. Отдельные `.md` файлы или `.txt` в директории `prompts/`.
+Not inline in code. Not in config files. Separate `.md` or `.txt` files in a `prompts/` directory.
 
 ~~~
 prompts/
   task_extraction/
     v1.md
     v2.md
-    current.md  # symlink на активную версию
+    current.md  # symlink to the active version
   subtask_suggestion/
     v1.md
     current.md
@@ -57,15 +57,15 @@ prompts/
     current.md
 ~~~
 
-### Версионирование в git
+### Versioning in git
 
-Каждая версия промпта — отдельный файл (v1, v2, v3), не перезаписывается. Изменение промпта — новый файл + обновление symlink.
+Each prompt version — a separate file (v1, v2, v3), never overwritten. Changing a prompt — a new file + updating the symlink.
 
-Почему не просто history git: быстрый rollback без git operations, возможность A/B test (часть пользователей на v2, часть на v3), audit log который промпт применялся к конкретному запросу.
+Why not just git history: fast rollback without git operations, ability to A/B test (part of users on v2, part on v3), an audit log of which prompt was applied to a specific request.
 
-### Templates с переменными
+### Templates with variables
 
-Промпты — это templates с placeholders:
+Prompts are templates with placeholders:
 
 ~~~markdown
 # prompts/task_extraction/v2.md
@@ -86,7 +86,7 @@ Extract and provide:
 3. Priority of each
 ~~~
 
-Подстановка через template engine (Go template, Jinja, Handlebars), не через string concatenation. Это предотвращает prompt injection через user data:
+Substitution via a template engine (Go template, Jinja, Handlebars), not via string concatenation. This prevents prompt injection through user data:
 
 ~~~go
 tmpl, _ := template.ParseFiles("prompts/task_extraction/current.md")
@@ -98,9 +98,9 @@ tmpl.Execute(&buf, PromptContext{
 })
 ~~~
 
-### Metadata каждого промпта
+### Metadata for each prompt
 
-В начале файла промпта — metadata:
+At the start of the prompt file — metadata:
 
 ~~~markdown
 ---
@@ -119,11 +119,11 @@ You are extracting action items from a document for {{COMPANY_NAME}}.
 ...
 ~~~
 
-## RAG-слой
+## RAG layer
 
-Если используется RAG (Retrieval-Augmented Generation), он выделен в отдельный модуль с чёткими абстракциями.
+If RAG (Retrieval-Augmented Generation) is used, it's split into a separate module with clear abstractions.
 
-### Компоненты
+### Components
 
 ~~~go
 type VectorStore interface {
@@ -148,43 +148,43 @@ type Retriever interface {
 Raw source → Parser → Chunker → Embedder → VectorStore
 ~~~
 
-- **Parser** — извлекает текст из PDF/DOCX/HTML
-- **Chunker** — разбивает на куски с оверлапом (типично 500-1000 токенов, overlap 100-200)
-- **Embedder** — превращает в векторы (OpenAI embeddings, local BGE-M3, etc.)
+- **Parser** — extracts text from PDF/DOCX/HTML
+- **Chunker** — splits into chunks with overlap (typically 500-1000 tokens, overlap 100-200)
+- **Embedder** — turns them into vectors (OpenAI embeddings, local BGE-M3, etc.)
 - **VectorStore** — Qdrant, Weaviate, pgvector, etc.
 
-### Fact-check перед использованием
+### Fact-check before use
 
-Retrieved documents могут быть нерелевантными или устаревшими. Правило: retrieved documents не попадают в промпт слепо.
+Retrieved documents can be irrelevant or stale. Rule: retrieved documents don't go into the prompt blindly.
 
-- **Relevance check** — повторная оценка релевантности (re-ranker модель или LLM-based evaluation)
-- **Freshness check** — фильтрация по дате если актуальность важна
-- **Source attribution** — в промпт передаются с источниками, LLM знает откуда информация
-- **Groundedness check** — для critical applications, проверка что ответ LLM действительно основан на retrieved documents, не галлюцинация
+- **Relevance check** — re-evaluate relevance (re-ranker model or LLM-based evaluation)
+- **Freshness check** — filter by date when currency matters
+- **Source attribution** — passed into the prompt with sources, the LLM knows where the information came from
+- **Groundedness check** — for critical applications, verify that the LLM's answer is actually grounded in retrieved documents, not a hallucination
 
 ### Hybrid search
 
-Vector search часто недостаточен. Комбинация:
+Vector search alone is often insufficient. A combination:
 
-- Vector search для semantic similarity
-- Keyword search (BM25) для exact matches
-- Metadata filtering для structured constraints
-- Re-ranking для финального порядка
+- Vector search for semantic similarity
+- Keyword search (BM25) for exact matches
+- Metadata filtering for structured constraints
+- Re-ranking for the final order
 
 ## Eval suite
 
-Набор тестовых кейсов для качества AI. Критичен — без него невозможно оценить влияние изменений.
+A set of test cases for AI quality. Critical — without it, you can't assess the impact of changes.
 
-### Структура
+### Structure
 
 ~~~
 evals/
   task_extraction/
     cases.jsonl           # test cases
-    rubric.md             # критерии оценки
+    rubric.md             # evaluation criteria
     run.go                # runner
     results/
-      2026-04-18.json     # результаты прогона
+      2026-04-18.json     # run results
 ~~~
 
 ### Test case format
@@ -204,9 +204,9 @@ evals/
 }
 ~~~
 
-### Rubric — критерии оценки
+### Rubric — evaluation criteria
 
-Когда точный expected output невозможен (LLM генерирует free-text), используется rubric — набор критериев:
+When an exact expected output is impossible (the LLM generates free text), a rubric is used — a set of criteria:
 
 ~~~markdown
 # Action-item extraction rubric
@@ -223,29 +223,29 @@ Aggregate: weighted average.
 Passing threshold: 7.5
 ~~~
 
-Rubric evaluated automatically (LLM-as-judge) или вручную на sample прогонах.
+Rubric evaluated automatically (LLM-as-judge) or manually on sample runs.
 
 ### Runner
 
-Eval suite — отдельная команда, не часть обычного test suite (медленная, дорогая):
+The eval suite — a separate command, not part of the regular test suite (slow, expensive):
 
 ~~~bash
 go run ./cmd/evals -suite=task_extraction -model=claude-opus-4
 ~~~
 
-Output: results/YYYY-MM-DD.json с метриками (pass rate, per-dimension scores, failures с деталями).
+Output: results/YYYY-MM-DD.json with metrics (pass rate, per-dimension scores, failures with details).
 
 ### Regression alerts
 
-Сравнение нового прогона с baseline:
+Comparing the new run against a baseline:
 
-- Если pass rate упал > 5% — alert, review новых failures
-- Если per-dimension score упал — investigate какая dimension и почему
-- CI может блокировать merge если eval regression
+- If pass rate drops > 5% — alert, review the new failures
+- If a per-dimension score drops — investigate which dimension and why
+- CI can block a merge on eval regression
 
 ## Cost tracking
 
-Каждый LLM-вызов логируется со структурированными данными.
+Every LLM call is logged with structured data.
 
 ~~~go
 type LLMCallLog struct {
@@ -264,50 +264,50 @@ type LLMCallLog struct {
 }
 ~~~
 
-Агрегация:
+Aggregation:
 
-- Per tenant — для billing
-- Per feature — какие фичи дорогие
-- Per user — для user-level quotas
-- Per model — сравнение стоимости/качества моделей
+- Per tenant — for billing
+- Per feature — which features are expensive
+- Per user — for user-level quotas
+- Per model — comparing cost/quality of models
 
 Alerts:
 
-- Spike в расходах одного tenant — возможное злоупотребление или баг
-- Расходы превысили budget — automatic throttling или notification
-- Unusual patterns (ночные массовые вызовы, повторяющиеся одинаковые запросы) — investigation
+- A spike in one tenant's spend — possible abuse or a bug
+- Spend exceeded budget — automatic throttling or notification
+- Unusual patterns (nightly mass calls, repeated identical requests) — investigation
 
 ## Caching
 
-LLM calls дорогие. Caching — обязательный компонент.
+LLM calls are expensive. Caching — a mandatory component.
 
 ### Embedding cache
 
-Embeddings детерминированы и стабильны для одного и того же текста. Кэшируются всегда.
+Embeddings are deterministic and stable for the same text. Always cached.
 
 Key: hash(text) + model_id.
-Storage: Redis или БД с TTL (embeddings не меняются, но model может deprecated).
+Storage: Redis or a DB with TTL (embeddings don't change, but a model can be deprecated).
 
 ### LLM response cache
 
-Детерминированные запросы (temperature=0, stable context) — кэшируются.
+Deterministic requests (temperature=0, stable context) — cached.
 
 Key: hash(prompt_template_id + prompt_version + input_variables + model + temperature).
-TTL: зависит от use case (короткий если данные часто меняются).
+TTL: depends on the use case (short if the data changes often).
 
-**Важно**: инвалидация при изменении промпта. Поэтому prompt_version в key — при выкате новой версии промпта cache miss для всех запросов.
+**Important**: invalidation on prompt change. That's why prompt_version is in the key — rolling out a new prompt version causes a cache miss for all requests.
 
 ### Semantic cache
 
-Для non-deterministic запросов — опционально. "Похожий запрос уже был, ответ переиспользуется".
+For non-deterministic requests — optional. "A similar request has already been made, the answer is reused."
 
-Риск — плохая semantic match может дать неправильный ответ. Использовать только для non-critical applications с высоким threshold similarity.
+Risk — a poor semantic match can give the wrong answer. Use only for non-critical applications with a high similarity threshold.
 
-## Fallback и degradation
+## Fallback and degradation
 
-LLM providers падают. Сеть медленная. Rate limits.
+LLM providers go down. The network is slow. Rate limits.
 
-### Primary / fallback модели
+### Primary / fallback models
 
 ~~~go
 func (s *Service) Complete(ctx context.Context, req CompletionRequest) (*Response, error) {
@@ -327,26 +327,26 @@ func (s *Service) Complete(ctx context.Context, req CompletionRequest) (*Respons
 
 ### Non-AI fallback
 
-Для критичных функций — fallback на non-AI путь:
+For critical functions — fallback to a non-AI path:
 
-- Если AI недоступен для task_extraction — показать документ без анализа, с сообщением "AI analysis временно недоступен"
-- Если AI для subtask_suggestion падает — показать пустой template без pre-fill
+- If AI is unavailable for task_extraction — show the document without analysis, with a message "AI analysis temporarily unavailable"
+- If AI for subtask_suggestion fails — show an empty template with no pre-fill
 
-Функция должна продолжать работать в degraded mode, не падать полностью.
+The feature should keep working in degraded mode, not fail completely.
 
-### Timeout и retry
+### Timeout and retry
 
-- Жёсткий timeout на LLM call (обычно 30-60 секунд)
-- Retry с exponential backoff для retryable errors (5xx, rate limits)
-- Максимум 2-3 retry, дальше fallback или error к пользователю
+- A hard timeout on the LLM call (usually 30-60 seconds)
+- Retry with exponential backoff for retryable errors (5xx, rate limits)
+- Maximum 2-3 retries, then fallback or an error to the user
 
-## Streaming и async
+## Streaming and async
 
-LLM calls — долгие (секунды-минуты для длинных ответов). UX требует правильной обработки.
+LLM calls are long (seconds-minutes for long responses). UX requires handling this properly.
 
-### Streaming для UI
+### Streaming for the UI
 
-Для chat-like interfaces — streaming response через Server-Sent Events или WebSocket:
+For chat-like interfaces — streaming response via Server-Sent Events or WebSocket:
 
 ~~~go
 func (h *Handler) StreamCompletion(w http.ResponseWriter, r *http.Request) {
@@ -363,57 +363,57 @@ func (h *Handler) StreamCompletion(w http.ResponseWriter, r *http.Request) {
 }
 ~~~
 
-### Async jobs для long-running
+### Async jobs for long-running work
 
-Для operations которые занимают минуты (анализ большого документа, batch processing):
+For operations that take minutes (analyzing a large document, batch processing):
 
-- User создаёт job через API
-- Job попадает в queue
-- Worker обрабатывает, обновляет status в БД
-- User polls status или получает notification по завершению
+- The user creates a job via the API
+- The job goes into a queue
+- A worker processes it, updates status in the DB
+- The user polls status or gets a notification on completion
 
-Не блокировать HTTP request на минуты.
+Don't block the HTTP request for minutes.
 
 ## Prompt injection defense
 
-User input никогда не попадает в промпт напрямую. Санитизация:
+User input never goes into the prompt directly. Sanitization:
 
-- **Escape specific markers** — если промпт использует specific delimiters (```, XML tags), они удаляются/escapеются из user input
-- **Length limits** — user input ограничен разумным размером
-- **Content filters** — детектирование prompt injection patterns ("ignore previous instructions", "you are now...")
-- **Output validation** — LLM response проверяется на ожидаемую структуру, не слепо показывается пользователю
+- **Escape specific markers** — if the prompt uses specific delimiters (```, XML tags), they're removed/escaped from user input
+- **Length limits** — user input is capped at a reasonable size
+- **Content filters** — detecting prompt injection patterns ("ignore previous instructions", "you are now...")
+- **Output validation** — the LLM response is checked against the expected structure, not shown to the user blindly
 
-Для critical applications — двух-этапная обработка: LLM сначала классифицирует intent user input, только разрешённые intents обрабатываются.
+For critical applications — two-stage processing: the LLM first classifies the intent of the user input, only allowed intents are processed.
 
-## Sensitive data в промптах
+## Sensitive data in prompts
 
-Чувствительные данные (ПД, коммерческая тайна) не отправляются во внешние API без compliance проверки.
+Sensitive data (personal data, trade secrets) isn't sent to external APIs without a compliance check.
 
-Правила:
+Rules:
 
-- **Self-hosted models** — для processing sensitive data предпочтительно
-- **Data masking** — перед отправкой в external API, ПД заменяются на tokens (`[EMAIL_1]`, `[NAME_1]`), восстанавливаются после ответа
-- **Opt-in consent** — user явно соглашается на processing внешним AI
-- **Audit log** — каждый call с sensitive data логируется для compliance
+- **Self-hosted models** — preferred for processing sensitive data
+- **Data masking** — before sending to an external API, personal data is replaced with tokens (`[EMAIL_1]`, `[NAME_1]`), restored after the response
+- **Opt-in consent** — the user explicitly consents to processing by external AI
+- **Audit log** — every call with sensitive data is logged for compliance
 
 ## Fine-tuning workflow
 
-Если используется fine-tuning:
+If fine-tuning is used:
 
-- **Training data curation** — отдельный pipeline с review качества
-- **Versioning** — модели версионируются как промпты
-- **A/B testing** — новая версия не заменяет старую мгновенно, постепенный rollout
-- **Rollback plan** — возможность быстро вернуться к предыдущей версии
-- **Eval suite** — обязателен для каждой новой версии модели
+- **Training data curation** — a separate pipeline with quality review
+- **Versioning** — models are versioned like prompts
+- **A/B testing** — the new version doesn't replace the old one instantly, gradual rollout
+- **Rollback plan** — the ability to quickly revert to the previous version
+- **Eval suite** — mandatory for every new model version
 
 ## Observability
 
-Дополнительно к обычной observability:
+In addition to regular observability:
 
-- **Prompt trace** — для каждого вызова: какой промпт использовался (ID + version), какой input, какой output
-- **Token distribution** — метрики input/output tokens per feature
-- **Latency histograms** — p50, p95, p99 per model и feature
-- **Error categorization** — rate limits, timeouts, content filter, validation failures отдельно
-- **Quality metrics** — через eval suite, тренды во времени
+- **Prompt trace** — for every call: which prompt was used (ID + version), what input, what output
+- **Token distribution** — input/output token metrics per feature
+- **Latency histograms** — p50, p95, p99 per model and feature
+- **Error categorization** — rate limits, timeouts, content filter, validation failures tracked separately
+- **Quality metrics** — via the eval suite, trends over time
 
-Dashboards для монитора AI-системы в realtime.
+Dashboards for monitoring the AI system in real time.

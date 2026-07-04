@@ -1,23 +1,23 @@
 ---
-description: Старт проекта — архитектор в kickoff-режиме (суть → CLAUDE.md → первый срез → гайды дня)
-argument-hint: "[пара слов о проекте] — необязательно"
+description: Project start — architect in kickoff mode (essence → CLAUDE.md → first slice → day guides)
+argument-hint: "[a couple of words about the project] — optional"
 ---
 
-Стань **архитектором** и проведи **kickoff** строго по `roles/architect.md` → секция «Kickoff — старт
-проекта». Контекст проекта (если дан): `$ARGUMENTS`.
+Become the **architect** and run **kickoff** strictly per `roles/architect.md` → the "Kickoff — starting
+a project" section. Project context (if given): `$ARGUMENTS`.
 
-Это вход в проект, когда дней и роадмапа ещё нет (грамматика `N`/`R D T` тут не применима). Кратко:
+This is the entry into a project when there are no days or roadmap yet (the `N`/`R D T` grammar doesn't apply here). Briefly:
 
-1. **Routing-вопросы** (по одному): что за продукт, для кого, стек, routing-сигналы (отдельный
-   QA-контур? домен-эксперт? UI?). **Stop-rule:** НЕ доменное дискавери (happy path / edge cases /
-   acceptance) — это задача SA, не архитектора.
-2. **Заполни `CLAUDE.md`** с provenance-правилом (`[от юзера]`/`[код:путь]`/`[вывод:cmd]`; без
-   источника — видимый `{{плейсхолдер}}`, не угадывать).
-3. **Зафиксируй сказанное** в `docs/PROJECT-STATE.md` (существующие секции; приоритеты от юзера, не
-   сочинять).
-4. **Несущая архитектура** → `/panel` → ADR.
-5. **Первые гайды дня** — `docs/day-0-guide.md` (init стека, если новый проект) + `docs/day-1-guide.md`.
+1. **Routing questions** (one at a time): what product, for whom, stack, routing signals (a separate
+   QA track? a domain expert? UI?). **Stop rule:** NOT domain discovery (happy path / edge cases /
+   acceptance) — that's the SA's job, not the architect's.
+2. **Fill in `CLAUDE.md`** with the provenance rule (`[from user]`/`[code:path]`/`[output:cmd]`; no
+   source → a visible `{{placeholder}}`, don't guess).
+3. **Record what was said** in `docs/PROJECT-STATE.md` (existing sections; priorities from the user, not
+   invented).
+4. **Load-bearing architecture** → `/panel` → ADR.
+5. **First day guides** — `docs/day-0-guide.md` (stack init, if a new project) + `docs/day-1-guide.md`.
 
-`/kickoff` НЕ заменяет `day-0-guide` — он идёт ДО первого рабочего дня и сам производит его. Полный
-нарратив (kickoff + онгоинг + пример со всеми ролями) — `core/pipeline.md`. Lightweight-by-default:
-масштабируй глубину по проекту. Существующий проект — сперва прочитать код, реконструировать CLAUDE.md.
+`/kickoff` does NOT replace `day-0-guide` — it comes BEFORE the first working day and produces it itself. Full
+narrative (kickoff + ongoing + an example with all roles) — `core/pipeline.md`. Lightweight by default —
+scale the depth to the project. For an existing project — first read the code, reconstruct CLAUDE.md.

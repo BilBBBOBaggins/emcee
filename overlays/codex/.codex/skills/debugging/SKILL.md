@@ -1,15 +1,15 @@
 ---
 name: debugging
-description: Метод дебага сломанного поведения — одновременный сбор логов со всех слоёв цепочки, поиск разрыва, запрет угадывания, правило трёх попыток. Используй, когда что-то не работает, падает тест, есть стектрейс или нужно найти причину бага.
+description: Method for debugging broken behavior — simultaneous log collection across every layer of the chain, finding the break, a ban on guessing, the three-attempt rule. Use when something isn't working, a test is failing, there's a stack trace, or you need to find the root cause of a bug.
 ---
 
-Дисциплина дебага этого проекта. **Полный метод — в файле `core/debugging.md`** (от корня проекта): прочитай его целиком, прежде чем дебажить. (Discovery у Codex — этот SKILL.md в `.codex/skills/debugging/`.)
+This project's debugging discipline. **Full method in `core/debugging.md`** (from the project root): read it in full before debugging. (Discovery on Codex — this SKILL.md in `.codex/skills/debugging/`.)
 
-Кратко (чтобы не ошибиться, даже если файл не открыл):
+In short (so you don't get it wrong even if you haven't opened the file):
 
-- Пользователь сообщил баг = **факт**; причина = **гипотеза**, требует верификации по коду/логам.
-- Собери логи **всех** звеньев цепочки **одновременно** (не по одному слою за раз), коррелируй по времени, найди разрыв — где данные потерялись/не дошли. Только потом формулируй причину.
-- Не угадывай («скорее всего», «возможно» — запрещены). Не уверен → не дочитал.
-- Фикс локализуй (protocol/platform/edge-specific), не правь общий код без подтверждения.
-- Правило трёх попыток: не чинится после 3 содержательных попыток — стоп, к пользователю.
-- **Когда НЕ:** это поиск причины УЖЕ сломанного. Не для новой фичи/планирования (→ spec-driven/architect). Совпала ситуация — вызови метод, не дебажь по наитию (см. `core/skills.md`).
+- The user reported a bug = a **fact**; the cause = a **hypothesis**, requiring verification against code/logs.
+- Collect logs from **all** links of the chain **simultaneously** (not one layer at a time), correlate them by time, find the break — where the data was lost/didn't arrive. Only then formulate the cause.
+- Don't guess ("most likely", "probably" — forbidden). Not sure → you haven't finished reading.
+- Scope the fix (protocol/platform/edge-specific), don't touch general code without confirmation.
+- Three-attempt rule: not fixed after 3 substantive attempts — stop, escalate to the user.
+- **When NOT to:** this is for finding the cause of something ALREADY broken. Not for a new feature/planning (→ spec-driven/architect). If the situation matches — invoke the method, don't debug by instinct (see `core/skills.md`).

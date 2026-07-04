@@ -1,118 +1,127 @@
-# Память агента — как проект помнит контекст между сессиями
+# Agent memory — how a project remembers context between sessions
 
-Как сохранять знания о проекте так, чтобы агент подхватывал их без раздувания стартового контекста.
-Это про **архитектуру памяти**, не про правила работы (см. [principles.md](principles.md)) и не про
-автоматические гейты (см. [quality-gates.md](quality-gates.md)).
+How to save project knowledge so the agent picks it up without bloating the startup context. This
+is about **memory architecture**, not about work rules (see [principles.md](principles.md)) and not
+about automated gates (see [quality-gates.md](quality-gates.md)).
 
-**Граница нейтральности (P3, ADR-010/011).** Сама **дисциплина** памяти — `universal`: тонкий индекс +
-ленивые topic-файлы, грузить только релевантное, не дублировать, прунинг, recovery-чекпойнт перед
-потерей контекста. **Механизмы** ниже (две нативные системы Claude Code, `PreCompact`-хук, `/rewind`,
-routines `/schedule`, `/loop`) — `origin: harness:claude-code`. На другом рантайме — его механизм
-памяти + entry-файл-иерархия (см. карту в [portability.md](portability.md)); дисциплина переносится
-как есть. Ниже — реализация на Claude Code (проверено по docs Claude Code → memory; актуально 2026).
+**Neutrality boundary (P3, ADR-010/011).** The memory **discipline** itself is `universal`: a thin
+index + lazy topic files, load only what's relevant, don't duplicate, prune, a recovery checkpoint
+before context loss. The **mechanisms** below (Claude Code's two native systems, the `PreCompact`
+hook, `/rewind`, `/schedule` and `/loop` routines) are `origin: harness:claude-code`. On another
+runtime — its own memory mechanism + entry-file hierarchy (see the map in
+[portability.md](portability.md)); the discipline ports over as is. Below is the Claude Code
+implementation (verified against the Claude Code docs → memory; current as of 2026).
 
-## Две нативные системы памяти
+## Two native memory systems
 
-Claude Code грузит обе в начале **каждой** сессии и трактует как контекст (не как enforced-конфиг —
-жёсткий запрет = `PreToolUse`-хук, а не строчка в памяти):
+Claude Code loads both at the start of **every** session and treats them as context (not as
+enforced config — a hard prohibition is a `PreToolUse` hook, not a line in memory):
 
-1. **CLAUDE.md — то, что пишешь ты** (правила, архитектура, команды). Грузится **иерархически**:
-   Claude идёт вверх по дереву каталогов, **конкатенирует** все найденные файлы (от корня к cwd;
-   ближайший к запуску читается последним), вложенные `CLAUDE.md` подгружаются лениво при чтении
-   файлов в их каталоге.
-2. **Auto-memory — то, что Claude пишет себе сам** (наблюдения, паттерны). Живёт **вне репозитория**,
-   per-git-repo: `~/.claude/projects/<project>/memory/` с индексом `MEMORY.md` + topic-файлами.
-   На старте грузятся только первые ~200 строк / 25KB `MEMORY.md`; topic-файлы — по требованию.
+1. **CLAUDE.md — what you write** (rules, architecture, commands). Loaded **hierarchically**: Claude
+   walks up the directory tree and **concatenates** every file it finds (from root to cwd; the one
+   closest to the run is read last); nested `CLAUDE.md` files load lazily when files in their
+   directory are read.
+2. **Auto-memory — what Claude writes for itself** (observations, patterns). Lives **outside the
+   repository**, per git repo: `~/.claude/projects/<project>/memory/` with a `MEMORY.md` index +
+   topic files. At startup only the first ~200 lines / 25KB of `MEMORY.md` load; topic files load on
+   demand.
 
-Граница ответственности: **правила и архитектура → CLAUDE.md** (в репо, версионируется, ревьюится);
-**накопленные наблюдения/привычки агента → auto-memory** (машинно-локально, не в гите).
+Division of responsibility: **rules and architecture → CLAUDE.md** (in the repo, versioned,
+reviewed); **the agent's accumulated observations/habits → auto-memory** (machine-local, not in
+git).
 
-## Дисциплина (главное)
+## Discipline (the main part)
 
-Цель дисциплины ниже — **качество вывода, не экономия токенов**. Чистый, релевантный контекст
-повышает adherence и качество рассуждения; раздутый контекст и файлы-простыни их деградируют.
-То, что это попутно дешевле, — приятный побочный эффект, не мотив (см. north star пакета:
-качество > токенов).
+The goal of the discipline below is **output quality, not token savings**. Clean, relevant context
+raises adherence and reasoning quality; a bloated context and wall-of-text files degrade them. That
+it's also cheaper along the way is a nice side effect, not the motive (see the package's north star:
+quality over token economy).
 
-- **<200 строк на один файл памяти.** Длиннее — модель хуже следует. Большой регламент **дроби**
-  на вложенные `CLAUDE.md` по каталогам (каждый <200 строк), а не один простыни-файл.
-- **Тонкий индекс + ленивые topic-файлы.** `MEMORY.md` (и корневой `CLAUDE.md`) — это карта со
-  ссылками, а детали — в отдельных файлах, которые подтягиваются по необходимости. Стартовый
-  контекст — только релевантное, чтобы модель рассуждала на чистом, а не рылась в шуме.
-- **Tiered / on-demand loading.** Не грузи «на всякий случай» (= [principles.md](principles.md):
-  минимальный контекст — ради качества, не дешевизны). Большие логи/справочники держи за ссылкой,
-  читай по триггеру.
-- **Не дублируй.** Один факт — в одном месте. Правило проекта — в CLAUDE.md; наблюдение агента — в
-  auto-memory. Дубль между ними дрейфует.
+- **<200 lines per memory file.** Longer, and the model follows it worse. **Break up** a large
+  regimen into nested per-directory `CLAUDE.md` files (each <200 lines), not one wall-of-text file.
+- **Thin index + lazy topic files.** `MEMORY.md` (and the root `CLAUDE.md`) is a map with links, and
+  the details live in separate files pulled in as needed. The startup context is only what's
+  relevant, so the model reasons on a clean slate instead of digging through noise.
+- **Tiered / on-demand loading.** Don't load "just in case" (= [principles.md](principles.md):
+  minimal context — for quality's sake, not cheapness). Keep large logs/reference material behind a
+  link, read on trigger.
+- **Don't duplicate.** One fact, one place. A project rule goes in CLAUDE.md; an agent observation
+  goes in auto-memory. A duplicate between the two drifts.
 
-Обратная сторона north star: там, где качество требует **больше** работы — вторая модель в панели
-всегда, verification passes, multi-agent проверки, максимальный effort — это дефолт, а не «по
-бюджету». Дисциплина контекста экономит место под рассуждение, а не режет глубину анализа.
+The flip side of the north star: where quality demands **more** work — a second model in the panel
+always, verification passes, multi-agent checks, maximum effort — that's the default, not "budget
+permitting." Context discipline frees up room for reasoning; it doesn't cut analysis depth.
 
-Этот пакет уже устроен по дисциплине: `CLAUDE.md` — точка входа со ссылками, тяжёлые правила
-вынесены в `core/`, `roles/`, `stack/` и подтягиваются по ситуации, а не разом.
+This package is already built on this discipline: `CLAUDE.md` is the entry point with links, heavy
+rules are moved out into `core/`, `roles/`, `stack/` and pulled in situationally, not all at once.
 
-## Прунинг — архивируй, не стирай; обновляй на месте
+## Pruning — archive, don't erase; update in place
 
-Долгоживущая память деградирует, если в неё только дописывать: горячий контекст разбухает, а
-устаревшие/противоречивые заметки **активно вредят** (агент действует по неверному факту — хуже,
-чем отсутствие памяти). Прунинг тут — про **корректность**, не про размер. Делается так, чтобы
-потерь практически не было:
+Long-lived memory degrades if you only ever append to it: hot context balloons, and
+stale/contradictory notes **actively harm** (the agent acts on a wrong fact — worse than having no
+memory at all). Pruning here is about **correctness**, not size. It's done so there's practically no
+loss:
 
-- **Durable-факты/правила** (как устроен проект) — **обновляй на месте**, не архивируй. Этот слой
-  ограничен и стабилен; CLAUDE.md держит *текущие* факты, перезаписывая устаревшие, а не растёт историей.
-- **Горячий снимок состояния** (`docs/PROJECT-STATE.md`) — перезаписывается на месте каждое обновление
-  (architect на входе/выходе дня): решённое/устаревшее **прунится**, не дописывается. Это снимок «где мы
-  сейчас» (цель ≤ ~1 экран), а не накопительный лог — «что и когда сделано» достаётся из git, «почему» из
-  `docs/adr/` (курируемые решения). Дисциплина прунинга PROJECT-STATE — [../roles/architect.md](../roles/architect.md).
-- **Эпизодическое** (логи, решения, прогресс) — со временем **в холод**: git history + при нужде
-  отдельный архивный topic-файл. Достаётся **поиском по запросу** (`git log`/`git grep`/Read), а не
-  постоянным указателем.
-- **Индекс — скупой.** Указатель в `MEMORY.md`/индексе оставляй ТОЛЬКО на «холодное, но агенту стоит
-  знать, что оно есть» — курируемые единицы, не запись-на-каждый-архив. Иначе индекс сам станет
-  стеной ссылок = тот же блоат через косвенность.
-- **Не hard-delete не-версионируемое.** Git-backed (CLAUDE.md, `docs/`) удалять безопасно — история
-  хранит всё; auto-memory вне гита — **архивируй, не стирай**.
+- **Durable facts/rules** (how the project is built) — **update in place**, don't archive. This
+  layer is bounded and stable; CLAUDE.md holds *current* facts, overwriting stale ones, rather than
+  growing as a history.
+- **Hot state snapshot** (`docs/PROJECT-STATE.md`) — overwritten in place on every update (architect
+  on entering/exiting a day): resolved/stale material is **pruned**, not appended to. This is a
+  snapshot of "where we are now" (target ≤ ~1 screen), not an accumulating log — "what was done and
+  when" comes from git, "why" comes from `docs/adr/` (curated decisions). PROJECT-STATE pruning
+  discipline — [../roles/architect.md](../roles/architect.md).
+- **Episodic material** (logs, decisions, progress) — goes **cold** over time: git history + a
+  separate archival topic file if needed. Retrieved by **searching on demand** (`git log`/`git
+  grep`/Read), not via a standing pointer.
+- **The index stays lean.** Leave a pointer in `MEMORY.md`/the index ONLY for "cold, but the agent
+  should know it exists" — curated entries, not one line per archive item. Otherwise the index
+  itself becomes a wall of links = the same bloat, one level removed.
+- **Don't hard-delete anything non-versioned.** Git-backed material (CLAUDE.md, `docs/`) is safe to
+  delete — history keeps everything; auto-memory outside git — **archive, don't erase**.
 
-Антипаттерн: «дописывать + архивировать всё с указателем» → память превращается в растущую простыню
-ссылок. Правильный конец — **небольшое стабильное горячее ядро (текущие факты) + тонкий индекс
-живого + searchable холодный стор**.
+Antipattern: "append + archive everything with a pointer" → memory turns into a growing wall of
+links. The right end state is **a small, stable hot core (current facts) + a thin index of what's
+live + a searchable cold store**.
 
-## Чекпойнт перед компакцией (опционально)
+## Checkpoint before compaction (optional)
 
-Длинная сессия упирается в лимит контекста и **компактится** — часть деталей теряется. Чтобы не
-терять состояние, в пакете есть готовый `PreCompact`-хук
-[.claude/hooks/checkpoint-precompact.sh](../.claude/hooks/checkpoint-precompact.sh): перед компакцией
-он пишет recovery-чекпойнт (время, триггер, путь к транскрипту) в `docs/checkpoints.md`. Включается
-в `.claude/settings.json` (секция `PreCompact` уже есть в `settings.json.example`).
+A long session hits the context limit and gets **compacted** — some detail is lost. To keep state
+from getting lost, the package ships a ready-made `PreCompact` hook
+[.claude/hooks/checkpoint-precompact.sh](../.claude/hooks/checkpoint-precompact.sh): before
+compaction it writes a recovery checkpoint (time, trigger, path to the transcript) to
+`docs/checkpoints.md`. It's enabled in `.claude/settings.json` (the `PreCompact` section is already
+present in `settings.json.example`).
 
-Это фиксирует **точку восстановления** (читаешь транскрипт + `git log` → продолжаешь). Для
-**смыслового** summary в чекпойнт — расширь скрипт вызовом модели по транскрипту. Чекпойнты —
-эпизодическое: чисти/архивируй по правилу прунинга выше. Известный edge-case: `PreCompact` может
-не сработать на ручном `/compact`.
+This fixes a **recovery point** (you read the transcript + `git log` → continue). For a
+**meaningful** summary in the checkpoint — extend the script with a model call over the transcript.
+Checkpoints are episodic: clean/archive them per the pruning rule above. Known edge case:
+`PreCompact` may not fire on a manual `/compact`.
 
-Смысловой захват — руками, пока контекст жив: в конце значимой сессии попроси агента «подведи итог
-сессии: что пришлось выяснять по ходу и что из этого добавить в регламент/входной файл» (паттерн
-capture-what-to-remember из Anthropic prompt library). Агент сам знает, что ему пришлось выяснять, —
-предложения дешевле получить до потери контекста, чем реконструировать после. Дополняет, не заменяет:
-PreCompact-хук пишет только recovery-точку, а «Эволюция входного файла» реагирует на уже повторённые
-ошибки — этот приём проактивный. Предложенное фильтруй как обычно (не дублировать то, что уже есть в
-репо/гайдах).
+Meaningful capture is manual, done while context is still alive: at the end of a significant
+session, ask the agent to "summarize the session: what had to be figured out along the way, and
+what of that should go into the regimen/entry file" (the capture-what-to-remember pattern from
+Anthropic's prompt library). The agent already knows what it had to figure out — getting
+suggestions is cheaper before context is lost than reconstructing them afterward. This complements,
+not replaces: the PreCompact hook writes only the recovery point, and "Evolution of this document"
+reacts to already-repeated mistakes — this technique is proactive. Filter what's proposed as usual
+(don't duplicate what's already in the repo/guides).
 
-Это про потерю состояния при **сжатии контекста**. Для «только что сломал правкой» — нативный
-**`/rewind`** (Esc-Esc): откат кода/диалога к снимку до изменения (см. [principles.md](principles.md)
-→ восстановление при поломке). Два разных инструмента: чекпойнт — recovery после компакции, rewind —
-откат свежей поломки.
+This is about losing state on **context compaction**. For "I just broke it with an edit" — the
+native **`/rewind`** (Esc-Esc): rolls code/dialogue back to a snapshot before the change (see
+[principles.md](principles.md) → recovery from breakage). Two different tools: the checkpoint is
+recovery after compaction, rewind is rolling back a fresh breakage.
 
-## Когда память — не место, а процесс
+## When memory is a process, not a place
 
-Для фоновой/повторяющейся работы между сессиями память дополняется автоматизацией, не файлами:
+For background/recurring work between sessions, memory is complemented by automation, not files:
 
-- **Routines** — конфигурируемые cloud-агенты Claude Code (prompt + repo + connectors), запуск по
-  cron / API / GitHub-событию, исполняются на инфраструктуре Anthropic (работают при закрытом ноуте).
-  Подходит для ночного обслуживания (взять баг → починить → черновой PR). Запуск/настройка — `/schedule`.
-- **Итеративные лупы** (`/loop`, Ralph-Wiggum-подход) — для self-pacing задач с условием остановки.
+- **Routines** — configurable Claude Code cloud agents (prompt + repo + connectors), triggered by
+  cron / API / a GitHub event, run on Anthropic's infrastructure (work with the laptop closed).
+  Suited to overnight upkeep (pick up a bug → fix it → draft a PR). Launch/configure via
+  `/schedule`.
+- **Iterative loops** (`/loop`, the Ralph Wiggum approach) — for self-pacing tasks with a stop
+  condition.
 
-Это не часть стартового контекста — это способ запускать работу, которая сама пишет результат в
-память/PR. Держи **человеческий гейт на high-stakes выводе** (практика самих инженеров Anthropic:
-автономность растёт, но важное всё ещё валидируется человеком).
+This isn't part of the startup context — it's a way to launch work that writes its own result into
+memory/a PR. Keep a **human gate on high-stakes output** (Anthropic's own engineers' practice:
+autonomy is growing, but what matters is still validated by a human).

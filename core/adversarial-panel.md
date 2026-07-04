@@ -1,88 +1,174 @@
-# Адверсивная панель — разбор архитектурных решений до коммита
+# Adversarial Panel — Reviewing Architectural Decisions Before Commit
 
-Метод проверки нетривиального архитектурного/стратегического решения **до** того, как в него вложены инженерные месяцы. Не «ревью, которое улучшает», а состязательный процесс из трёх ролей, который ищет, **где решение ломается**, честно защищает его и выносит обязывающий вердикт. Результат — переработанная архитектура (v2) + ADR.
+A method for checking a non-trivial architectural/strategic decision **before** engineering months are
+invested in it. Not "a review that improves," but an adversarial process of three roles that looks for
+**where the decision breaks**, honestly defends it, and renders a binding verdict. The result is a
+reworked architecture (v2) + an ADR.
 
-Это разворачивается из коробки в каждом проекте (`core/` копируется всегда). **Метод не зависит от субагентов.** На Claude Code роли реализованы как субагенты в `.claude/agents/` (`red-team`, `blue-team`, `arbiter`), запуск `/panel`; на других рантаймах — прозовый прогон по этому файлу (`origin: harness:claude-code` — только проводка/запуск, не сам метод).
+This ships out of the box in every project (`core/` is always copied). **The method does not depend on
+subagents.** On Claude Code the roles are implemented as subagents in `.claude/agents/` (`red-team`,
+`blue-team`, `arbiter`), invoked via `/panel`; on other runtimes — a prose run through this file
+(`origin: harness:claude-code` — only the wiring/invocation, not the method itself).
 
-## Когда запускать
+## When to Run It
 
-Перед **нетривиальным** решением, цена ошибки в котором — месяцы или необратимость:
+Before a **non-trivial** decision where the cost of error is months of work or irreversibility:
 
-- Несущая архитектура (границы модулей/сервисов, направление авторитета, модель консистентности, выбор хранилища).
-- Build-vs-buy, выбор технологии/платформы, на которой потом стоит весь проект.
-- Стратегическая ставка (где течёт ценность, на чём moat) — техника без проверки рамки бесполезна.
-- Любое решение, которое дорого откатывать или которое смотрит наружу (внешний контракт, регуляторика, безопасность).
+- Load-bearing architecture (module/service boundaries, direction of authority, consistency model, storage choice).
+- Build-vs-buy, choice of technology/platform that the entire project will then stand on.
+- A strategic bet (where value flows, what the moat is) — technique without checking the frame is useless.
+- Any decision that's expensive to roll back or that faces outward (an external contract, regulation, security).
 
-**Не** запускать для: тривиальных implementation-choices, того что легко revert, стиля кода. Для таких — обычный архитектор ([../roles/architect.md](../roles/architect.md)).
+**Do not** run it for: trivial implementation choices, things that are easy to revert, code style. For
+those — the regular architect ([../roles/architect.md](../roles/architect.md)).
 
-Это конкретный механизм для тех решений, которые [../roles/architect.md](../roles/architect.md) помечает как «варианты A vs B vs C» и для которых пишется ADR.
+This is the concrete mechanism for decisions that [../roles/architect.md](../roles/architect.md) flags
+as "option A vs B vs C" and for which an ADR is written.
 
-## Несущая конструкция метода
+## The Method's Load-Bearing Structure
 
-Три роли + независимая вторая модель (codex). Каждая роль — отдельный субагент со своим системным промптом; они **не правят** друг друга, каждый пишет свой документ.
+Three roles + an independent second model (codex). Each role is a separate subagent with its own system
+prompt; they **do not edit** each other, each writes its own document.
 
-1. **Red-team** ([субагент red-team](../.claude/agents/red-team.md)) — презумпция, что в решении есть фатальные изъяны. Бьёт по **сильнейшей** версии замысла через все линзы (корректность, безопасность/режим, право, операции, экономика, стратегия, исполнение, инверсия усилие↔ценность). **Обязательно привлекает codex** как вторую независимую модель и складывает её сильнейшие попадания в свой разбор. Выдаёт kill-list.
-2. **Blue-team** ([субагент blue-team](../.claude/agents/blue-team.md)) — максимизирует выживание решения **честно**. Классифицирует каждую претензию red (попадание / промах / соломенный человек / выдумка), на каждое реальное попадание даёт митигацию **с ценой и остаточным риском** — либо признаёт фатальность. **Обязательно привлекает codex** той же второй моделью: ищет митигации, которых red+codex не увидели, и **перепроверяет codex-находки red** (ловит галлюцинации обвинителя). Собирает переработанную версию.
-3. **Arbiter** ([субагент arbiter](../.claude/agents/arbiter.md)) — **судит, не сглаживает**. По каждому спорному пункту: чья позиция сильнее, класс дефекта (фатально/серьёзно/мелочь/не-дефект), остаток после митигации blue. «Обе правы» — запрещённый исход (кроме честного «не решается на этих данных» с указанием решающего факта). codex привлекает **только как фактчекер спорных эмпирических утверждений** (число / «продукт или препринт» / живая норма), **не как со-судью** — приговор «чей довод сильнее» не делегируется. Калибруется против риторического крена **симметрично**: уверенная атака ≠ попадание без доказательства, недоказанное не засчитывается от **любой** стороны, перед вердиктом восстанавливает сильнейшую версию **обеих** позиций. Синтезирует общий вердикт и исполнимые действия.
+1. **Red team** ([red-team subagent](../.claude/agents/red-team.md)) — presumes the decision has fatal
+   flaws. Attacks the **strongest** version of the intent through every lens (correctness, security/regime,
+   legal, operations, economics, strategy, execution, effort↔value inversion). **Must engage codex** as an
+   independent second model and folds its strongest hits into its own analysis. Produces a kill list.
+2. **Blue team** ([blue-team subagent](../.claude/agents/blue-team.md)) — maximizes the decision's
+   survival **honestly**. Classifies every red claim (hit / miss / straw man / fabrication), gives a
+   mitigation **with a cost and residual risk** for every real hit — or concedes it's fatal. **Must engage
+   codex** with the same second model: looks for mitigations that red+codex missed, and **rechecks red's
+   codex findings** (catches the accuser's hallucinations). Assembles the reworked version.
+3. **Arbiter** ([arbiter subagent](../.claude/agents/arbiter.md)) — **judges, doesn't smooth things
+   over**. For every disputed point: rules whose position is stronger, the defect class
+   (fatal/serious/minor/not-a-defect), and the remainder after blue's mitigation. "Both are right" is a
+   forbidden outcome (except for an honest "not resolvable on this evidence," naming the deciding fact).
+   Engages codex **only as a fact-checker of disputed empirical claims** (a number / "shipped product or
+   preprint" / a currently-in-force regulation), **not as a co-judge** — the verdict on "whose argument is
+   stronger" is not delegated. Calibrates against rhetorical bias **symmetrically**: a confident attack ≠
+   a hit without evidence, an unproven claim doesn't count from **either** side, and before the verdict it
+   reconstructs the strongest version of **both** positions. Synthesizes the overall verdict and
+   actionable next steps.
 
-## Вторая модель (codex): симметрично на red и blue, фактчек на суде
+## Second Model (codex): Symmetric on Red and Blue, Fact-Check at the Verdict
 
-Одна модель (Claude) склонна к слепым зонам и правдоподобным галлюцинациям. Вторая независимая frontier-модель (codex) атакует с другого распределения ошибок. Её ценность — **декорреляция**, и она работает, только когда codex стоит **напротив** Claude, а не на одной стороне.
+One model (Claude) is prone to blind spots and plausible hallucinations. A second independent frontier
+model (codex) attacks from a different error distribution. Its value is **decorrelation**, and it only
+works when codex stands **opposite** Claude, not on the same side.
 
-**codex обязателен при доступности, симметрично у red и blue** (основной режим панели; физически
-недоступен → честный фолбэк ниже, не пропуск — ратифицировано [ADR-016](../docs/adr/016-panel-second-model-mandatory-when-available.md)):
+**codex is mandatory when available, symmetrically for red and blue** (the panel's default mode;
+physically unavailable → the honest fallback below, not a skip — ratified by
+[ADR-016](../docs/adr/016-panel-second-model-mandatory-when-available.md)):
 
-- **red + codex** — независимая атака (red интегрирует сильнейшие попадания codex);
-- **blue + codex** — независимая защита: митигации, которых red+codex не нашли, **и перепроверка codex-находок red** (red мог протащить галлюцинацию своей второй модели — blue ловит её своей).
+- **red + codex** — an independent attack (red integrates codex's strongest hits);
+- **blue + codex** — an independent defense: mitigations that red+codex didn't find, **and rechecking
+  red's codex findings** (red might have smuggled in a hallucination from its own second model — blue
+  catches it with its own).
 
-Симметрия снимает перекос «у обвинителя frontier-союзник, у защиты — нет», из-за которого red систематически выигрывал.
+Symmetry removes the skew where "the accuser has a frontier ally and the defense doesn't," which is why
+red used to win systematically.
 
-**Арбитр codex НЕ отдаёт вердикт.** Если red опирался на codex, а арбитр своим codex судит спор — судья заякорен на той же модели, что сформировала атаку: декорреляция схлопывается, крен в сторону red **усиливается**. Поэтому арбитр зовёт codex **только для независимого фактчека спорного эмпирического пункта** (цифра, «развёрнутый продукт или arXiv-препринт», действующая редакция нормы) — не для приговора «чей довод сильнее». Когда codex отработал и за red, и за blue, его фактчек для арбитра честно нейтрален.
+**The arbiter's codex does NOT hand down the verdict.** If red relied on codex, and the arbiter's own
+codex judges the dispute, the judge is anchored to the same model that shaped the attack: decorrelation
+collapses, and the skew toward red **intensifies**. That's why the arbiter calls codex **only for an
+independent fact-check of a disputed empirical point** (a number, "shipped product or arXiv preprint,"
+the currently-in-force edition of a regulation) — not for a verdict on "whose argument is stronger." Once
+codex has worked for both red and blue, its fact-check is honestly neutral for the arbiter.
 
-**Калибровка арбитра против риторического крена** (вторая причина перевеса red, помимо огневой мощи): LLM читает уверенную критику как строгость, а честную защиту как сикофантию, и судья переоценивает напор обвинителя. Корректируется **НЕ контр-предвзятостью в пользу blue, а единым стандартом для обеих сторон**: недоказанное/неисточниковое утверждение не засчитывается, от кого бы ни исходило; перед вердиктом восстанавливается сильнейшая версия **обеих** позиций; бремя доказательства — на утверждающем [факт]. Стандарт симметричен; то, что под ним чаще оказывается red, — следствие того, что он чаще вводит новые утверждения, не правило против red.
+**Calibrating the arbiter against rhetorical bias** (the second reason for red's advantage, besides
+firepower): an LLM reads confident criticism as rigor and honest defense as sycophancy, and the judge
+overweights the accuser's force. This is corrected **not by a counter-bias favoring blue, but by a single
+standard for both sides**: an unproven/unsourced claim doesn't count, no matter who makes it; before the
+verdict, the strongest version of **both** positions is reconstructed; the burden of proof is on whoever
+is asserting [a fact]. The standard is symmetric; that red more often ends up under it is a consequence
+of red more often introducing new claims, not a rule against red.
 
-**Если codex (или любая вторая frontier-модель) недоступен** — не пропускай панель, а перейди в честный фолбэк-режим: (1) red и blue атакуют/защищают как обычно; (2) **отдельным проходом** каждая сторона пытается опровергнуть собственные выводы (усиленный self-critique с другого угла); (3) в выводе явно помечается «второй модели не было — это пробел разбора, остаточный риск слепых зон выше». Фолбэк слабее двух-модельного режима — но лучше, чем тихо пропущенная проверка. (Если у тебя глобально настроен собственный протокол второй модели — следуй ему.)
+**If codex (or any second frontier model) is unavailable** — don't skip the panel, switch to the honest
+fallback mode: (1) red and blue attack/defend as usual; (2) in a **separate pass**, each side tries to
+refute its own conclusions (a reinforced self-critique from a different angle); (3) the output explicitly
+flags "no second model was used — this is a gap in the review, the residual risk of blind spots is
+higher." The fallback is weaker than the two-model mode — but better than a silently skipped check. (If
+you have your own second-model protocol configured globally — follow it.)
 
-Команда вызова (max effort, full project read, web-enabled) — **канонически в [second-model.md](second-model.md) §Как звать**: единственный источник блока команды и живой сноски `<codex-model-id>`, здесь не дублируется (single-source — ADR-001, ADR-014 №4). Панельная специфика: `tools.web_search=true` для red/blue **обязателен** (регуляторика/нормативка/числа).
+The invocation command (max effort, full project read, web-enabled) — **canonically in
+[second-model.md](second-model.md) §How to call it**: the single source for the command block and the live
+`<codex-model-id>` footnote, not duplicated here (single-source — ADR-001, ADR-014 #4). Panel-specific
+detail: `tools.web_search=true` is **mandatory** for red/blue (regulation/norms/numbers).
 
-codex используется в панели:
-- **внутри red-team** — независимая атака (red обязан её запросить и интегрировать сильнейшее);
-- **внутри blue-team** — независимая защита + перепроверка codex-находок red;
-- **у arbiter** — узкий фактчек спорных эмпирических утверждений (не приговор);
-- **на финале** — вычитка синтезированной v2 на **внутренние противоречия** (где одно утверждение спеки конфликтует с другим).
+codex is used in the panel:
+- **inside red-team** — an independent attack (red must request it and integrate the strongest finding);
+- **inside blue-team** — an independent defense + rechecking red's codex findings;
+- **with the arbiter** — a narrow fact-check of disputed empirical claims (not a verdict);
+- **at the finale** — a review pass of the synthesized v2 for **internal contradictions** (where one
+  statement in the spec conflicts with another).
 
-Цена честно: codex — медленная часть прогона. Симметрия добавляет проходы (red + blue тяжёлые, arbiter — узкий целевой фактчек, можно без xhigh). При north star «качество > токенов» это оправдано; держи фактчек арбитра узким, не полным xhigh-прогоном.
+Cost, honestly: codex is the slow part of the run. Symmetry adds passes (red + blue are heavy, the
+arbiter is a narrow targeted fact-check, can skip xhigh). Under the north star "quality over token
+economy" this is justified; keep the arbiter's fact-check narrow, not a full xhigh run.
 
-## Процесс прогона
+## Run Process
 
-Панель работает в `scratchpad/panel/` — артефакты раундов не засоряют репозиторий до финального ADR. Все пути вида `panel/...` ниже — относительно этого каталога (то есть `scratchpad/panel/...`); оркестратор передаёт субагентам полный путь, чтобы red/blue/arbiter писали в один и тот же каталог.
+The panel works in `scratchpad/panel/` — round artifacts don't clutter the repository before the final
+ADR. All `panel/...`-style paths below are relative to this directory (i.e. `scratchpad/panel/...`); the
+orchestrator passes the subagents the full path so that red/blue/arbiter write to the same directory.
 
-0. **Зафиксировать v1.** Записать разбираемое решение в `panel/architecture-v1.md`: несущие тезисы (каждый — отдельное проверяемое утверждение), контекст, ограничения. Если решения ещё нет в письменном виде — сначала его выписать; нельзя атаковать то, что не сформулировано. Извлечь **список несущих допущений** (нумерованный) — это цели для атаки.
-1. **Red-team r1.** Запустить субагента `red-team` на `architecture-v1.md` + список допущений. Он внутри привлекает codex и сдаёт `panel/red-r1.md` (вердикт + kill-list + допущения↔дешёвая проверка + предусловия выживания + стальной человек + вопросы перед коммитом).
-2. **Blue-team r1.** Запустить субагента `blue-team` на `architecture-v1.md` + `red-r1.md`. Он **не ждёт** red и не правит его — читает предъявленное, внутри привлекает codex (независимая защита + перепроверка codex-находок red) и сдаёт `panel/blue-r1.md` (классификация претензий + митигации с ценой + переработанная версия + признанные фатальные).
-3. **Arbiter r1.** Запустить субагента `arbiter` на всех трёх документах. При спорном **эмпирическом** пункте зовёт codex узким фактчеком (не приговором). Сдаёт `panel/arbiter-r1.md`: вердикт (строить / при условиях / переработать / не строить), таблица приговоров, решено/открыто, действия по приоритету, и — если надо — какие пункты вернуть на второй раунд.
-4. **Второй раунд (если арбитр назначил).** По спорным пунктам, что остались открытыми, повторить red↔blue точечно (не весь объём — только названные пункты), затем arbiter r2.
-5. **Синтез v2.** Из вердикта арбитра собрать `panel/architecture-v2.md`: что меняется, какие новые предусловия, что вынесено из охвата, что осталось открытым вопросом с владельцем discovery.
-6. **Финальная вычитка codex.** Прогнать v2 через codex на **внутренние противоречия** (одно утверждение спеки против другого). Исправить найденное.
-7. **ADR.** Зафиксировать решение как ADR в `docs/adr/` (формат — [../roles/architect.md](../roles/architect.md) → «ADR process»): Context, Decision (= v2), Consequences, Alternatives considered. В Consequences — открытые вопросы и предусловия выживания из вердикта арбитра как явные риски/TODO с владельцем.
+0. **Fix v1.** Write the decision under review into `panel/architecture-v1.md`: load-bearing theses (each
+   a separate checkable claim), context, constraints. If the decision isn't yet written down — write it
+   out first; you can't attack what hasn't been formulated. Extract a **numbered list of load-bearing
+   assumptions** — these are the attack targets.
+1. **Red team r1.** Run the `red-team` subagent on `architecture-v1.md` + the assumption list. It
+   engages codex internally and delivers `panel/red-r1.md` (verdict + kill list + assumptions↔cheap
+   check + survival preconditions + steel man + pre-commit questions).
+2. **Blue team r1.** Run the `blue-team` subagent on `architecture-v1.md` + `red-r1.md`. It **does not
+   wait** for red and doesn't edit it — it reads what's presented, engages codex internally (an
+   independent defense + rechecking red's codex findings), and delivers `panel/blue-r1.md` (claim
+   classification + mitigations with cost + a reworked version + acknowledged fatal flaws).
+3. **Arbiter r1.** Run the `arbiter` subagent on all three documents. On a disputed **empirical** point,
+   it calls codex for a narrow fact-check (not a verdict). Delivers `panel/arbiter-r1.md`: the verdict
+   (build / build with conditions / rework / don't build), a table of rulings, resolved/open items,
+   prioritized actions, and — if needed — which points to send back for a second round.
+4. **Second round (if the arbiter calls for it).** For the disputed points that remain open, repeat
+   red↔blue in a targeted way (not the whole scope — only the named points), then arbiter r2.
+5. **Synthesize v2.** Assemble `panel/architecture-v2.md` from the arbiter's verdict: what changes, what
+   new preconditions apply, what's been carved out of scope, what remains an open question with a
+   discovery owner.
+6. **Final codex review pass.** Run v2 through codex for **internal contradictions** (one statement in
+   the spec against another). Fix whatever is found.
+7. **ADR.** Record the decision as an ADR in `docs/adr/` (format —
+   [../roles/architect.md](../roles/architect.md) → "ADR process"): Context, Decision (= v2),
+   Consequences, Alternatives considered. In Consequences — the open questions and survival preconditions
+   from the arbiter's verdict, as explicit risks/TODOs with an owner.
 
-Показывать пользователю каждый раунд (вердикт red, защиту blue, приговор arbiter) — он ground truth и может зарубить плохую посылку раньше, чем панель уйдёт в неё ([principles.md](principles.md): видимость работы).
+Show the user every round (red's verdict, blue's defense, the arbiter's ruling) — they're the ground
+truth and can kill a bad premise before the panel goes deep into it ([principles.md](principles.md):
+visibility of work).
 
-## Консенсус — это фиксированная точка, не взаимное истощение
+## Consensus Is a Fixed Point, Not Mutual Exhaustion
 
-Панель завершена, когда либо: (a) очередной раунд не рождает нового **меняющего решение** возражения (позиция пережила атаку — как есть или в ревизии), либо (b) остаток разногласий сводится к явно названным **эмпирическим неизвестным** («верно, ЕСЛИ факт X; X не проверен») — они логируются как TODO на discovery, а не заметаются.
+The panel is finished when either: (a) another round produces no new **decision-changing** objection
+(the position survived the attack — as-is or revised), or (b) the remaining disagreement reduces to
+explicitly named **empirical unknowns** ("true IF fact X holds; X is unverified") — these are logged as
+discovery TODOs, not swept aside.
 
-**Не консенсус:** капитуляция стороны без разбора её сильнейшего довода (sycophancy — LLM прогибаются под давлением, arbiter штрафует за это); обе стороны выдохлись; согласие на непомеченном допущении.
+**Not consensus:** a side capitulating without addressing its strongest argument (sycophancy — LLMs cave
+under pressure, the arbiter penalizes this); both sides running out of steam; agreement resting on an
+unflagged assumption.
 
-**Единогласие — не автоматически подтверждение.** Если red, blue и codex все сошлись на неочевидном несущем пункте, это может быть **общая слепая зона** одного распределения модели, а не истина (та же причина, по которой панели нужна вторая модель). Арбитр помечает такое единогласие как кандидата на проверку (второй моделью / пользователем), а не закрывает как решённый вопрос. Разногласие ловит CRUX; здесь — обратная ловушка, ложное согласие.
+**Unanimity is not automatically confirmation.** If red, blue, and codex all converge on a non-obvious
+load-bearing point, that can be a **shared blind spot** of a single model distribution, not the truth
+(the same reason the panel needs a second model). The arbiter flags such unanimity as a candidate for
+verification (by a second model / the user), rather than closing it as a settled question. Disagreement
+is caught by the CRUX; here it's the reverse trap — false agreement.
 
-**Termination guard:** потолок ~4-5 раундов. Если всё ещё расходятся — стоп, предъявить пользователю живое разногласие + **CRUX** (тот один факт/ценность, что его решает). Честное не-согласие лучше фальшивого.
+**Termination guard:** a cap of ~4-5 rounds. If still diverging — stop, present the user with the live
+disagreement + the **CRUX** (the one fact/value that resolves it). Honest non-agreement beats fake
+agreement.
 
-## Антипаттерны
+## Anti-patterns
 
-- Запускать панель на тривиальном решении — трата времени; это инструмент для дорогих/необратимых развилок.
-- Дать red-team соломенного человека — бить надо по сильнейшей версии замысла, иначе разбор бесполезен (arbiter это штрафует).
-- Принять митигацию blue без цены и остаточного риска — это лозунг, не защита.
-- Молча пропустить вторую модель — теряется защита от слепых зон одной модели. Нет codex → честный фолбэк-режим (self-critique + пометка о пробеле), а не тихий пропуск.
-- Не выписать v1 письменно перед атакой — нельзя атаковать неформализованное; получится спор о разных пониманиях.
-- Папировать стратегический дефект инженерным трюком — если рамка слабая, безупречная реализация не спасает.
+- Running the panel on a trivial decision — a waste of time; this is a tool for expensive/irreversible forks.
+- Feeding red-team a straw man — the attack must target the strongest version of the intent, otherwise the review is useless (the arbiter penalizes this).
+- Accepting a blue mitigation with no cost and no residual risk — that's a slogan, not a defense.
+- Silently skipping the second model — loses the protection against a single model's blind spots. No codex → the honest fallback mode (self-critique + a flag noting the gap), not a silent skip.
+- Not writing out v1 before the attack — you can't attack what isn't formalized; you'll end up arguing about different understandings.
+- Papering over a strategic defect with an engineering trick — if the frame is weak, flawless implementation won't save it.

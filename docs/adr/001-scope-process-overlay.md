@@ -1,99 +1,106 @@
-# ADR-001: Охват пакета — process-overlay, а не app-bootstrap
+# ADR-001: Package scope — process overlay, not app bootstrap
 
 Date: 2026-06-27
-Status: Accepted (реализовано: README/stub переформулированы, дефолт test-along, day-0-guide в генераторе; п.3 уточнён ADR-016)
+Status: Accepted (implemented: README/stub reworded, test-along default, day-0-guide in the generator; item 3 refined by ADR-016)
 
-> Уточнение 2026-07-03: п.3 решения («вторая модель в панели рекомендована, но не обязательна»)
-> уточнён [ADR-016](016-panel-second-model-mandatory-when-available.md) — обязательна **при доступности**,
-> симметрично red/blue, с тем же честным фолбэком. Тело ниже — историческое, не переписывалось.
+> Update 2026-07-03: item 3 of the decision ("second model on the panel is recommended but not mandatory")
+> is refined by [ADR-016](016-panel-second-model-mandatory-when-available.md) — mandatory **when available**,
+> symmetrically for red/blue, with the same honest fallback. The body below is historical and was not rewritten.
 
-> Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md).
+> Decision reached by running the adversarial panel (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md).
 
-## Коротко
+## In short
 
-Генератор пакета создаёт **регламент работы агента**, а не работающее приложение, — и так и должно
-быть. Решающий аргумент: владеть устаревающим scaffold'ом (go.mod, CI-конфиги, линтеры) под десятки
-стеков непосильно одному мейнтейнеру, а адресат пакета — оператор Claude Code, который и так
-инициализирует стек одной командой. Поэтому README переписан под честное обещание, а разрыв «первый
-день предполагает зелёную сборку» закрыт делегирующим гайдом `day-0-guide.md`.
+The package generator creates an **agent operating regimen**, not a working application — and that
+is exactly how it should be. The decisive argument: owning an aging scaffold (go.mod, CI configs,
+linters) across dozens of stacks is more than a single maintainer can sustain, and the package's
+intended audience is a Claude Code operator who already initializes a stack with one command.
+Accordingly, the README has been rewritten to make an honest promise, and the gap — "day one assumes
+a green build" — is closed by the delegating `day-0-guide.md` guide.
 
-## Контекст
+## Context
 
-README обещал «быстрый старт нового проекта», но `new-project.py` генерирует только регламент
-работы агента (`core/`, `roles/`, `CLAUDE.md`, заготовки `docs/`) — **не работающее приложение.**
-Нет ни `go.mod` / `package.json`, ни Makefile, ни тест-раннера, линтера, CI или `.gitignore`. При
-этом пример первого дня уже предполагает, что «проект инициализирован и `make test` зелёный»
-([examples/docs/day-1-guide.example.md:5](../../examples/docs/day-1-guide.example.md)).
+The README promised a "quick start for a new project," but `new-project.py` only generates an
+agent operating regimen (`core/`, `roles/`, `CLAUDE.md`, `docs/` skeletons) — **not a working
+application.** There is no `go.mod` / `package.json`, no Makefile, no test runner, linter, CI, or
+`.gitignore`. Meanwhile the day-one example already assumes that "the project is initialized and
+`make test` is green" ([examples/docs/day-1-guide.example.md:5](../../examples/docs/day-1-guide.example.md)).
 
-Этот разрыв между обещанием и фактическим выходом порождал вопрос: расширять ли генератор до
-полноценного bootstrap'а приложения? Рассмотрели три варианта охвата:
+This gap between the promise and the actual output raised the question: should the generator be
+extended into a full application bootstrap? Three scope options were considered:
 
-- **A** — полный app-scaffold под стек + онбординг-мастер + solo-mode по умолчанию.
-- **B** — честный process-overlay поверх уже существующего проекта (переписать обещания).
-- **C** — гибрид: scaffold по флагу `--scaffold`, solo-mode по умолчанию, вторая модель (codex) с фолбэком.
+- **A** — a full stack-specific app scaffold + onboarding wizard + solo mode by default.
+- **B** — an honest process overlay on top of an already-existing project (rewrite the promises).
+- **C** — a hybrid: scaffold behind a `--scaffold` flag, solo mode by default, second model (codex)
+  with a fallback.
 
-## Решение
+## Decision
 
-**Строим вариант B+ : process-overlay + делегирующий Day-0.** Генератор не владеет артефактами
-тулчейна — ни напрямую (как в A), ни под флагом (как в C).
+**We build variant B+: process overlay + a delegating Day 0.** The generator does not own
+toolchain artifacts — neither directly (as in A) nor behind a flag (as in C).
 
-**Решающий критерий — кто несёт версионный долг:**
+**Decisive criterion — who carries the version debt:**
 
-- **Разрешено:** инструкция-команда init (`go mod init`, `uv init`, `create-next-app`). Это
-  делегирование — пакет говорит, *что запустить*, но не хранит результат.
-- **Запрещено:** сохранённый результат (`go.mod`, `pyproject.toml`, CI-yaml, конфиг линтера)
-  внутри пакета.
+- **Allowed:** an instruction to run an init command (`go mod init`, `uv init`,
+  `create-next-app`). This is delegation — the package says *what to run*, but does not store the
+  result.
+- **Forbidden:** a stored result (`go.mod`, `pyproject.toml`, CI yaml, linter config) inside the
+  package.
 
-Главный фактор — адресат пакета. Это оператор Claude Code, который инициализирует стек одной
-командой в актуальной версии инструмента. Владеть устаревающим scaffold'ом означало бы взять на себя
-чужой версионный долг под N стеков × N версий без всякой выгоды. Для соло-мейнтейнера это
-непосильно — панель признала это фатальным для варианта A.
+The main factor is the package's intended audience. It's a Claude Code operator who initializes
+a stack with one command using the current version of the tool. Owning an aging scaffold would mean
+taking on someone else's version debt across N stacks × N versions with no benefit. For a solo
+maintainer this is more than can be sustained — the panel found this fatal for variant A.
 
-**Конкретные изменения (составляют синтез v2):**
+**Concrete changes (constitute synthesis v2):**
 
-1. **Формулировки.** README и stub: «быстрый старт нового проекта» → «регламент работы агента
-   поверх вашего проекта».
-2. **Дефолты генератора:** `test-along` + solo role-map по умолчанию; BDD — только за явным
-   `--testing bdd`. Синхронно обновить `day-1.example` и self-test.
-3. **Адверсивная панель:** вторая модель (codex) рекомендована, но **не обязательна.** Если вторая
-   модель недоступна — обязателен фолбэк-протокол (одна модель + усиленный self-critique + честная
-   пометка о пробеле). Убрать ссылку на приватный `~/.claude/CLAUDE.md`.
-4. **Новый `docs/day-0-guide.md`** (в генерируемом проекте) на стороне делегирования: команды init,
-   а не сохранённые результаты. Это снимает разрыв «day-1 предполагает зелёный `make test`».
-5. **Починить дрейф контракта «Чистая сборка»** в `stack/go.md` и `stack/python.md`, расширить
-   self-test.
+1. **Wording.** README and stub: "quick start for a new project" → "an agent operating regimen
+   on top of your project."
+2. **Generator defaults:** `test-along` + a solo role map by default; BDD only behind an explicit
+   `--testing bdd`. Update `day-1.example` and the self-test in sync.
+3. **Adversarial panel:** the second model (codex) is recommended but **not mandatory.** If the
+   second model is unavailable, a fallback protocol is mandatory (single model + strengthened
+   self-critique + an honest note about the gap). Remove the reference to the private
+   `~/.claude/CLAUDE.md`.
+4. **New `docs/day-0-guide.md`** (in the generated project) on the delegation side: init commands,
+   not stored results. This closes the gap "day 1 assumes a green `make test`."
+5. **Fix the drift in the "Clean build" contract** in `stack/go.md` and `stack/python.md`, extend
+   the self-test.
 
-(Эти изменения отделены от точечных багов A1–A7 из предварительного разбора — те чинятся независимо.)
+(These changes are separate from the point bugs A1–A7 from the preliminary review — those are
+fixed independently.)
 
-## Последствия
+## Consequences
 
-**Плюсы:** убирается ложное обещание; снижается порог входа для соло; панель работает у внешнего
-пользователя; пакет фокусируется на своём единственном moat — зрелом регламенте работы агента.
+**Pros:** the false promise is removed; the entry barrier for solo use is lowered; the panel
+works for an external user; the package focuses on its single moat — a mature agent operating
+regimen.
 
-**Риски и открытые вопросы** (решает пользователь):
+**Risks and open questions** (decided by the user):
 
-- [ ] **Ключевой вопрос (CRUX).** Аудитория пакета — оператор Claude Code, а не новичок без агента.
-      На этом стоит весь ADR. Если это ложно — пересмотр целиком (тогда A возможен как другой продукт
-      для другой аудитории). Аргумент за: пакет вообще функционирует только через агента (команды
-      `R D T` диспатчат субагентов), так что «новичок без агента» не может использовать ничего.
-- [ ] Настоящая причина отвала пользователей — неверное ожидание (это лечит B+) или реальное
-      отсутствие приложения (это намекало бы на A)? Закрывается ретроспективой 3 реальных стартов, а
-      не дебатом моделей; нужны данные.
-- [ ] Панель без второй модели объективно слабее; фолбэк снижает, но не убирает этот остаток (НП2).
-      Этот риск неустраним.
-- **Жёсткий стоп — эмпирический гейт «O1» (строить только после ретроспективы 2–3 реальных
-  стартов):** не строить владеющий scaffold или `--scaffold`, пока юзер-тест (уже *после*
-  исправленных обещаний) не покажет, что инициализация стека — реальное узкое место. Если покажет —
-  это повод для **отдельного** пересмотра охвата, а не неявное разрешение варианта C. Если за 3
-  старта инициализация узким местом не была — не строить никогда.
+- [ ] **Key question (CRUX).** The package's audience is a Claude Code operator, not a novice
+      without an agent. The entire ADR rests on this. If false — a full reconsideration (then A
+      becomes possible as a different product for a different audience). Argument in favor: the
+      package only functions through an agent at all (the `R D T` commands dispatch subagents), so
+      "a novice without an agent" cannot use anything.
+- [ ] Is the real cause of user churn a mismatched expectation (which B+ fixes) or the actual
+      absence of an application (which would point toward A)? Settled by a retrospective on 3 real
+      starts, not by a debate between models; data is needed.
+- [ ] A panel without a second model is objectively weaker; the fallback reduces but does not
+      remove this residue (NP2). This risk cannot be eliminated.
+- **Hard stop — empirical gate "O1" (build only after a retrospective on 2–3 real starts):** do
+  not build an owning scaffold or `--scaffold` until a user test (*after* the corrected promises)
+  shows that stack initialization is a real bottleneck. If it does — that's grounds for a
+  **separate** scope reconsideration, not an implicit green light for variant C. If initialization
+  was not a bottleneck across 3 starts — never build it.
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **A — владеющий app-scaffold.** Отклонён: не-устаревающее ядро A и так поглощается B+, а владение
-  версионным долгом под N стеков непосильно для соло; вдобавок дублирует задачу, уже решённую
-  стандартными инструментами для адресата-агента, который умеет init сам. Панель признала это
-  фатальным для A.
-- **C — гибрид / `--scaffold`.** Отклонён: флаг не убирает долг сопровождения, а лишь делает его
-  условно невидимым, плюс добавляет вторую ветку тестирования. Защитимое ядро C терминологически
-  совпадает с B+. Если появятся данные об узком месте — это повод для отдельного пересмотра, не
-  сейчас.
+- **A — an owning app scaffold.** Rejected: the non-aging core of A is already absorbed by B+,
+  and owning version debt across N stacks is more than a solo maintainer can sustain; it also
+  duplicates a task already solved by standard tools for an agent-audience that can run init itself.
+  The panel found this fatal for A.
+- **C — hybrid / `--scaffold`.** Rejected: the flag doesn't remove the maintenance debt, it only
+  makes it conditionally invisible, plus it adds a second testing branch. The defensible core of C
+  is terminologically identical to B+. If data about a bottleneck emerges — that's grounds for a
+  separate reconsideration, not now.

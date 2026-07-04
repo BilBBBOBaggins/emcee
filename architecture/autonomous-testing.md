@@ -1,27 +1,27 @@
-# Autonomous Testing — архитектурный паттерн
+# Autonomous Testing — architecture pattern
 
-Паттерн для автоматизации UI-тестирования через **встроенный в приложение IPC-сервер**, позволяющий тестам управлять приложением как real user через внешний tool.
+A pattern for automating UI testing via an **IPC server embedded in the application**, letting tests drive the application like a real user through an external tool.
 
-Паттерн работает и позволяет автономное UI-тестирование для AI-агентов — критично когда автоматические gate-тесты (unit, integration) не могут проверить реальное поведение UI.
+The pattern works and enables autonomous UI testing for AI agents — critical when automated gate tests (unit, integration) can't verify real UI behavior.
 
-**Применимо для**: desktop apps (Qt, WPF, Tauri), mobile apps (Flutter, native), любых UI-heavy приложений где E2E automation через browser (Selenium, Playwright) не применим.
+**Applicable to**: desktop apps (Qt, WPF, Tauri), mobile apps (Flutter, native), any UI-heavy applications where E2E automation via browser (Selenium, Playwright) doesn't apply.
 
-**Не применимо для**: web apps (у них Playwright и подобные решают проблему), headless services.
+**Not applicable to**: web apps (Playwright and similar solve the problem for them), headless services.
 
-## Проблема которую решает
+## The problem it solves
 
-Automated gates (unit, integration) покрывают код в изоляции. Но **между слоями** бывают разрывы:
+Automated gates (unit, integration) cover code in isolation. But gaps happen **between layers**:
 
-- Кнопка в UI не подключена к handler'у
-- Signal из backend не прокидывается в model
-- Model обновляется но UI не перерисовывается
-- Action триггерит правильный call, но response не обрабатывается
+- A UI button isn't wired to its handler
+- A signal from the backend doesn't propagate to the model
+- The model updates but the UI doesn't redraw
+- An action triggers the right call, but the response isn't handled
 
-Unit тесты не ловят эти проблемы — они mock'ают соседние слои. Manual testing ловит, но не автоматизируется.
+Unit tests don't catch these problems — they mock neighboring layers. Manual testing catches them, but doesn't automate.
 
-Autonomous testing — UI-driven tests с полным стеком **без** human в цикле. AI-агент может запустить тест, проверить результат, диагностировать проблему.
+Autonomous testing — UI-driven tests with the full stack **without** a human in the loop. An AI agent can run a test, check the result, diagnose the problem.
 
-## Базовая архитектура
+## Basic architecture
 
 ~~~
 ┌──────────────────────┐
@@ -32,7 +32,7 @@ Autonomous testing — UI-driven tests с полным стеком **без** h
 ┌──────────────────────┐
 │  Application         │
 │  ┌─────────────────┐ │
-│  │  TestDriver     │ │  IPC server внутри приложения
+│  │  TestDriver     │ │  IPC server inside the application
 │  │  (IPC server)   │ │
 │  └─────────────────┘ │
 │  ┌─────────────────┐ │
@@ -47,23 +47,23 @@ Autonomous testing — UI-driven tests с полным стеком **без** h
 └──────────────────────┘
 ~~~
 
-TestDriver — компонент внутри приложения который:
+TestDriver — a component inside the application that:
 
-- Открывает IPC endpoint (socket, named pipe, HTTP)
-- Принимает команды через стандартизированный протокол
-- Выполняет actions на UI элементах
-- Возвращает state UI в структурированном формате
+- Opens an IPC endpoint (socket, named pipe, HTTP)
+- Accepts commands via a standardized protocol
+- Performs actions on UI elements
+- Returns the UI state in a structured format
 
 External test script:
 
-- Подключается к IPC endpoint
-- Отправляет последовательность команд
-- Проверяет results
-- Сохраняет screenshots, logs, traces
+- Connects to the IPC endpoint
+- Sends a sequence of commands
+- Checks results
+- Saves screenshots, logs, traces
 
-## Активация TestDriver
+## Activating TestDriver
 
-TestDriver включён **только в специальной сборке** или через runtime flag.
+TestDriver is enabled **only in a special build** or via a runtime flag.
 
 ### Compile-time flag
 
@@ -74,13 +74,13 @@ TestDriver включён **только в специальной сборке*
 #endif
 ~~~
 
-Сборка:
+Build:
 
 ~~~bash
 cmake -B build-qa -DENABLE_TEST_DRIVER=ON
 ~~~
 
-Production builds — TestDriver отсутствует, нет security risk.
+Production builds — TestDriver is absent, no security risk.
 
 ### Runtime flag
 
@@ -91,35 +91,35 @@ if (commandLine.contains("--test-mode")) {
 }
 ~~~
 
-Запуск:
+Launch:
 
 ~~~bash
 ./MyApp --test-mode
 ~~~
 
-Более гибко, но security concern — нужно убедиться что флаг не активируется случайно в production.
+More flexible, but a security concern — need to make sure the flag isn't accidentally activated in production.
 
-### Изоляция через отдельный билд
+### Isolation via a separate build
 
-Рекомендуется — TestDriver в отдельной build directory, не в production build.
+Recommended — TestDriver in a separate build directory, not in the production build.
 
-- Production: `build/` — без TestDriver
-- Testing: `build-qa/` — с TestDriver
+- Production: `build/` — without TestDriver
+- Testing: `build-qa/` — with TestDriver
 
-Предотвращает accidental deployment.
+Prevents accidental deployment.
 
-## Протокол IPC
+## IPC protocol
 
-### Требования
+### Requirements
 
-- Простой для debugging
-- Typed commands с validation
-- Async-friendly (приложение не блокируется на ответ)
-- Language-agnostic (test scripts на разных языках)
+- Simple to debug
+- Typed commands with validation
+- Async-friendly (the application doesn't block waiting for a response)
+- Language-agnostic (test scripts in different languages)
 
 ### JSON-RPC 2.0
 
-Рекомендуемый выбор. Стандартизирован, typed, async.
+The recommended choice. Standardized, typed, async.
 
 Request:
 
@@ -162,17 +162,17 @@ Error:
 
 ### Transport
 
-- **Local socket** (Unix socket, named pipe) — для same-machine tests. Быстрое, простое
-- **TCP localhost** — если нужна cross-process communication
-- **WebSocket** — если tests в browser или remote
+- **Local socket** (Unix socket, named pipe) — for same-machine tests. Fast, simple
+- **TCP localhost** — if cross-process communication is needed
+- **WebSocket** — if tests run in a browser or remotely
 
-Для большинства случаев local socket оптимален.
+For most cases, a local socket is optimal.
 
 ### Framing
 
-Newline-delimited JSON — один message на строку. Простой parsing.
+Newline-delimited JSON — one message per line. Simple parsing.
 
-Для большого payload — length-prefixed frames.
+For large payloads — length-prefixed frames.
 
 ## Categories of commands
 
@@ -187,7 +187,7 @@ scroll(objectName, direction, amount)
 dragDrop(sourceObjectName, targetObjectName)
 type(objectName, text)
 keyPress(keyCombo)
-clickIndex(listObjectName, index)  — клик по элементу списка
+clickIndex(listObjectName, index)  — click on a list element
 ~~~
 
 ### Property access
@@ -195,16 +195,16 @@ clickIndex(listObjectName, index)  — клик по элементу списк
 ~~~
 getProperty(objectName, propertyName)
 setProperty(objectName, propertyName, value)
-getModel(modelName)  — весь model state
+getModel(modelName)  — the whole model state
 getModelCount(modelName)
 ~~~
 
-### Waiting и verification
+### Waiting and verification
 
 ~~~
 exists(objectName) → bool
 isVisible(objectName) → bool
-waitForObject(objectName, timeout)  — ждёт появления
+waitForObject(objectName, timeout)  — waits for it to appear
 waitForProperty(objectName, property, expectedValue, timeout)
 ~~~
 
@@ -218,9 +218,9 @@ screenshotObject(objectName) → image path
 ### State inspection
 
 ~~~
-state() — snapshot всего UI tree
+state() — snapshot of the whole UI tree
 modelState() — ground truth data model
-diff(previousState) — что изменилось
+diff(previousState) — what changed
 ~~~
 
 ### Application control
@@ -228,27 +228,27 @@ diff(previousState) — что изменилось
 ~~~
 getAppState() — high-level app state
 resetState() — clear all data, return to clean state
-waitForSync() — ждёт завершения background operations
-invoke(method, args) — прямой вызов метода (для setup/teardown)
+waitForSync() — waits for background operations to finish
+invoke(method, args) — direct method call (for setup/teardown)
 ~~~
 
 ### External integration
 
-Для тестирования интеграций с внешними сервисами:
+For testing integrations with external services:
 
 ~~~
-externalCheck(params) — проверка данных на сервере
-externalPut(params) — создание данных на сервере (для server→client тестов)
+externalCheck(params) — check data on the server
+externalPut(params) — create data on the server (for server→client tests)
 externalDelete(params)
 ~~~
 
 ## Object identification
 
-Тест должен найти UI element для взаимодействия. Варианты:
+A test must find a UI element to interact with. Options:
 
 ### By object name
 
-Каждый interactable element имеет уникальное `objectName`:
+Every interactable element has a unique `objectName`:
 
 ~~~qml
 Button {
@@ -261,17 +261,17 @@ Button {
 driver.click("syncButton")
 ~~~
 
-Рекомендуется — explicit, controlled, survives refactoring.
+Recommended — explicit, controlled, survives refactoring.
 
 ### By accessibility properties
 
-Используя accessible name, role, etc.:
+Using accessible name, role, etc.:
 
 ~~~python
 driver.click(role="button", name="Send")
 ~~~
 
-Плюсы: совмещается с accessibility testing. Минусы: менее controlled, может ломаться при UI changes.
+Pros: aligns with accessibility testing. Cons: less controlled, can break on UI changes.
 
 ### By path
 
@@ -281,24 +281,24 @@ Tree-based identification:
 driver.click("/mainWindow/sidebar/syncButton")
 ~~~
 
-Fragile — ломается при изменении UI hierarchy. Использовать только при необходимости.
+Fragile — breaks when the UI hierarchy changes. Use only when necessary.
 
 ## Context properties access
 
-Для bridge models (которые не live в UI tree):
+For bridge models (which don't live in the UI tree):
 
 ~~~python
 driver.get_property("@messageModel", "count")
 driver.get_model("@userModel")
 ~~~
 
-Prefix `@` указывает на context property.
+The `@` prefix indicates a context property.
 
 ## Test scenarios
 
 ### Format
 
-Scenarios в JSON (или YAML) — declarative, легко generate, легко inspect:
+Scenarios in JSON (or YAML) — declarative, easy to generate, easy to inspect:
 
 ~~~json
 {
@@ -337,109 +337,109 @@ Scenarios в JSON (или YAML) — declarative, легко generate, легко
 
 ### Execution
 
-Test runner читает scenario, выполняет steps последовательно, сохраняет outcomes.
+The test runner reads the scenario, executes steps sequentially, saves outcomes.
 
 ### Generation
 
-AI-агенты могут **generate scenarios** из тест-кейсов (written by QA UAT). Acceptance criteria в Given/When/Then → scenario steps.
+AI agents can **generate scenarios** from test cases (written by QA UAT). Acceptance criteria in Given/When/Then → scenario steps.
 
-## Integration с AI-agent workflow
+## Integration with the AI-agent workflow
 
-TestDriver — критическая часть для автономного AI-driven development.
+TestDriver — a critical part for autonomous AI-driven development.
 
 ### Loop
 
-1. Agent пишет код
-2. Agent запускает scenario тест через TestDriver
-3. TestDriver возвращает state после каждого шага
-4. Agent анализирует state — expected vs actual
-5. Если разрыв — agent диагностирует причину (читает код, логи, state)
-6. Agent пишет fix, повторяет loop
+1. The agent writes code
+2. The agent runs a scenario test via TestDriver
+3. TestDriver returns the state after each step
+4. The agent analyzes the state — expected vs actual
+5. If there's a gap — the agent diagnoses the cause (reads code, logs, state)
+6. The agent writes a fix, repeats the loop
 
 ### Key principle: state comparison
 
-Agent сравнивает UI state с expected state в структурированном формате, не через скриншоты.
+The agent compares the UI state with the expected state in a structured format, not via screenshots.
 
 **Preferred flow**:
 
-1. Agent запрашивает `state()` — structured JSON
-2. Сравнивает с expected JSON
-3. Finds diff
+1. The agent requests `state()` — structured JSON
+2. Compares it with the expected JSON
+3. Finds the diff
 
 **Fallback**:
 
-4. Если JSON недостаточен — screenshot для визуального inspection
-5. Analyze screenshot (if needed)
+4. If JSON isn't sufficient — screenshot for visual inspection
+5. Analyze the screenshot (if needed)
 
-Screenshot — expensive (visual analysis через VLM), use sparingly. JSON state — cheap и precise.
+Screenshots — expensive (visual analysis via VLM), use sparingly. JSON state — cheap and precise.
 
-### Rules для agent
+### Rules for the agent
 
-- Анализируй state/JSON в первую очередь
-- Screenshot только когда JSON показывает аномалию и нужно понять визуально
-- Максимум 1 screenshot за раз, не накапливать
-- Если тест падает 3 раза после fixes — остановиться, описать проблему
-- Не менять публичные API core/bridge без подтверждения
-- Не менять архитектурные решения
-- Один коммит = один fix
+- Analyze state/JSON first
+- Screenshot only when JSON shows an anomaly and visual understanding is needed
+- Maximum 1 screenshot at a time, don't accumulate
+- If a test fails 3 times after fixes — stop, describe the problem
+- Don't change public core/bridge APIs without confirmation
+- Don't change architectural decisions
+- One commit = one fix
 
-## Test accounts и data
+## Test accounts and data
 
-E2E тесты требуют реальных данных. Зафиксированные test accounts — лучший подход:
+E2E tests require real data. Fixed test accounts — the best approach:
 
 | Account | Data volume | Purpose |
 |---------|------------|---------|
-| heavy | огромный | stress tests |
-| medium | средний | типичный случай |
-| small | маленький | быстрые тесты |
-| empty | пустой | edge case |
+| heavy | huge | stress tests |
+| medium | medium | typical case |
+| small | small | fast tests |
+| empty | empty | edge case |
 
-Каждый test specifies которые accounts нужны. Минимум в прогоне — 3 account разного типа.
+Each test specifies which accounts it needs. Minimum in a run — 3 accounts of different types.
 
-Accounts не меняются между прогонами — reproducibility.
+Accounts don't change between runs — reproducibility.
 
-## Observations и assertions
+## Observations and assertions
 
-### Что наблюдать
+### What to observe
 
-- Visible UI state (элементы, text, images)
-- Internal model state (data в bridge models)
-- External state (данные на сервере, files в filesystem)
-- Changes over time (что произошло после action)
+- Visible UI state (elements, text, images)
+- Internal model state (data in bridge models)
+- External state (data on the server, files in the filesystem)
+- Changes over time (what happened after an action)
 
-### Уровни verification
+### Verification levels
 
-**L1 — UI**: кнопка появилась, text отобразился. Быстро но может пропустить semantic issues.
+**L1 — UI**: a button appeared, text was displayed. Fast but may miss semantic issues.
 
-**L2 — Model**: bridge model имеет ожидаемые данные. Более глубокая проверка.
+**L2 — Model**: the bridge model has the expected data. A deeper check.
 
-**L3 — External**: данные доехали до сервера / БД. Самая полная проверка.
+**L3 — External**: the data reached the server / DB. The most complete check.
 
-Хорошие тесты используют все три уровня — action → L1 check → L2 check → L3 check → (опционально) back to L1 после sync.
+Good tests use all three levels — action → L1 check → L2 check → L3 check → (optionally) back to L1 after sync.
 
 ### 4-step pattern
 
-Для каждого теста:
+For each test:
 
 ~~~
-1. ACTION через UI (click, type, etc.)
+1. ACTION via UI (click, type, etc.)
 2. IMMEDIATE VISUAL RESULT (toast, dialog, state change)
-3. REAL RESULT (data на external system)
-4. UI IN SYNC WITH SERVER (UI не откатился, UI отражает серверное состояние)
+3. REAL RESULT (data on the external system)
+4. UI IN SYNC WITH SERVER (the UI hasn't rolled back, the UI reflects server state)
 ~~~
 
-Шаг 4 ловит два типа багов:
+Step 4 catches two types of bugs:
 
-- **UI откатился**: optimistic update отменён после server failure
-- **UI застыл**: server обновил, но UI не перечитал
+- **UI rolled back**: an optimistic update was reverted after a server failure
+- **UI froze**: the server updated, but the UI didn't re-read
 
-Все 4 шага обязательны. Детали — см. [roles/qa-e2e.md](../roles/qa-e2e.md).
+All 4 steps are mandatory. Details — see [roles/qa-e2e.md](../roles/qa-e2e.md).
 
 ## Implementation specifics
 
 ### Thread safety
 
-TestDriver получает команды в отдельном потоке, но UI operations должны быть в main thread.
+TestDriver receives commands on a separate thread, but UI operations must run on the main thread.
 
 Marshalling:
 
@@ -454,11 +454,11 @@ void TestDriver::handleClick(const QString& objectName) {
 }
 ~~~
 
-`BlockingQueuedConnection` — caller ждёт выполнения. Важно для deterministic testing.
+`BlockingQueuedConnection` — the caller waits for execution to complete. Important for deterministic testing.
 
 ### Finding objects
 
-Рекурсивный поиск в object tree:
+Recursive search in the object tree:
 
 ~~~cpp
 QObject* findByObjectName(QObject* root, const QString& name) {
@@ -474,11 +474,11 @@ QObject* findByObjectName(QObject* root, const QString& name) {
 }
 ~~~
 
-Для QML — специфика: context properties, repeater instances, loaders.
+For QML — specifics: context properties, repeater instances, loaders.
 
 ### State serialization
 
-`state()` команда возвращает JSON представление UI tree:
+The `state()` command returns a JSON representation of the UI tree:
 
 ~~~json
 {
@@ -505,35 +505,35 @@ Useful for:
 - Debugging (what's visible now?)
 - Diff (what changed?)
 
-## Ограничения
+## Limitations
 
-### Что TestDriver не заменяет
+### What TestDriver doesn't replace
 
-**Unit tests** — быстрые, isolated, много. TestDriver — медленный, integrated, мало. Разные concerns.
+**Unit tests** — fast, isolated, plentiful. TestDriver — slow, integrated, few. Different concerns.
 
-**Visual testing** — pixel-perfect проверка визуальной корректности. Screenshot comparison tools для этого.
+**Visual testing** — pixel-perfect verification of visual correctness. Screenshot comparison tools for that.
 
-**Performance testing** — TestDriver добавляет overhead, misleading для perf tests.
+**Performance testing** — TestDriver adds overhead, misleading for perf tests.
 
-**Manual exploratory testing** — человек лучше находит unexpected issues.
+**Manual exploratory testing** — a human is better at finding unexpected issues.
 
-### Поддержка
+### Maintenance
 
-TestDriver — infrastructure code который требует поддержки:
+TestDriver — infrastructure code that requires maintenance:
 
-- Добавление новых commands по мере роста приложения
-- Maintenance при major UI changes
-- Documentation для new team members
+- Adding new commands as the application grows
+- Maintenance during major UI changes
+- Documentation for new team members
 
-Invest в это соразмерно размеру проекта.
+Invest in it proportionally to the project's size.
 
-## Эволюция от manual к autonomous
+## Evolution from manual to autonomous
 
-Для существующего проекта — постепенный подход:
+For an existing project — a gradual approach:
 
-1. **Manual E2E тесты сначала** — через human tester или Selenium/Playwright если web
-2. **Semi-autonomous** — TestDriver commands, но test scenarios written by humans
-3. **Autonomous** — AI-агенты генерируют и выполняют scenarios on demand
-4. **Self-healing** — агенты не только тестируют но и reporting issues + suggesting fixes
+1. **Manual E2E tests first** — via a human tester or Selenium/Playwright if it's a web app
+2. **Semi-autonomous** — TestDriver commands, but test scenarios written by humans
+3. **Autonomous** — AI agents generate and execute scenarios on demand
+4. **Self-healing** — agents not only test but also report issues + suggest fixes
 
-Each step — investment. Start simple, evolve by demonstrated need.
+Each step — an investment. Start simple, evolve by demonstrated need.

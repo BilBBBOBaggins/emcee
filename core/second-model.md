@@ -1,51 +1,59 @@
-# Вторая модель (codex) — вторая пара глаз на high-stakes выводе
+# Second model (codex) — a second pair of eyes on high-stakes output
 
-Одна модель (Claude) склонна к слепым зонам и правдоподобным галлюцинациям одного распределения
-ошибок. **Вторая независимая frontier-модель (codex)** атакует с другого распределения и ловит то,
-что одна не видит. Сегодня она подключена в адверсивной панели и spec-driven C+; этот файл обобщает
-её как **opt-in вторую пару глаз для любой роли** — узко, на high-stakes выводе.
+A single model (Claude) is prone to blind spots and plausible hallucinations from one error
+distribution. **A second, independent frontier model (codex)** attacks from a different distribution
+and catches what one alone misses. Today it's wired into the adversarial panel and spec-driven C+;
+this file generalizes it as an **opt-in second pair of eyes for any role** — narrowly, on
+high-stakes output.
 
-Это усиление [principles.md](principles.md) → PR-NN-03 (verification pass): на дорогом выводе второй
-проход делает не та же модель, а независимая.
+This reinforces [principles.md](principles.md) → PR-NN-03 (verification pass): on expensive output,
+the second pass is done not by the same model, but by an independent one.
 
-## Когда звать (узкие триггеры — НЕ на каждом шаге)
+## When to call it in (narrow triggers — NOT on every step)
 
-Зови codex, когда вывод = **консеквентное суждение с риском слепой зоны**, цена ошибки которого
-оправдывает второй проход:
+Call codex in when the output = **a consequential judgment with blind-spot risk**, whose cost of
+error justifies a second pass:
 
-- **reviewer** — на финдингах высокой важности перед вердиктом (реальны ли, не пропущено ли).
-- **architect** — на спецификации/трейдоффах перед ADR (нетривиальное/необратимое → это уже
-  [adversarial-panel.md](adversarial-panel.md), полный протокол).
-- **SA/BA** — на требованиях/сценариях, где пропуск граничного случая дорог.
-- **debugger** — на гипотезе причины перед дорогим фиксом (не угадал ли по одному распределению).
+- **reviewer** — on high-importance findings before the verdict (are they real, was anything
+  missed).
+- **architect** — on the spec/trade-offs before an ADR (non-trivial/irreversible → that's already
+  [adversarial-panel.md](adversarial-panel.md), the full protocol).
+- **SA/BA** — on requirements/scenarios where missing a boundary case is costly.
+- **debugger** — on the cause hypothesis before an expensive fix (did it guess from just one
+  distribution).
 
-**НЕ зови** на тривиальном/чистом коде, мелких правках, рутине: developer/devops уже под reviewer +
-mechanical-гейтами — второй проход там избыточен (шум + расход квоты).
+**Don't call it** for trivial/clean code, small edits, routine work: developer/devops are already
+under reviewer + mechanical gates — a second pass there is redundant (noise + burned quota).
 
-## Честные ограничения
+## Honest limitations
 
-- **codex — code/reasoning-модель.** Как ревьюер **кода и жёстких контрактов** — сильна; как ревьюер
-  **дизайна и продуктовых требований** — слабее. На не-коде помечай вывод «вторая модель, слабее на
-  этом классе» и **замеряй пользу** ([spec-driven.md](spec-driven.md) → PROCESS-METRICS): не ловит
-  класс дефектов за 2-3 фичи → сузить триггеры обратно к reviewer/architect/C+.
-- **opt-in, не mandatory.** «codex на каждом шаге каждой роли» отклонён: мёртвый ритуал + операционный
-  потолок — codex на ChatGPT-Max-квоте, частые xhigh-вызовы упираются в rate-limit плана.
-- **Это НЕ ослабляет локальные протоколы.** Если запущена адверсивная панель, C+ или аудит
-  ([../roles/auditor.md](../roles/auditor.md) — там codex-проход на high-stakes находках mandatory,
-  ADR-005) — действует ИХ правило codex (рекомендован/обязателен с честным фолбэком). second-model —
-  общий opt-in для обычных ролей, не замена и не послабление панели/C+/аудита.
+- **codex is a code/reasoning model.** As a reviewer of **code and hard contracts** — strong; as a
+  reviewer of **design and product requirements** — weaker. On non-code output, flag it "second
+  model, weaker on this class" and **measure the payoff** ([spec-driven.md](spec-driven.md) →
+  PROCESS-METRICS): doesn't catch a defect class in 2-3 features → narrow the triggers back down to
+  reviewer/architect/C+.
+- **opt-in, not mandatory.** "codex on every step of every role" was rejected: a dead ritual + an
+  operational ceiling — codex runs on the ChatGPT Max quota, and frequent xhigh calls hit the plan's
+  rate limit.
+- **This does NOT weaken local protocols.** If the adversarial panel, C+, or an audit
+  ([../roles/auditor.md](../roles/auditor.md) — where the codex pass on high-stakes findings is
+  mandatory, ADR-005) is running — THEIR codex rule applies (recommended/mandatory with an honest
+  fallback). second-model is the general opt-in for ordinary roles, not a replacement for or a
+  loosening of the panel/C+/audit.
 
-## Как звать
+## How to call it
 
-Команда (max effort, full project read, web — prompt на stdin):
+Command (max effort, full project read, web — prompt on stdin):
 
 ~~~bash
 codex exec -s read-only -c 'sandbox_permissions=["disk-full-read-access"]' \
   -c tools.web_search=true -m <codex-model-id> -c model_reasoning_effort=xhigh -
 ~~~
 
-**Плейсхолдер `<codex-model-id>` — канонический источник (этот файл; на него ссылаются все codex-команды
-пакета, ADR-001).** Подставь живой топ codex, сверив `~/.codex/models_cache.json` перед прогоном; на момент
-написания топ = `gpt-5.5` (`xhigh` = «Extra High»). Не зашивай id в команды — обновляется одна эта сноска.
-Нет codex / второй модели — честный фолбэк: усиленный self-critique с другого угла + пометка «второй
-модели не было, остаточный риск слепых зон выше» (как в панели), а не тихий пропуск.
+**The placeholder `<codex-model-id>` — canonical source (this file; every codex command in the
+package refers to it, ADR-001).** Substitute the live top codex model, checking
+`~/.codex/models_cache.json` before the run; at time of writing the top is `gpt-5.5` (`xhigh` =
+"Extra High"). Don't hardcode the id into commands — only this one footnote gets updated. No codex
+/ no second model — the honest fallback: reinforced self-critique from a different angle + a flag
+"no second model was available, residual blind-spot risk is higher" (as in the panel), rather than a
+silent skip.

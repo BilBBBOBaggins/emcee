@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# PreCompact-хук: ПЕРЕД компакцией контекста пишет recovery-чекпойнт (указатель на транскрипт +
-# время + триггер) в docs/checkpoints.md, чтобы детали не терялись молча и можно было продолжить
-# работу после сжатия. Опционально — включается через .claude/settings.json.
+# PreCompact hook: BEFORE context compaction, writes a recovery checkpoint (a pointer to the
+# transcript + time + trigger) to docs/checkpoints.md, so details aren't lost silently and work
+# can continue after compaction. Optional — enabled via .claude/settings.json.
 #
-# Это минимальный честный вариант (фиксирует ТОЧКУ восстановления). Для СМЫСЛОВОГО summary в
-# чекпойнт расширь скрипт вызовом модели по транскрипту — см. core/memory.md.
-# Известный edge-case: PreCompact может не сработать на ручном /compact.
-# python3 (а не jq) — пакет и так требует python3, это переносимее на macOS.
+# This is the minimal honest version (fixes a recovery POINT). For a MEANINGFUL summary in the
+# checkpoint, extend the script with a model call over the transcript — see core/memory.md.
+# Known edge case: PreCompact may not fire on a manual /compact.
+# python3 (not jq) — the package already requires python3, which is more portable on macOS.
 set -euo pipefail
 
 input="$(cat)"
@@ -23,9 +23,9 @@ trigger="${meta##*$'\t'}"
 out="${CLAUDE_PROJECT_DIR:-.}/docs/checkpoints.md"
 mkdir -p "$(dirname "$out")"
 {
-  printf '\n## Компакция (%s) — %s\n' "$trigger" "$(date '+%Y-%m-%d %H:%M:%S')"
-  printf -- '- Транскрипт: %s\n' "$tpath"
-  printf -- '- Восстановление: прочитай транскрипт + `git log`, продолжи с последнего шага (см. core/memory.md → прунинг: это эпизодическое, чисти/архивируй).\n'
+  printf '\n## Compaction (%s) — %s\n' "$trigger" "$(date '+%Y-%m-%d %H:%M:%S')"
+  printf -- '- Transcript: %s\n' "$tpath"
+  printf -- '- Recovery: read the transcript + `git log`, continue from the last step (see core/memory.md → pruning: this is episodic, clean up/archive).\n'
 } >> "$out"
 
 exit 0

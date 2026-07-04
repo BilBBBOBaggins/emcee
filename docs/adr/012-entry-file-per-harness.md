@@ -1,97 +1,58 @@
-# ADR-012: Вход регламента — тонкий per-harness нативный файл + нейтральное методическое ядро (codex без CLAUDE.md)
+# ADR-012: Regimen entry — thin per-harness native file + neutral methodological core (codex without CLAUDE.md)
 
 Date: 2026-06-29
 Status: Accepted
 
-> Решение принято прогоном адверсивной панели (red-team → blue-team → arbiter), см. [core/adversarial-panel.md](../../core/adversarial-panel.md).
+> Decision made via an adversarial panel run (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md).
 
-Уточняет/исправляет P4 из [ADR-011](011-process-layer-and-multimodel-build.md); не затрагивает позицию `.claude/` в пакете.
+Clarifies/corrects P4 from [ADR-011](011-process-layer-and-multimodel-build.md); does not affect the position of `.claude/` in the package.
 
-## Коротко
+## In short
 
-Сгенерённый **Codex-проект содержит файл `CLAUDE.md`** в корне + 69 упоминаний `CLAUDE.md`, а
-`AGENTS.md` просит «читай CLAUDE.md, не смотри на имя» — Codex-юзер без Клода путается. Корень: **имя
-входного файла `CLAUDE.md` — это harness-изм, пропущенный в P3**. Прежний дизайн (AGENTS.md →
-указатель на CLAUDE.md, CLAUDE.md лежит в codex-проекте) держался на **неверном** rationale «вынос
-контента = второй источник истины».
+The generated **Codex project contains a `CLAUDE.md` file** at its root plus 69 mentions of `CLAUDE.md`, while `AGENTS.md` says "read CLAUDE.md, ignore the name" — a Codex user with no Claude gets confused. Root cause: **the entry file name `CLAUDE.md` is a harness-ism that P3 missed**. The earlier design (AGENTS.md → pointer to CLAUDE.md, with CLAUDE.md living in the Codex project) rested on the **wrong** rationale that "extracting content = a second source of truth."
 
-Решение: вход = **тонкий per-harness нативный файл** (`CLAUDE.md` для Claude Code / `AGENTS.md`
-для Codex, по одному на проект), несущий проектную специфику + honest harness-delta и указывающий в
-**нейтральное методическое ядро `core/`** (оно уже нейтрально). **Codex-проект `CLAUDE.md` не
-получает.** Отдельный `REGIMEN.md` НЕ заводим (избыточен — payload уже `core/`).
+Decision: the entry = **a thin per-harness native file** (`CLAUDE.md` for Claude Code / `AGENTS.md` for Codex, one per project), carrying project specifics + an honest harness delta and pointing to the **neutral methodological core `core/`** (already neutral). **The Codex project does not get a `CLAUDE.md`.** A separate `REGIMEN.md` is NOT introduced (redundant — the payload is already `core/`).
 
-## Контекст
+## Context
 
-P4 (ADR-011) построил codex-оверлей. Проверка «ничего не сломали» вскрыла дефект пользовательского
-опыта: codex-проект несёт `CLAUDE.md`-файл и пронизан Claude-неймингом входа. Панель установила:
+P4 (ADR-011) built the codex overlay. A "did we break anything" check exposed a user-experience defect: the codex project carries a `CLAUDE.md` file and is permeated with Claude entry-file naming. The panel established:
 
-- **Имя входа `CLAUDE.md` — harness-изм** (привязка к конкретному рантайму). P3 нейтрализовал
-  plan-mode/`/rewind`/`.claude/`, но имя входного файла пропустил.
-- **Дословное «переименовать CLAUDE.md→AGENTS.md» (Option B) качественно несостоятельно:**
-  контент входа реально Claude-специфичен — `«этот CLAUDE.md»`, memory-иерархия, slash-команды, метка
-  «Промпт для Claude Code». Под именем AGENTS.md часть строк станет **ложью** для Codex.
-- **Часть упоминаний — Claude-ФАКТ рантайма:** memory-иерархия (`core/memory.md`), матрица
-  (`core/portability.md:92` «AGENTS→CLAUDE»). Нейтрализовать = соврать.
-- **Прежний rationale неверен** (жил в дореформенном codex-входе — указателе `AGENTS.md`→`CLAUDE.md`,
-  ныне в пакете не существует; см. правку ниже): один template → нативное имя = нормальная генерация
-  (как `sync-roles` рендерит в два таргета), НЕ второй источник истины.
+- **The entry name `CLAUDE.md` is a harness-ism** (tied to a specific runtime). P3 neutralized plan-mode/`/rewind`/`.claude/`, but missed the entry file's name.
+- **A literal "rename CLAUDE.md→AGENTS.md" (Option B) fails qualitatively:** the entry content is genuinely Claude-specific — `"this CLAUDE.md"`, the memory hierarchy, slash commands, the "Prompt for Claude Code" label. Under the name AGENTS.md, some lines would become **false** for Codex.
+- **Some mentions are a Claude runtime FACT:** the memory hierarchy (`core/memory.md`), the matrix (`core/portability.md:92` "AGENTS→CLAUDE"). Neutralizing them would mean lying.
+- **The earlier rationale is wrong** (it lived in the pre-reform codex entry — the `AGENTS.md`→`CLAUDE.md` pointer, which no longer exists in the package; see the fix below): one template → a native name is normal generation (the way `sync-roles` renders into two targets), NOT a second source of truth.
 
-## Решение
+## Decision
 
-**Вход — per-harness нативный файл; «тонкий» = не несёт корпус методов/ролей (он в `core/`), несёт
-проектную специфику (стек, роутеры, testing) + honest harness-delta.**
+**The entry is a per-harness native file; "thin" = it does not carry the body of methods/roles (that lives in `core/`), it carries project specifics (stack, routers, testing) + an honest harness delta.**
 
-1. **Генератор пишет вход в нативное имя С КОНТЕНТОМ** (не указателем): claude-code → `CLAUDE.md`;
-   codex → `AGENTS.md` несёт контент. Codex-проект `CLAUDE.md` НЕ получает.
-2. **Два класса упоминаний `CLAUDE.md` + allowlist для меток** (разный режим):
-   - **(a) generic «входной файл»** (роутеры, «Прочитай CLAUDE.md» в ролях) → **нейтрализовать** в
-     «входной файл регламента» (резолвится в нативное имя per harness).
-   - **(b) Claude-ФАКТ рантайма** (memory-иерархия, матрица:92, нативное авточтение) → **оставить
-     явным** Claude-фактом в harness-delta. Не нейтрализовать.
-   - **(c) process-convention метка** («Промпт для Claude Code») → **оставить** (каноничный
-     Claude-флавор, ADR-011).
-3. **`.codex/agents/*.toml` ссылаются на `AGENTS.md`**, не `CLAUDE.md`.
-4. **Новый selftest-инвариант:** ловить **голый прозовый** `CLAUDE.md` в codex-выводе (не только
-   markdown-ссылки — `neutralize_dead_links` их пропускает). Критерий: ноль (a)/self-ref в
-   codex-проекте; (b)-delta и (c)-метка — по allowlist.
-5. **`selftest.py:214` инвертируется:** codex-проект НЕ должен иметь **файл** `CLAUDE.md` в корне.
-6. **Убрать неверный rationale «второй источник»** из дореформенного codex-входа. Реализовано
-   **удалением, а не переписыванием**: указатель `overlays/codex/AGENTS.md`→`CLAUDE.md` заменён
-   delta-заголовком `overlays/codex/_agents-header.md`, который этого rationale не несёт вовсе (в
-   пакете `overlays/codex/AGENTS.md` больше не существует; полный `AGENTS.md` материализует лишь
-   генератор в проекте).
-7. **`REGIMEN.md` НЕ заводим** (нейтральный payload уже `core/`; третье имя = лишний хоп, нулевой
-   анти-дрейф-выигрыш).
+1. **The generator writes the entry to the native name WITH CONTENT** (not a pointer): claude-code → `CLAUDE.md`; codex → `AGENTS.md` carries the content. The Codex project does NOT get a `CLAUDE.md`.
+2. **Two classes of `CLAUDE.md` mentions + an allowlist for labels** (different handling):
+   - **(a) generic "entry file"** (routers, "read CLAUDE.md" in roles) → **neutralize** to "regimen entry file" (resolves to the native name per harness).
+   - **(b) Claude runtime FACT** (memory hierarchy, matrix:92, native auto-read) → **leave explicit** as a Claude fact in the harness delta. Do not neutralize.
+   - **(c) process-convention label** ("Prompt for Claude Code") → **leave as is** (canonical Claude flavor, ADR-011).
+3. **`.codex/agents/*.toml` reference `AGENTS.md`**, not `CLAUDE.md`.
+4. **New selftest invariant:** catch **bare prose** `CLAUDE.md` in codex output (not just markdown links — `neutralize_dead_links` skips those). Criterion: zero (a)/self-ref in the codex project; (b)-delta and (c)-label follow the allowlist.
+5. **`selftest.py:214` is inverted:** the codex project must NOT have a **file** `CLAUDE.md` at its root.
+6. **Remove the wrong "second source" rationale** from the pre-reform codex entry. Implemented by **deletion, not rewriting**: the `overlays/codex/AGENTS.md`→`CLAUDE.md` pointer was replaced by the delta header `overlays/codex/_agents-header.md`, which carries no such rationale at all (the package no longer has an `overlays/codex/AGENTS.md`; only the generator materializes the full `AGENTS.md` in the project).
+7. **`REGIMEN.md` is NOT introduced** (the neutral payload is already `core/`; a third name = an extra hop, zero anti-drift gain).
 
-## Последствия
+## Consequences
 
-**Плюсы (качество):** Codex-юзер получает чистый проект — нативный `AGENTS.md`, без `CLAUDE.md` и без
-«читай CLAUDE.md несмотря на имя»; Claude-факты честно живут в per-harness delta, не маскируются;
-нейтральный payload `core/` by construction; один источник на проект, без дрейфа.
+**Upsides (quality):** the Codex user gets a clean project — a native `AGENTS.md`, no `CLAUDE.md` and no "read CLAUDE.md despite the name"; Claude facts honestly live in the per-harness delta, not masked; the `core/` payload is neutral by construction; one source per project, no drift.
 
-**Отменяет инвариант** «оверлей = только плумбинг, `CLAUDE.md` = общее ядро» (`overlays/README.md:5-6,47`):
-вход теперь per-harness нативный, а общее ядро = `core/` (метод), не `CLAUDE.md`. Неверный rationale
-«второй источник» **удалён** вместе с дореформенным указателем `overlays/codex/AGENTS.md` — его место
-занял delta-заголовок `overlays/codex/_agents-header.md` (без этого rationale).
+**Overturns the invariant** "overlay = plumbing only, `CLAUDE.md` = shared core" (`overlays/README.md:5-6,47`): the entry is now per-harness native, and the shared core = `core/` (the method), not `CLAUDE.md`. The wrong "second source" rationale **was removed** along with the pre-reform `overlays/codex/AGENTS.md` pointer — its place was taken by the delta header `overlays/codex/_agents-header.md` (without that rationale).
 
-**Реализация (исполнено и верифицировано):**
+**Implementation (executed and verified):**
 
-- [x] Классифицировать все 69 упоминаний `CLAUDE.md` по классам (a/b/c). Сведено к 26 легитимным
-      вхождениям: (b)-факты memory/portability плюс нейтрализованные (a) с явным указанием per-harness.
-      (b)-факта без дома в harness-delta не нашлось.
-- [x] Генератор: запись входа в нативное имя для каждого рантайма; codex без `CLAUDE.md` (проверено:
-      codex-проект несёт `AGENTS.md` с контентом, файла `CLAUDE.md` нет).
-- [x] Нейтрализация (a)-ссылок; `.codex/agents/*.toml` → `AGENTS.md`; правка rationale; инверсия
-      инварианта в `selftest.py:214` плюс инвариант на голый прозовый текст (тривайр для (b)-homes).
-- [x] После фикса: сгенерён codex-проект — ноль (a)/self-ref `CLAUDE.md`, ноль висячих ссылок, доктор зелёный.
+- [x] Classify all 69 mentions of `CLAUDE.md` into classes (a/b/c). Reduced to 26 legitimate occurrences: (b)-facts for memory/portability plus neutralized (a) with an explicit per-harness note. No (b)-fact without a home in the harness delta was found.
+- [x] Generator: writes the entry to the native name for each runtime; codex without `CLAUDE.md` (verified: the codex project carries `AGENTS.md` with content, no `CLAUDE.md` file).
+- [x] Neutralized (a)-references; `.codex/agents/*.toml` → `AGENTS.md`; fixed the rationale; inverted the invariant in `selftest.py:214` plus an invariant for bare prose text (triage for (b)-homes).
+- [x] After the fix: a codex project was generated — zero (a)/self-ref `CLAUDE.md`, zero dangling links, the doctor green.
 
-## Рассмотренные альтернативы
+## Alternatives considered
 
-- **Option B (дословно переименовать CLAUDE.md→AGENTS.md).** Отклонено: контент входа
-  Claude-специфичен, дословный рендер = ложь для Codex.
-- **`REGIMEN.md` (третье нейтральное имя для payload).** Отклонено: избыточно — нейтральный
-  методический payload уже `core/`; третье имя = лишняя косвенность, нулевой анти-дрейф-выигрыш.
-- **Текущий указатель (CLAUDE.md в codex-проекте + AGENTS.md→CLAUDE.md).** Отклонено: дефект
-  пользовательского опыта (Codex-юзер путается) плюс rationale «второй источник истины» неверен.
-- **refined-B плюс allowlist без правки генератора.** Allowlist необходим, но без записи входа
-  в нативное имя оставляет файл `CLAUDE.md` в codex-проекте — полумера, цель не достигнута.
+- **Option B (literally rename CLAUDE.md→AGENTS.md).** Rejected: the entry content is Claude-specific, a literal render would be a lie for Codex.
+- **`REGIMEN.md` (a third neutral name for the payload).** Rejected: redundant — the neutral methodological payload is already `core/`; a third name is extra indirection, zero anti-drift gain.
+- **The current pointer (CLAUDE.md in the codex project + AGENTS.md→CLAUDE.md).** Rejected: a user-experience defect (the Codex user gets confused) plus the "second source of truth" rationale is wrong.
+- **Refined-B plus an allowlist without fixing the generator.** The allowlist is necessary, but without writing the entry to the native name it still leaves a `CLAUDE.md` file in the codex project — a half-measure that misses the goal.

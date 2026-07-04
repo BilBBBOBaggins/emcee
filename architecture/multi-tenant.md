@@ -1,113 +1,113 @@
-# Multi-tenancy — архитектурный паттерн
+# Multi-tenancy — architectural pattern
 
-Multi-tenancy закладывается с первого дня. Добавление потом — месяцы переписывания, закладка сразу — несколько часов.
+Multi-tenancy is designed in from day one. Adding it later means months of rewriting; designing it in from the start takes a few hours.
 
-## Модели multi-tenancy
+## Multi-tenancy models
 
-Три основные модели по возрастанию изоляции:
+Three main models, in increasing order of isolation:
 
 ### Shared DB, shared schema
 
-Все tenants в одной БД, одних таблицах. Различаются по `tenant_id` в каждой таблице.
+All tenants in one database, same tables. Distinguished by `tenant_id` in every table.
 
-Плюсы:
-- Самый дешёвый по infra
-- Простые миграции (одна операция для всех)
-- Простой analytics и reporting
+Pros:
+- Cheapest in terms of infra
+- Simple migrations (one operation for everyone)
+- Simple analytics and reporting
 
-Минусы:
-- Слабая изоляция (полагается на application-level проверки)
-- Один плохой tenant может деградировать performance для всех
-- Риск data leak при багах
+Cons:
+- Weak isolation (relies on application-level checks)
+- One bad tenant can degrade performance for everyone
+- Risk of data leak from bugs
 
-Подходит для: большинства B2B SaaS, особенно starter/SMB tier.
+Suitable for: most B2B SaaS, especially starter/SMB tier.
 
 ### Shared DB, separate schema
 
-Все tenants в одной БД, но каждый — в своей PostgreSQL schema.
+All tenants in one database, but each in its own PostgreSQL schema.
 
-Плюсы:
-- Лучшая изоляция на уровне SQL
-- Tenant-specific schema evolution возможен
+Pros:
+- Better isolation at the SQL level
+- Tenant-specific schema evolution is possible
 
-Минусы:
-- Сложнее миграции (для каждого schema)
-- Connection pooling сложнее (разные search_path)
-- Limit на количество schemas в одной БД
+Cons:
+- Harder migrations (per schema)
+- Connection pooling is harder (different search_path)
+- Limit on the number of schemas in one database
 
-Подходит для: mid-market, когда изоляция важна но отдельная БД избыточна.
+Suitable for: mid-market, when isolation matters but a separate database is overkill.
 
 ### Separate DB per tenant
 
-Каждый tenant — своя БД (или даже отдельный инстанс).
+Each tenant has its own database (or even a separate instance).
 
-Плюсы:
-- Максимальная изоляция
-- Tenant может быть на своём железе (compliance)
-- Performance isolation полная
+Pros:
+- Maximum isolation
+- Tenant can be on its own hardware (compliance)
+- Full performance isolation
 
-Минусы:
-- Сложная инфраструктура
-- Cross-tenant analytics требует агрегации
-- Миграции — параллельные операции над многими БД
+Cons:
+- Complex infrastructure
+- Cross-tenant analytics requires aggregation
+- Migrations are parallel operations across many databases
 
-Подходит для: enterprise tier, regulated industries, compliance-heavy доменов.
+Suitable for: enterprise tier, regulated industries, compliance-heavy domains.
 
-## Рекомендуемый подход
+## Recommended approach
 
-Для большинства проектов — **shared DB, shared schema** как старт, с архитектурой готовой к переходу на **separate DB** для enterprise tier.
+For most projects — **shared DB, shared schema** as a start, with an architecture ready to transition to **separate DB** for the enterprise tier.
 
-Архитектурное следствие: весь код работает через абстракцию "tenant context", не знает physical layout БД. Переход с shared на separate — это изменение connection resolver, не изменение бизнес-логики.
+Architectural consequence: all code works through a "tenant context" abstraction, doesn't know the physical layout of the DB. Moving from shared to separate is a change to the connection resolver, not a change to business logic.
 
-## Правила модели shared schema
+## Rules for the shared schema model
 
-### Каждая таблица имеет tenant_id
+### Every table has tenant_id
 
 ~~~sql
 CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id),
-    -- ...остальные поля
+    -- ...remaining fields
 );
 
 CREATE INDEX idx_orders_tenant_id ON orders(tenant_id);
 ~~~
 
-- `tenant_id NOT NULL` — никогда nullable
-- Индекс на `tenant_id` — обязателен для performance
-- Foreign key на `tenants(id)` — для referential integrity
+- `tenant_id NOT NULL` — never nullable
+- Index on `tenant_id` — mandatory for performance
+- Foreign key on `tenants(id)` — for referential integrity
 
-### Все запросы фильтруются по tenant_id
+### All queries filtered by tenant_id
 
-Это защищается двумя слоями.
+This is protected by two layers.
 
-### Row-Level Security (RLS) в PostgreSQL
+### Row-Level Security (RLS) in PostgreSQL
 
 ~~~sql
--- Включаем RLS для таблицы
+-- Enable RLS for the table
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
--- Создаём policy — видны только строки текущего tenant
+-- Create a policy — only the current tenant's rows are visible
 CREATE POLICY tenant_isolation ON orders
     USING (tenant_id = current_setting('app.tenant_id')::uuid);
 
--- Отдельная policy для admin роли
+-- Separate policy for the admin role
 CREATE POLICY admin_all_access ON orders
     TO admin_role
     USING (true);
 ~~~
 
-RLS добавляет `WHERE tenant_id = current_setting('app.tenant_id')` к каждому запросу автоматически. Это защита от забытого фильтра в коде.
+RLS adds `WHERE tenant_id = current_setting('app.tenant_id')` to every query automatically. This is protection against a forgotten filter in code.
 
-Tenant context устанавливается в начале транзакции:
+Tenant context is set at the start of the transaction:
 
 ~~~sql
 SET LOCAL app.tenant_id = '550e8400-e29b-41d4-a716-446655440000';
 ~~~
 
-### Repository layer в коде
+### Repository layer in code
 
-Дополнительная защита на уровне приложения. Каждый repository обёрнут tenant context:
+Additional protection at the application level. Every repository is wrapped by tenant context:
 
 ~~~go
 type OrderRepository struct {
@@ -120,8 +120,8 @@ func (r *OrderRepository) GetByID(ctx context.Context, orderID uuid.UUID) (*Orde
         return nil, ErrNoTenantContext
     }
 
-    // RLS защитит даже если забудем tenant_id в WHERE,
-    // но пишем явно для дополнительной безопасности
+    // RLS will protect us even if we forget tenant_id in WHERE,
+    // but we write it explicitly for extra safety
     query := `SELECT * FROM orders WHERE tenant_id = $1 AND id = $2`
     // ...
 }
@@ -129,20 +129,20 @@ func (r *OrderRepository) GetByID(ctx context.Context, orderID uuid.UUID) (*Orde
 
 ## Tenant context
 
-Tenant context — это текущий tenant в рамках обработки запроса. Устанавливается на самом начале и передаётся через context по всему стеку.
+Tenant context is the current tenant within request processing. Set at the very beginning and passed through context down the whole stack.
 
-### Источники tenant identity
+### Sources of tenant identity
 
-По убыванию приоритета:
+In decreasing priority:
 
 1. **Subdomain** — `acme.app.example.com` → tenant "acme"
-2. **JWT claim** — токен содержит `tenant_id`
-3. **API key** — ключ привязан к tenant'у
-4. **Path parameter** — `/tenants/{tenant_id}/...` (для admin endpoints)
+2. **JWT claim** — token contains `tenant_id`
+3. **API key** — key is bound to a tenant
+4. **Path parameter** — `/tenants/{tenant_id}/...` (for admin endpoints)
 
-Обычно используется комбинация: subdomain для UI, JWT для authenticated API calls, API key для server-to-server.
+Usually a combination is used: subdomain for UI, JWT for authenticated API calls, API key for server-to-server.
 
-### Middleware устанавливает context
+### Middleware sets the context
 
 ~~~go
 func TenantMiddleware(next http.Handler) http.Handler {
@@ -159,9 +159,9 @@ func TenantMiddleware(next http.Handler) http.Handler {
 }
 ~~~
 
-### Database connection устанавливает session var
+### Database connection sets a session var
 
-При получении connection из pool — перед использованием выполняется SET LOCAL:
+When getting a connection from the pool — before use, a SET LOCAL is executed:
 
 ~~~go
 func (db *DB) QueryWithTenant(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
@@ -184,35 +184,35 @@ func (db *DB) QueryWithTenant(ctx context.Context, query string, args ...interfa
 
 ## Cross-tenant operations
 
-Admin и platform-level операции могут легитимно требовать доступа ко всем tenants. Правила:
+Admin and platform-level operations may legitimately require access to all tenants. Rules:
 
-- Отдельная admin роль в БД с bypass RLS (через `TO admin_role USING (true)`)
-- Явная активация admin-режима в коде — не default behavior
-- Audit log обязателен на все admin-действия
-- Admin API endpoints отдельны от tenant API endpoints, на отдельных путях (/admin/*)
-- Admin authentication отдельна от tenant authentication (например, internal SSO вместо tenant JWT)
+- A separate admin role in the DB that bypasses RLS (via `TO admin_role USING (true)`)
+- Explicit activation of admin mode in code — not default behavior
+- Audit log mandatory for all admin actions
+- Admin API endpoints are separate from tenant API endpoints, on separate paths (/admin/*)
+- Admin authentication is separate from tenant authentication (e.g., internal SSO instead of tenant JWT)
 
-## Миграции
+## Migrations
 
-Миграции в shared schema применяются ко всем tenants одновременно. Правила:
+Migrations in shared schema are applied to all tenants simultaneously. Rules:
 
 ### Backwards-compatible migrations
 
-Миграция не должна ломать старый код, работающий в процессе rolling deployment:
+A migration must not break old code running during a rolling deployment:
 
-- Добавление колонки — nullable или с default
-- Удаление колонки — сначала deprecate в коде, потом удалить через несколько deploys
-- Rename — через add new + backfill + remove old, не через ALTER RENAME
+- Adding a column — nullable or with a default
+- Removing a column — first deprecate in code, then remove after several deploys
+- Rename — via add new + backfill + remove old, not via ALTER RENAME
 
-Паттерн для добавления NOT NULL колонки:
+Pattern for adding a NOT NULL column:
 
 ~~~sql
 -- Migration 001: add column nullable
 ALTER TABLE orders ADD COLUMN priority INTEGER;
 
--- Application code: пишет в priority, но fallback для NULL
+-- Application code: writes priority, but has a fallback for NULL
 
--- Migration 002 (после deploy): backfill
+-- Migration 002 (after deploy): backfill
 UPDATE orders SET priority = 0 WHERE priority IS NULL;
 
 -- Migration 003: make NOT NULL
@@ -220,32 +220,32 @@ ALTER TABLE orders ALTER COLUMN priority SET NOT NULL;
 ALTER TABLE orders ALTER COLUMN priority SET DEFAULT 0;
 ~~~
 
-### Миграции данных per tenant
+### Per-tenant data migrations
 
-Если миграция данных нужна per-tenant (например, пересчёт cached fields):
+If a data migration is needed per tenant (e.g., recomputing cached fields):
 
-- Выполняется batch job, не в transaction миграции
-- Tenants обрабатываются параллельно или пакетами
-- Progress tracking для long-running миграций
+- Executed as a batch job, not within the migration transaction
+- Tenants processed in parallel or in batches
+- Progress tracking for long-running migrations
 
-## Billing и usage tracking
+## Billing and usage tracking
 
-Per-tenant метрики собираются через middleware или event log:
+Per-tenant metrics are collected via middleware or an event log:
 
-- Количество API вызовов
-- Storage usage (размер в БД)
-- Compute time (для heavy operations)
-- Feature usage (какие features используются)
+- Number of API calls
+- Storage usage (size in the DB)
+- Compute time (for heavy operations)
+- Feature usage (which features are used)
 
-Агрегация происходит асинхронно:
+Aggregation happens asynchronously:
 
-- Raw events в специальную таблицу или time-series store
-- Периодическая агрегация (hourly/daily) в billing tables
-- Billing calculation — отдельный модуль
+- Raw events into a dedicated table or time-series store
+- Periodic aggregation (hourly/daily) into billing tables
+- Billing calculation — a separate module
 
-## Тесты multi-tenancy
+## Multi-tenancy tests
 
-Обязательные сценарии в test suite:
+Mandatory scenarios in the test suite:
 
 ### Isolation tests
 
@@ -254,35 +254,35 @@ func TestTenantIsolation(t *testing.T) {
     tenantA := createTestTenant(t)
     tenantB := createTestTenant(t)
 
-    // Создаём order в tenant A
+    // Create an order in tenant A
     orderID := createOrderInTenant(t, tenantA, "test order")
 
-    // Пытаемся прочитать из tenant B
+    // Try to read it from tenant B
     ctx := withTenant(context.Background(), tenantB.ID)
     _, err := repo.GetByID(ctx, orderID)
 
-    // Должно быть ErrNotFound, не данные tenant A
+    // Should be ErrNotFound, not tenant A's data
     require.ErrorIs(t, err, ErrNotFound)
 }
 ~~~
 
 ### RLS bypass tests
 
-Убедиться что raw SQL минуя RLS не работает без admin-роли:
+Make sure raw SQL bypassing RLS doesn't work without the admin role:
 
 ~~~go
 func TestRLSCannotBeBypassed(t *testing.T) {
-    // Попытка прочитать без установки tenant context
+    // Attempt to read without setting tenant context
     _, err := db.Query("SELECT * FROM orders")
 
-    // Должна быть ошибка либо пустой результат, не полная таблица
+    // Should be an error or an empty result, not the full table
     // ...
 }
 ~~~
 
 ### Admin access tests
 
-Admin видит всех tenants:
+Admin sees all tenants:
 
 ~~~go
 func TestAdminSeesAllTenants(t *testing.T) {
@@ -296,27 +296,27 @@ func TestAdminSeesAllTenants(t *testing.T) {
     orders, err := adminRepo.ListAllOrders(ctx)
 
     require.NoError(t, err)
-    require.Len(t, orders, 2) // видит обоих
+    require.Len(t, orders, 2) // sees both
 }
 ~~~
 
-## Антипаттерны
+## Anti-patterns
 
-- **tenant_id в application memory** — global variable или thread-local без explicit context. Ломается в async workflows.
-- **Опциональный tenant_id** — nullable колонка или проверка "if tenant_id != nil". Обязательное поле.
-- **Admin bypass через code flag** — `if isAdmin { skipTenantCheck() }`. Должно быть на уровне БД роли, не в application code.
-- **Cross-tenant reports в runtime** — "показать топ-10 продуктов across all tenants". Это admin-функция, отдельный путь, отдельная авторизация.
-- **Shared resources без tenant isolation** — uploaded files в одной папке без префикса, cache keys без tenant prefix. Всё с tenant scope.
+- **tenant_id in application memory** — a global variable or thread-local without explicit context. Breaks in async workflows.
+- **Optional tenant_id** — a nullable column or an "if tenant_id != nil" check. It must be a mandatory field.
+- **Admin bypass through a code flag** — `if isAdmin { skipTenantCheck() }`. Should be at the DB role level, not in application code.
+- **Cross-tenant reports at runtime** — "show top-10 products across all tenants". This is an admin function, a separate path, separate authorization.
+- **Shared resources without tenant isolation** — uploaded files in one folder without a prefix, cache keys without a tenant prefix. Everything must be tenant-scoped.
 
 ## Performance considerations
 
-- `tenant_id` в каждом query — **обязательно индекс**. Без индекса — full table scan для каждого запроса
-- Composite indexes должны начинаться с `tenant_id`:
+- `tenant_id` in every query — **an index is mandatory**. Without an index — a full table scan on every query
+- Composite indexes must start with `tenant_id`:
 
 ~~~sql
 CREATE INDEX idx_orders_tenant_status ON orders(tenant_id, status);
 CREATE INDEX idx_orders_tenant_created ON orders(tenant_id, created_at);
 ~~~
 
-- Partitioning по `tenant_id` для очень больших таблиц — когда один tenant имеет миллионы записей и это мешает остальным
-- Connection pooling — watch out за session variables (RLS tenant_id). Pool должен правильно обрабатывать SET LOCAL (автоматически сбрасывается при commit/rollback)
+- Partitioning by `tenant_id` for very large tables — when one tenant has millions of records and it interferes with the rest
+- Connection pooling — watch out for session variables (RLS tenant_id). The pool must handle SET LOCAL correctly (automatically reset on commit/rollback)

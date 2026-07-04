@@ -1,43 +1,43 @@
 # Acme Teams
 
-B2B SaaS для управления командами и доступами. Веб-приложение: владелец заводит команду, приглашает участников, управляет ролями и биллингом.
+B2B SaaS for team and access management. Web app: an owner sets up a team, invites teammates, manages roles and billing.
 
-> Это пример заполненного `CLAUDE.md` (все `{{...}}` подставлены, оставлен один testing-вариант). Шаблон — в [../CLAUDE.md](../CLAUDE.md). Ссылки в этом файле ведут на `../` только потому, что пример лежит в `examples/`; в реальном проекте `CLAUDE.md` стоит в корне и ссылки идут на `core/...`, `roles/...` напрямую.
+> This is an example of a filled-in `CLAUDE.md` (all `{{...}}` substituted, one testing variant kept). The template is at [../CLAUDE.md](../CLAUDE.md). Links in this file point at `../` only because the example lives under `examples/`; in a real project `CLAUDE.md` sits at the repo root and links go straight to `core/...`, `roles/...`.
 
-## Стек
+## Stack
 
-- Go 1.23 (бэкенд)
-- Echo (HTTP), sqlc, Goose (миграции), slog
-- TypeScript 5 (фронтенд)
+- Go 1.23 (backend)
+- Echo (HTTP), sqlc, Goose (migrations), slog
+- TypeScript 5 (frontend)
 - Next.js 15 (App Router), shadcn/ui, TanStack Query
-- PostgreSQL 16 (RLS для multi-tenancy)
-- Make (сборка), golangci-lint
-- testify (Go), Vitest + Testing Library + Playwright (фронт)
+- PostgreSQL 16 (RLS for multi-tenancy)
+- Make (build), golangci-lint
+- testify (Go), Vitest + Testing Library + Playwright (frontend)
 
-## Архитектура
+## Architecture
 
-Модульный монолит (Go) + Next.js фронт. Решение зафиксировано в [docs/adr/001-modular-monolith.example.md](docs/adr/001-modular-monolith.example.md).
+Modular monolith (Go) + Next.js frontend. The decision is recorded in [docs/adr/001-modular-monolith.example.md](docs/adr/001-modular-monolith.example.md).
 
-Слои бэкенда (строго соблюдать направление зависимостей):
+Backend layers (strictly respect the direction of dependencies):
 
-1. **transport** — HTTP-обработчики, middleware. Знает про service, не знает про БД напрямую.
-2. **service** — use cases, бизнес-логика. Знает про repository-интерфейсы.
-3. **repository** — доступ к данным (sqlc). Не знает про service/transport.
+1. **transport** — HTTP handlers, middleware. Knows about service, doesn't know about the DB directly.
+2. **service** — use cases, business logic. Knows about repository interfaces.
+3. **repository** — data access (sqlc). Doesn't know about service/transport.
 
-Правило: transport → service → repository. Обратные импорты запрещены.
+Rule: transport → service → repository. Reverse imports are forbidden.
 
-## Команды
+## Commands
 
-### Быстрые команды через цифры
+### Quick numeric commands
 
-- **`/kickoff`** = старт проекта (дней ещё нет): архитектор в kickoff-режиме — суть → входной файл → первый срез → гайды дня. Полный пайплайн: [../core/pipeline.md](../core/pipeline.md).
-- Одно число `N` = архитектор входит в день N. Читает весь проект, выводит статус.
-- Два числа `R D` = роль R входит в контекст дня D без конкретной задачи (review или планирование).
-- Три числа `R D T` = роль R берёт задачу T из гайда дня D ([docs/day-1-guide.example.md](docs/day-1-guide.example.md)).
+- **`/kickoff`** = project start (no days yet): architect in kickoff mode — essence → entry file → first slice → day guides. Full pipeline: [../core/pipeline.md](../core/pipeline.md).
+- A single number `N` = the architect enters day N. Reads the whole project, outputs status.
+- Two numbers `R D` = role R enters the context of day D without a specific task (review or planning).
+- Three numbers `R D T` = role R takes task T from the guide for day D ([docs/day-1-guide.example.md](docs/day-1-guide.example.md)).
 
-Маппинг ролей:
+Role map:
 
-| R | Роль | Файл роли |
+| R | Role | Role file |
 |---|------|-----------|
 | 0 | Reviewer | [../roles/reviewer.md](../roles/reviewer.md) |
 | 1 | Developer | [../roles/developer.md](../roles/developer.md) |
@@ -48,69 +48,69 @@ B2B SaaS для управления командами и доступами. �
 | 6 | Debugger | [../roles/debugger.md](../roles/debugger.md) |
 | 7 | DevOps | [../roles/devops.md](../roles/devops.md) |
 
-Карта цифр — единственный источник истины. Гайды дня и прочие артефакты — по конвенции из [../core/task-protocol.md](../core/task-protocol.md).
+The role map is the single source of truth. Day guides and other artifacts follow the convention in [../core/task-protocol.md](../core/task-protocol.md).
 
-### Сборка и тесты
+### Build and tests
 
-Сборка:
+Build:
 
 ~~~bash
 make build
 ~~~
 
-Все тесты:
+All tests:
 
 ~~~bash
 make test
 ~~~
 
-Быстрый прогон конкретного теста:
+Quick run of a specific test:
 
 ~~~bash
 go test ./internal/service/ -run TestInviteService_Create
 npm run test -- --run InviteTeammateModal
 ~~~
 
-## Обязательно читать в начале каждой сессии
+## Required reading at the start of every session
 
-- [../core/pipeline.md](../core/pipeline.md) — как устроен весь пайплайн: kickoff → онгоинг, кто что делает
-- [../core/principles.md](../core/principles.md) — базовые принципы работы агента
-- [../core/task-protocol.md](../core/task-protocol.md) — как агент понимает задачи + имена артефактов
-- [../core/quality-gates.md](../core/quality-gates.md) — критерии завершённости задачи
-- [../core/constitution.md](../core/constitution.md) — несущие non-negotiable + протокол сверки (preflight/exit)
+- [../core/pipeline.md](../core/pipeline.md) — how the whole pipeline works: kickoff → ongoing, who does what
+- [../core/principles.md](../core/principles.md) — base principles of agent work
+- [../core/task-protocol.md](../core/task-protocol.md) — how the agent understands tasks + artifact names
+- [../core/quality-gates.md](../core/quality-gates.md) — task completion criteria
+- [../core/constitution.md](../core/constitution.md) — load-bearing non-negotiables + the preflight/exit check protocol
 
-## По ситуации
+## Situational
 
-- Дебаг чего-то сломанного → [../core/debugging.md](../core/debugging.md)
-- Вопросы о качестве кода → [../core/code-quality.md](../core/code-quality.md)
-- Бэкенд-стек → [../stack/go.md](../stack/go.md)
-- Фронтенд-стек → [../stack/react-nextjs.md](../stack/react-nextjs.md)
-- Композиция → [../architecture/modular-monolith.md](../architecture/modular-monolith.md), изоляция данных → [../architecture/multi-tenant.md](../architecture/multi-tenant.md)
-- Домен → [../domain/b2b-saas.md](../domain/b2b-saas.md)
+- Debugging something broken → [../core/debugging.md](../core/debugging.md)
+- Code quality questions → [../core/code-quality.md](../core/code-quality.md)
+- Backend stack → [../stack/go.md](../stack/go.md)
+- Frontend stack → [../stack/react-nextjs.md](../stack/react-nextjs.md)
+- Composition → [../architecture/modular-monolith.md](../architecture/modular-monolith.md), data isolation → [../architecture/multi-tenant.md](../architecture/multi-tenant.md)
+- Domain → [../domain/b2b-saas.md](../domain/b2b-saas.md)
 
 ## Testing philosophy
 
-### Outside-in BDD (для B2B с domain expertise)
+### Outside-in BDD (for B2B with domain expertise)
 
-Pipeline формирования тестов и кода:
+Test-and-code formation pipeline:
 
-1. SA/BA формирует acceptance criteria на языке домена (Given/When/Then).
-2. QA UAT превращает criteria в формальные тест-кейсы с ожидаемым видимым поведением.
-3. QA E2E или Developer пишет код тестов.
-4. Developer реализует код чтобы тесты проходили.
+1. SA/BA forms acceptance criteria in domain language (Given/When/Then).
+2. QA UAT turns criteria into formal test cases with the expected visible behavior.
+3. QA E2E or the developer writes the test code.
+4. The developer implements the code so the tests pass.
 
-Тесты — **спецификация**, не проверка. Тест красный = баг в коде (или неполная имплементация), не проблема теста.
+Tests are a **specification**, not a check. A red test = a bug in the code (or an incomplete implementation), not a problem with the test.
 
-Пример сквозной связки для фичи «пригласить участника»: spec → scenarios → test-cases → код — см. [docs/](docs/).
+An end-to-end example of this chain for the "invite teammate" feature: spec → scenarios → test-cases → code — see [docs/](docs/).
 
-## Специфика проекта
+## Project specifics
 
-- **Бизнес-контекст:** ранний B2B SaaS, MVP. Activation завязан на onboarding (пригласить команду).
-- **Team setup:** 1–2 человека; роли исполняются через переключение Claude Code по цифрам.
-- **Внешние зависимости:** email-провайдер ещё не выбран (см. PROJECT-STATE → open questions); сейчас отправка письма — заглушка-логгер.
-- **Текущий статус:** [docs/PROJECT-STATE.example.md](docs/PROJECT-STATE.example.md).
-- **Критические запреты:** tenant определяется только из auth-контекста, никогда из тела запроса; ПД (email) не пишутся в логи в открытом виде.
+- **Business context:** early B2B SaaS, MVP. Activation hinges on onboarding (inviting the team).
+- **Team setup:** 1–2 people; roles are executed by switching Claude Code via numbers.
+- **External dependencies:** the email provider isn't chosen yet (see PROJECT-STATE → open questions); sending mail is currently a logger stub.
+- **Current status:** [docs/PROJECT-STATE.example.md](docs/PROJECT-STATE.example.md).
+- **Critical prohibitions:** the tenant is determined only from the auth context, never from the request body; PII (email) is never written to logs in the clear.
 
-## Эволюция этого документа
+## Evolution of this document
 
-Живой документ. Правило добавляется когда агент делает ошибку, которую можно предотвратить формализацией; удаляется когда оно over-specialized под ушедший контекст. Раз в 1–3 месяца — review.
+A living document. A rule is added when the agent makes a mistake that formalization can prevent; it is removed when it becomes over-specialized for context that's gone. Review every 1–3 months.

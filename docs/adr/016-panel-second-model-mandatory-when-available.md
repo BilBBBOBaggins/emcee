@@ -1,39 +1,22 @@
-# ADR-016: Вторая модель в адверсивной панели — обязательна при доступности
+# ADR-016: Second model in the adversarial panel — mandatory when available
 
 Date: 2026-07-03
 Status: Accepted
 
-> Провенанс: холистический аудит пакета 2026-07-03 (находка B1) вскрыл дрейф «канон ↔ ADR»:
-> [core/adversarial-panel.md](../../core/adversarial-panel.md) требовал «codex обязателен симметрично»,
-> тогда как [ADR-001](001-scope-process-overlay.md) п.3 фиксировал «рекомендована, но не обязательна»,
-> а `.claude/commands/panel.md` противоречил сам себе (строка 11 «обязан» ↔ строка 19 «рекомендован»).
-> Ни один ADR эскалацию не ратифицировал. Вердикт codex-прохода аудита (gpt-5.5 xhigh): находка
-> реальна; ратифицировать «обязателен при доступности + честный фолбэк» — симметрия red/blue является
-> несущей гарантией панели, «рекомендован» оставляет лазейку для асимметричного пропуска. Принято
-> оператором.
+> Provenance: a holistic package audit on 2026-07-03 (finding B1) uncovered a "canon ↔ ADR" drift: [core/adversarial-panel.md](../../core/adversarial-panel.md) required "codex is mandatory, symmetrically," while [ADR-001](001-scope-process-overlay.md) item 3 recorded "recommended, but not mandatory," and `.claude/commands/panel.md` contradicted itself (line 11 "must" ↔ line 19 "recommended"). No ADR had ratified the escalation. Verdict of the audit's codex pass (gpt-5.5 xhigh): the finding is real; ratify "mandatory when available + an honest fallback" — red/blue symmetry is a load-bearing guarantee of the panel, "recommended" leaves a loophole for an asymmetric skip. Accepted by the operator.
 
-## Коротко
+## In short
 
-В адверсивной панели вторая независимая frontier-модель (codex) **обязательна при доступности,
-симметрично у red-team и blue-team**. Недоступна физически (нет CLI/сети/квоты) — панель не
-пропускается: действует **честный фолбэк** ([core/adversarial-panel.md](../../core/adversarial-panel.md)
-§Вторая модель — усиленный self-critique + явная пометка «второй модели не было, остаточный риск
-слепых зон выше»). «Рекомендована» из ADR-001 п.3 — **уточнено** этим ADR; сам ADR-001 не
-переписывается (immutability), его статус-хедер несёт указатель сюда.
+In the adversarial panel, a second independent frontier model (codex) is **mandatory when available, symmetrically for red team and blue team**. If physically unavailable (no CLI/network/quota), the panel is not skipped: an **honest fallback** applies ([core/adversarial-panel.md](../../core/adversarial-panel.md) §Second model — reinforced self-critique + an explicit note that "there was no second model, residual blind-spot risk is higher"). "Recommended" from ADR-001 item 3 is **clarified** by this ADR; ADR-001 itself is not rewritten (immutability), its status header carries a pointer here.
 
-## Решение
+## Decision
 
-1. **Обязательность условна доступности, не желанию.** Пропуск codex при живом CLI — нарушение
-   протокола панели; пропуск при физической недоступности — легитимный фолбэк под запись.
-2. **Симметрия — несущая гарантия.** Декорреляция работает, только когда вторая модель стоит и в
-   атаке (red), и в защите (blue); асимметричное подключение смещает суд.
-3. **Арбитра это не касается**: codex у арбитра — только фактчекер спорных эмпирических утверждений,
-   не со-судья (без изменений, [core/adversarial-panel.md](../../core/adversarial-panel.md) §«Арбитр codex НЕ отдаёт вердикт»).
+1. **The mandate is conditional on availability, not on preference.** Skipping codex while the CLI is live is a violation of the panel protocol; skipping it due to physical unavailability is a legitimate fallback, on the record.
+2. **Symmetry is a load-bearing guarantee.** Decorrelation works only when the second model stands both in attack (red) and in defense (blue); an asymmetric hookup skews the verdict.
+3. **This does not concern the arbiter**: for the arbiter, codex is only a fact-checker of disputed empirical claims, not a co-judge (unchanged, [core/adversarial-panel.md](../../core/adversarial-panel.md) §"The codex arbiter does NOT issue a verdict").
 
 ## Consequences
 
-- Формулировки синхронизированы: `core/adversarial-panel.md`, `.claude/commands/panel.md`
-  (внутреннее противоречие 11↔19 устранено), `.claude/agents/red-team.md` §Привлечение второй модели.
-- Фолбэк-протокол не ослаблен и не изменён.
-- Операционный потолок (квота ChatGPT-Max, rate-limit xhigh) остаётся принятым остатком ADR-001:
-  «обязателен при доступности» не требует расширения квоты — недоступность по квоте = фолбэк.
+- Wording synchronized across: `core/adversarial-panel.md`, `.claude/commands/panel.md` (the internal 11↔19 contradiction resolved), `.claude/agents/red-team.md` §Engaging the second model.
+- The fallback protocol is neither weakened nor changed.
+- The operational ceiling (ChatGPT-Max quota, xhigh rate limit) remains an accepted residual of ADR-001: "mandatory when available" does not require expanding the quota — unavailability due to quota = fallback.

@@ -1,49 +1,50 @@
 # PROJECT-STATE — Acme Teams
 
-**Снимок текущего состояния, не журнал.** Architect читает на входе в день (`N`) и
-перезаписывает на месте в конце дня: решённое убирает, устаревшее затирает. История
-(«что и когда сделано») — в git (`git log`), решения «почему» — в `docs/adr/`. Здесь —
-только то, что нужно, чтобы продолжить сейчас. Цель ≤ ~1 экран.
+**A snapshot of the current state, not a journal.** The architect reads this on entering a day
+(`N`) and overwrites it in place at the end of the day: removes what's resolved, wipes what's
+stale. History ("what was done and when") lives in git (`git log`); "why" decisions live in
+`docs/adr/`. This holds only what's needed to continue right now. Target ≤ ~1 screen.
 
-Last updated: 2026-04-18 (День 1)
+Last updated: 2026-04-18 (Day 1)
 
-## Снимок
+## Snapshot
 
-- **Фаза:** MVP, неделя 1. Готов каркас: аутентификация (session cookie, middleware кладёт
-  `tenant_id` в ctx), multi-tenancy (Row-Level Security по `tenant_id` в Postgres), фича
-  «пригласить участника» (API + UI + тесты).
-- **Стек/команды** — в `CLAUDE.md` (здесь не дублируем).
-- **Метрики** (пересчитываются на входе в день, не накапливаются): 14 коммитов · 86/86 тестов ·
-  ~2 400 LOC — команды в [roles/architect.md](../../roles/architect.md) (секция status report).
+- **Phase:** MVP, week 1. Scaffold is ready: auth (session cookie, middleware puts `tenant_id` in
+  ctx), multi-tenancy (Row-Level Security by `tenant_id` in Postgres), the "invite a teammate"
+  feature (API + UI + tests).
+- **Stack/commands** — in `CLAUDE.md` (not duplicated here).
+- **Metrics** (recomputed on entering a day, not accumulated): 14 commits · 86/86 tests ·
+  ~2,400 LOC — commands in [roles/architect.md](../../roles/architect.md) (status report section).
 
 ## Frozen scope (QG-NN-05)
 
-Shipping root(s): `cmd/acme/main.go` (API) · `app/layout.tsx` (web) — фиксирует architect;
-задача, меняющая entry-point поставки, обязана обновить строку
-([core/quality-gates.md](../../core/quality-gates.md) §Достижимость).
+Shipping root(s): `cmd/acme/main.go` (API) · `app/layout.tsx` (web) — fixed by the architect; a
+task that changes the shipping entry point must update this line
+([core/quality-gates.md](../../core/quality-gates.md) §Reachability).
 
-- `INV-01` — владелец приглашает участника по email с ролью; после accept приглашённый видит
-  команду. Evidence: `tests/assembled/invite_flow_test.go` (аннотация `@qg:INV-01`).
-- `INV-02` — повторный инвайт на pending-email отклоняется с видимой пользователю ошибкой.
-  Evidence: там же (`@qg:INV-02`).
-- `INV-03` — автоскрытие toast через 5 секунд — waiver: эргономика без output-дифференциала,
-  E2E-контур, не гейт.
+- `INV-01` — the owner invites a teammate by email with a role; after accepting, the invitee sees
+  the team. Evidence: `tests/assembled/invite_flow_test.go` (annotation `@qg:INV-01`).
+- `INV-02` — a repeat invite to a pending email is rejected with a user-visible error.
+  Evidence: same file (`@qg:INV-02`).
+- `INV-03` — the toast auto-hides after 5 seconds — waiver: ergonomics with no outcome
+  differential, E2E circuit, not a gate.
 
-## В работе
+## In progress
 
-- Приём приглашения (accept invite) — запланировано на День 2.
-- Реальная отправка письма (сейчас заглушка-логгер) — ждёт выбор провайдера, см. open questions.
+- Accepting the invitation (accept invite) — planned for Day 2.
+- Real email sending (currently a logger stub) — waiting on the provider choice, see open
+  questions.
 
-## Риски / блокеры
+## Risks / blockers
 
-- Провайдер email не выбран — влияет на День 2. Решение нужно от пользователя.
-- Rate-limit на инвайты ещё нет — потенциальный abuse-вектор, вынести в Open questions / «Следующий день».
+- The email provider isn't chosen — affects Day 2. Needs a user decision.
+- No rate limit on invites yet — potential abuse vector, carry over to Open questions / "Next day".
 
 ## Open questions
 
-- [ ] Email-провайдер: SES vs Postmark vs SMTP? — нужно решение пользователя.
-- [ ] Лимит pending-инвайтов на tenant? — уточнить у domain expert (см. [roles/sa.md](../../roles/sa.md)).
+- [ ] Email provider: SES vs Postmark vs SMTP? — needs a user decision.
+- [ ] Limit on pending invites per tenant? — clarify with the domain expert (see [roles/sa.md](../../roles/sa.md)).
 
-## Следующий день
+## Next day
 
-День 2: приём приглашения по токену из письма + связка инвайт → member.
+Day 2: accepting the invitation via the token from the email + wiring invite → member.
