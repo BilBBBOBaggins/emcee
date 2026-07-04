@@ -64,7 +64,7 @@
   <!-- ============ ZONE 2 : ONGOING ============ -->
   <rect class="zone" x="40" y="260" width="1060" height="214" rx="12"/>
   <text x="58" y="286" class="zhead">②  ONGOING — day by day, the R D T cycle</text>
-  <text x="330" y="286" class="zhint">repeats while a roadmap slice remains</text>
+  <text x="440" y="286" class="zhint">repeats while a roadmap slice remains</text>
 
   <rect class="box role" x="58"  y="322" width="168" height="58" rx="9"/>
   <text x="142" y="346" class="bt">architect · N</text>
