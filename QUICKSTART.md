@@ -1,33 +1,33 @@
-# QUICKSTART — как начать и держать дисциплину
+# QUICKSTART — how to start and keep discipline
 
-Этот пакет — **регламент работы агента** поверх вашего проекта: правила, роли, числовые команды
-`R D T`, гейты качества и состязательная панель для важных решений. Само приложение он не создаёт —
-стек инициализирует агент или стандартный инструмент.
+This package is an **agent work regimen** layered on top of your project: rules, roles, numeric
+commands `R D T`, quality gates, and an adversarial panel for important decisions. It doesn't
+create the application itself — the agent or a standard tool initializes the stack.
 
-Если термины ниже незнакомы, короткий словарь есть в конце [README.md](README.md).
+If any of the terms below are unfamiliar, there's a short glossary at the end of [README.md](README.md).
 
-## Выберите свой трек
+## Choose your track
 
-Дальше всё зависит от того, с чего вы стартуете:
+What comes next depends on where you're starting from:
 
-- **[Б — новый проект](#б--новый-проект)** — у вас пустой каталог.
-- **[А1 — существующий проект без нашего регламента](#а1--существующий-проект-без-харнесса)** — есть
-  код, регламента ещё нет.
-- **[А2 — существующий проект со старым регламентом](#а2--существующий-проект-с-устаревшим-харнессом-upgrade)** —
-  регламент стоял со старой версии и отстал, нужен upgrade.
+- **[B — new project](#b--new-project)** — you have an empty directory.
+- **[A1 — existing project without our regimen](#a1--existing-project-without-the-harness)** — you
+  have code, but no regimen yet.
+- **[A2 — existing project with an outdated regimen](#a2--existing-project-with-an-outdated-harness-upgrade)** —
+  the regimen was installed from an old version and has fallen behind, and needs an upgrade.
 
-Все три трека сходятся в общий [ежедневный цикл](#ежедневный-цикл-общий-для-всех) и
-[дисциплину](#как-держать-дисциплину-общий-для-всех).
+All three tracks converge into the shared [daily cycle](#daily-cycle-common-to-all-tracks) and
+[discipline](#how-to-keep-discipline-common-to-all-tracks).
 
-> **Полную картину «как работать»** даёт [core/pipeline.md](core/pipeline.md): старт через
-> `/kickoff`, переход в онгоинг `R D T`, кто что делает, откуда берутся гайды дня, пример со всеми
-> ролями. Ниже — практические шаги.
+> **The full picture of "how to work"** is in [core/pipeline.md](core/pipeline.md): starting via
+> `/kickoff`, moving into ongoing `R D T`, who does what, where day guides come from, an example
+> covering every role. Below are the practical steps.
 
 ---
 
-## Б — новый проект
+## B — new project
 
-Сгенерируйте каркас регламента в пустом каталоге:
+Generate the regimen scaffold in an empty directory:
 
 ```bash
 ./new-project.py --name "Acme Teams" --dir ../acme --mode new \
@@ -36,193 +36,202 @@
     --testing test-along --wiring yes
 ```
 
-> **Рантайм (`--harness`).** По умолчанию `--harness claude-code`: вход проекта — `CLAUDE.md`,
-> обвязка — `.claude/`. Для **Codex CLI** добавьте `--harness codex`: вход — `AGENTS.md` (Codex
-> авто-читает; `CLAUDE.md` в codex-проект не кладётся), обвязка — `.codex/` (агент-профили
-> `*.toml`). Метод общий для обоих — он в `core/`. Дальше по шагам, где упомянут `CLAUDE.md`,
-> на Codex читайте `AGENTS.md` (это ваш вход регламента). Подробно — [README](README.md) →
-> «Claude Code default, Codex built-in», [ADR-012](docs/adr/012-entry-file-per-harness.md).
+> **Runtime (`--harness`).** The default is `--harness claude-code`: the project's entry file is
+> `CLAUDE.md`, wiring is `.claude/`. For **Codex CLI**, add `--harness codex`: the entry file is
+> `AGENTS.md` (Codex auto-reads it; `CLAUDE.md` is not placed in a Codex project), wiring is
+> `.codex/` (agent profiles as `*.toml`). The method is shared between both — it lives in `core/`.
+> From here on, wherever `CLAUDE.md` is mentioned, on Codex read `AGENTS.md` instead (that's your
+> regimen entry file). Details — [README](README.md) → "Claude Code default, Codex built-in",
+> [ADR-012](docs/adr/012-entry-file-per-harness.md).
 
-Дальше:
+Then:
 
-1. **`/kickoff` — главный шаг.** Это команда, которая выводит проект из состояния «пусто» в «есть
-   план на день 1». Архитектор задаёт вам короткие routing-вопросы (что строим, для кого, на каком
-   стеке), **сам заполняет `CLAUDE.md`** (помечая источник каждого факта; чего не знает — оставляет
-   видимый `{{плейсхолдер}}`, а не выдумывает), фиксирует ваши приоритеты в
-   `docs/PROJECT-STATE.md`, прогоняет несущую архитектуру через `/panel` → ADR и производит
-   `docs/day-0-guide.md` и `docs/day-1-guide.md`. Вам не нужно вручную копаться в `{{...}}` — вы
-   просто отвечаете на вопросы. (Подробно — [core/pipeline.md](core/pipeline.md).)
+1. **`/kickoff` — the main step.** This is the command that takes the project from "empty" to
+   "has a plan for day 1". The architect asks you short routing questions (what you're building,
+   for whom, on what stack), **fills in `CLAUDE.md` itself** (tagging the source of every fact;
+   whatever it doesn't know, it leaves as a visible `{{placeholder}}` rather than inventing one),
+   records your priorities in `docs/PROJECT-STATE.md`, runs the load-bearing architecture through
+   `/panel` → ADR, and produces `docs/day-0-guide.md` and `docs/day-1-guide.md`. You don't need to
+   dig through `{{...}}` by hand — you just answer the questions. (Details —
+   [core/pipeline.md](core/pipeline.md).)
 
-2. **Проверьте готовность:** `python3 regimen-doctor.py` должен дать 🟢. То, что kickoff не смог
-   заполнить из источника и оставил как `{{...}}`, дозаполните сами — найти всё:
-   `grep -rn '{{' . --include='*.md'`. После правок запустите проверку повторно.
+2. **Check readiness:** `python3 regimen-doctor.py` should give a 🟢. Whatever kickoff couldn't
+   fill in from source and left as `{{...}}`, fill in yourself — find it all with:
+   `grep -rn '{{' . --include='*.md'`. Re-run the check after making edits.
 
-3. **День 0 — инициализация стека.** Команда `1 0 1` (это developer берёт задачу 1 из
-   `docs/day-0-guide.md`): агент сам запускает `go mod init` / `create-next-app` / `uv init`,
-   вписывает фактические команды build/test, получает **зелёный baseline** (в актуальной версии
-   инструмента, а не из зашитого scaffold'а).
+3. **Day 0 — stack initialization.** The command `1 0 1` (the developer takes task 1 from
+   `docs/day-0-guide.md`): the agent itself runs `go mod init` / `create-next-app` / `uv init`,
+   fills in the actual build/test commands, and gets a **green baseline** (on the current version
+   of the tool, not from a hardcoded scaffold).
 
-4. **День 1.** Команда `1 1 1` — developer берёт первую задачу из `docs/day-1-guide.md`, который
-   произвёл kickoff.
+4. **Day 1.** The command `1 1 1` — the developer takes the first task from `docs/day-1-guide.md`,
+   which kickoff produced.
 
-5. **Коммит** стартового коммита делаете вы сами.
+5. **Commit** — you make the starting commit yourself.
 
 ---
 
-## А1 — существующий проект (без харнесса)
+## A1 — existing project (without the harness)
 
-Наложите регламент рядом с кодом в режиме `overlay`:
+Overlay the regimen next to your code in `overlay` mode:
 
 ```bash
 ./new-project.py --name "Acme Teams" --dir ../existing-repo --mode overlay \
     --backend go --testing test-along --wiring yes
 ```
 
-Режим `overlay` **ничего не затирает**: ваши `README.md`, код и `CLAUDE.md` остаются нетронутыми.
-`day-0-guide` не создаётся, потому что проект уже инициализирован.
+`overlay` mode **overwrites nothing**: your `README.md`, code, and `CLAUDE.md` are left untouched.
+No `day-0-guide` is created, because the project is already initialized.
 
-1. **`CLAUDE.md`.** Если у вас уже был свой `CLAUDE.md`, регламент лёг рядом как
-   `CLAUDE.regimen.md` — слейте его в свой руками (или примите за основу). Если своего не было —
-   `CLAUDE.md` от пакета уже на месте.
+1. **`CLAUDE.md`.** If you already had your own `CLAUDE.md`, the regimen's copy was placed
+   alongside it as `CLAUDE.regimen.md` — merge it into yours by hand (or adopt it as the base). If
+   you didn't have one, the package's `CLAUDE.md` is already in place.
 
-2. **Фактические команды.** Впишите в `CLAUDE.md` реальные команды build/test/lint вашего проекта
-   вместо `{{...}}`. Заполните и остальные плейсхолдеры: `grep -rn '{{' . --include='*.md'`.
+2. **Actual commands.** Fill `CLAUDE.md` with your project's real build/test/lint commands instead
+   of `{{...}}`. Fill in the remaining placeholders too: `grep -rn '{{' . --include='*.md'`.
 
-3. **Удалите неприменимое** из `stack/` `architecture/` `domain/`; проверьте, что не осталось
-   висячих ссылок на удалённые файлы.
+3. **Remove what doesn't apply** from `stack/`, `architecture/`, `domain/`; check that no dangling
+   links to deleted files remain.
 
-4. **Проверьте готовность:** `python3 regimen-doctor.py` → доведите до 🟢.
+4. **Check readiness:** `python3 regimen-doctor.py` → bring it to 🟢.
 
-5. **Первая задача.** Опишите `docs/day-1-guide.md` и запустите `1 1 1`. Либо сразу попросите
-   ad-hoc роль `auditor` оценить состояние проекта (см. [дисциплину](#как-держать-дисциплину-общий-для-всех)
-   ниже), чтобы получить карту больных мест.
+5. **First task.** Write up `docs/day-1-guide.md` and run `1 1 1`. Or ask the ad-hoc `auditor` role
+   right away to assess the project's state (see [discipline](#how-to-keep-discipline-common-to-all-tracks)
+   below) to get a map of the trouble spots.
 
 ---
 
-## А2 — существующий проект (с устаревшим харнессом, upgrade)
+## A2 — existing project (with an outdated harness, upgrade)
 
-Регламент emcee уже стоял со старой версии и отстал. **Режим `overlay` его не обновит** —
-он сознательно не перезатирает существующие файлы. Отдельного `--mode upgrade` в генераторе тоже
-нет: owned merge-движок противоречит охвату пакета (см. [ADR-006](docs/adr/006-regimen-upgrade.md)).
-Поэтому обновляет регламент **агент** по git-диффу, а вы ревьюите и коммитите.
+The emcee regimen was already installed from an old version and has fallen behind. **`overlay`
+mode won't update it** — it deliberately doesn't overwrite existing files. There's no separate
+`--mode upgrade` in the generator either: an owned merge engine would be at odds with the
+package's scope (see [ADR-006](docs/adr/006-regimen-upgrade.md)). So the regimen is updated by the
+**agent**, working from a git diff, while you review and commit.
 
-### Основной путь — роль Upgrader
+### Main path — the Upgrader role
 
-Просто попросите ad-hoc: «обнови регламент по `roles/upgrader.md`». Агент сработает report-first:
+Just ask ad hoc: "update the regimen per `roles/upgrader.md`". The agent works report-first:
 
-- сгенерит свежий регламент во временный каталог;
-- покажет вам дрейф (что разошлось), список новых файлов и дельту ADR;
-- авто-обновит **только** чистые package-owned файлы;
-- mixed-файлы и ваш контент сольёт точечно через дифф;
-- а коммитите — вы.
+- generates a fresh regimen into a temporary directory;
+- shows you the drift (what has diverged), a list of new files, and the ADR delta;
+- auto-updates **only** clean package-owned files;
+- merges mixed files and your content in point by point via diff;
+- and you do the committing.
 
-### Ручной рецепт (если хотите сделать сами)
+### Manual recipe (if you'd rather do it yourself)
 
-Ключевое правило безопасности: **не перезатирать файлы с вашими заполненными `{{}}`.** Что можно
-обновлять автоматически, а что — только руками:
+The key safety rule: **don't overwrite files that have your filled-in `{{}}`.** What can be
+updated automatically, and what only by hand:
 
-| Авто-обновить (чистый package-owned, без `{{}}`) | Слить вручную через `git diff` (ваш контент) |
+| Auto-update (clean package-owned, no `{{}}`) | Merge by hand via `git diff` (your content) |
 |---|---|
-| чистые `core/*.md` (где нет `{{`): constitution, debugging, memory, spec-driven, adversarial-panel, second-model | `CLAUDE.md` (имя/стек/команды/правила) |
-| `sync-roles.py`, `regimen-doctor.py` | `roles.json` (если переназначали цифры) |
-| `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, `.claude/skills/{debugging,code-quality,memory,spec-driven}` | `docs/` (ваши day-guides, PROJECT-STATE, specs, ADR) |
-| **новые** файлы: `core/second-model.md`, `roles/{designer,auditor,upgrader}.md`, `.claude/agents/auditor.md` | `core/*.md` и `roles/*.md` **с заполненными `{{}}`** (quality-gates, code-quality, qa-e2e, qa-uat и др.) |
+| clean `core/*.md` (no `{{` in them): constitution, debugging, memory, spec-driven, adversarial-panel, second-model | `CLAUDE.md` (name/stack/commands/rules) |
+| `sync-roles.py`, `regimen-doctor.py` | `roles.json` (if you renumbered roles) |
+| `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, `.claude/skills/{debugging,code-quality,memory,spec-driven}` | `docs/` (your day guides, PROJECT-STATE, specs, ADRs) |
+| **new** files: `core/second-model.md`, `roles/{designer,auditor,upgrader}.md`, `.claude/agents/auditor.md` | `core/*.md` and `roles/*.md` **with filled-in `{{}}`** (quality-gates, code-quality, qa-e2e, qa-uat, etc.) |
 
-> ⚠️ **Не делайте `cp -r core/*`.** Каталог `core/` содержит файлы с вашими заполненными
-> `{{placeholders}}` (quality-gates, code-quality, principles, task-protocol) — слепая перезапись
-> их сотрёт. (Файл `render-handbook.py` — package-only, в проект не копируется, в вашем проекте его
-> и нет.)
+> ⚠️ **Don't `cp -r core/*`.** The `core/` directory contains files with your filled-in
+> `{{placeholders}}` (quality-gates, code-quality, principles, task-protocol) — a blind overwrite
+> will erase them. (`render-handbook.py` is package-only, isn't copied into the project, and isn't
+> in your project at all.)
 
-Шаги:
+Steps:
 
-1. **Зафиксируйте текущее:** `git add -A && git commit -m "до апгрейда"`. Чистое дерево позволит
-   отревьюить дифф и при необходимости откатиться.
-2. **Свежий регламент во временный каталог** теми же опциями, что использовали изначально:
+1. **Commit the current state:** `git add -A && git commit -m "before upgrade"`. A clean tree lets
+   you review the diff and roll back if needed.
+2. **Fresh regimen into a temporary directory**, using the same options you used originally:
    ```bash
-   ./new-project.py --name "<имя>" --dir /tmp/regimen-new --mode new \
-       --backend <стек> --testing <как было> --wiring yes
+   ./new-project.py --name "<name>" --dir /tmp/regimen-new --mode new \
+       --backend <stack> --testing <as before> --wiring yes
    ```
-3. **Авто-обновите только чистый package-owned** (левая колонка таблицы): покопийно перенесите
-   чистые core-файлы, tool-скрипты, `.claude/*` и новые файлы. Файлы с `{{}}` не трогайте.
-4. **Mixed и ваш контент (правая колонка) — слейте руками** через `git diff` против
-   `/tmp/regimen-new/<файл>`. Перенесите новые секции регламента (например, в `CLAUDE.md` →
-   «По ситуации» добавьте указатели на `second-model` / `designer` / `auditor` / `upgrader`),
-   сохранив весь свой контент и `{{}}`.
-5. **Ресинк и проверка:** `python3 sync-roles.py` → `python3 regimen-doctor.py` (🟢?) → `git diff`
-   (отревьюйте всё).
-6. **Коммит** апгрейда сделайте сами, отдельным коммитом.
+3. **Auto-update only the clean package-owned files** (left column of the table): copy over the
+   clean core files, tool scripts, `.claude/*`, and new files, file by file. Leave files with `{{}}`
+   untouched.
+4. **Mixed files and your content (right column) — merge by hand** via `git diff` against
+   `/tmp/regimen-new/<file>`. Carry over new regimen sections (for example, in `CLAUDE.md` →
+   "Situational", add pointers to `second-model` / `designer` / `auditor` / `upgrader`), keeping
+   all of your content and `{{}}` intact.
+5. **Resync and check:** `python3 sync-roles.py` → `python3 regimen-doctor.py` (🟢?) → `git diff`
+   (review everything).
+6. **Commit** the upgrade yourself, as a separate commit.
 
-> Что именно поменялось между версиями, видно в [docs/adr/](docs/adr/) — каждый ADR описывает одно
-> изменение регламента с обоснованием — плюс в `git log` пакета.
-
----
-
-## Ежедневный цикл (общий для всех)
-
-Числовые команды (расшифровка — в `CLAUDE.md` → «Маппинг ролей», источник — `roles.json`):
-
-- **`N`** — архитектор входит в день N: читает проект, выдаёт статус и риски.
-- **`R D`** — роль R входит в контекст дня D (review, планирование), без конкретной задачи.
-- **`R D T`** — роль R берёт задачу T из `docs/day-<D>-guide.md`. **Это основной режим.**
-
-Цикл одной задачи (`R D T`):
-
-1. **Preflight.** Агент выписывает применимые non-negotiable правила из
-   [core/constitution.md](core/constitution.md) и планируемые отступления. Есть отступление →
-   агент останавливается и согласует его с вами **до** кода.
-2. **Работа** по блоку «Промпт для Claude Code» из гайда дня.
-3. **Гейты зелёные** — все тесты проходят, сборка чистая (без warnings), соблюдены лимиты на размер
-   файлов ([core/quality-gates.md](core/quality-gates.md)).
-4. **Exit.** Блок сверки с конституцией: что проверено, отступлений нет.
-5. **Коммит — ваш.** Агент выводит готовую команду, но **коммитите только вы** (по каждой задаче).
+> What exactly changed between versions is visible in [docs/adr/](docs/adr/) — each ADR describes
+> one regimen change with its rationale — plus in the package's `git log`.
 
 ---
 
-## Как держать дисциплину (общий для всех)
+## Daily cycle (common to all tracks)
 
-Это и есть смысл пакета. Вот рычаги, в порядке частоты использования:
+Numeric commands (decoded in `CLAUDE.md` → "Role map"; source of truth is `roles.json`):
 
-- **Каждую задачу:** preflight/exit-сверка с [конституцией](core/constitution.md) + зелёные
-  [гейты](core/quality-gates.md). Без этого задача не считается выполненной.
-- **Вес сверки по размеру задачи (depth-тиры):** тривиальная правка (опечатка, одна строка) →
-  **Inline** (one-line micro-exit); сфокусированный логический юнит → **Atomic** (лёгкий
-  preflight+exit); задача-фича → **Full** (полный блок). Гейты не ослабляются ни на одном тире.
-  См. `core/constitution.md` → «Depth-тиры».
-- **Изменение в >1 файле** (рефактор, миграция) → сначала **plan mode** (Shift-Tab или `/plan`):
-  план до кода, который вы правите за 30 секунд. Если сломали правкой — нативный `/rewind`
-  (Esc-Esc). См. `core/principles.md`.
-- **Несущее или необратимое решение** (границы модулей, выбор технологии, build-vs-buy, дорогой
-  откат) → **`/panel`:** red-team (+codex) → blue-team → arbiter → ADR. Не для тривиального. См.
-  [core/adversarial-panel.md](core/adversarial-panel.md).
-- **Важный вывод любой роли** (значимый финдинг reviewer, спека перед ADR) → **вторая пара глаз:**
-  opt-in проход codex. См. [core/second-model.md](core/second-model.md).
-- **Жёсткий контракт** (парсер, валидатор, вычисление) → **C+:** тест-первый + независимый автор
-  тестов + состязательная вычитка тестов. См. [core/spec-driven.md](core/spec-driven.md).
-- **Фича с доменно-нетривиальной / необратимой ценой** → агент **не начинает код без достаточного
-  входа** (spec/design/ADR): на такой задаче он сам остановится и заведёт discovery или спросит вас,
-  а не закодит вслепую. Это **условный** self-stop, не церемония на каждой мелочи. Опрос при этом
-  идёт по фазе: открытый вопрос на раскрытии, пик из списка (`AskUserQuestion` + Other) на
-  подтверждении. См. [core/pipeline.md](core/pipeline.md) → фазы-контракты + [core/task-protocol.md](core/task-protocol.md)
-  → «Опрос пользователя» ([ADR-013](docs/adr/013-feature-discovery-trigger.md)).
-- **«Как мы вообще живём / что прогнило»** → ad-hoc роль **`auditor`** («оцени состояние проекта»):
-  карта больных мест, ловит межзадачный дрейф. Read-only, ничего не чинит. См. `roles/auditor.md`
-  (дормантная).
-- **UI-фича** → роль **`designer`** (дормантная): вайрфрейм как код из спеки. См. `roles/designer.md`.
-- **Регламент отстал от новой версии пакета** → ad-hoc роль **`upgrader`** («обнови регламент»):
-  report-first апгрейд package-owned по git-диффу, ваш контент не трогает. См. `roles/upgrader.md`
-  (дормантная) и трек [А2](#а2--существующий-проект-с-устаревшим-харнессом-upgrade) выше.
-- **После любых правок регламента** → `python3 regimen-doctor.py` (🟢 = регламент цел).
-- **Память:** durable-факты держите в `CLAUDE.md` (обновляйте на месте), наблюдения агента — в
-  auto-memory; каждый файл <200 строк, тонкий индекс + ленивая подгрузка. См.
+- **`N`** — the architect enters day N: reads the project, reports status and risks.
+- **`R D`** — role R enters the context of day D (review, planning), without a specific task.
+- **`R D T`** — role R takes task T from `docs/day-<D>-guide.md`. **This is the primary mode.**
+
+The cycle for a single task (`R D T`):
+
+1. **Preflight.** The agent lists the applicable non-negotiable rules from
+   [core/constitution.md](core/constitution.md) and any planned deviations. If there's a
+   deviation → the agent stops and clears it with you **before** touching code.
+2. **Work** through the "Prompt for Claude Code" block from the day guide.
+3. **Green gates** — all tests pass, the build is clean (no warnings), file-size limits are
+   respected ([core/quality-gates.md](core/quality-gates.md)).
+4. **Exit.** A check-back block against the constitution: what was verified, no deviations.
+5. **The commit is yours.** The agent prints the ready-made command, but **only you commit**
+   (for every task).
+
+---
+
+## How to keep discipline (common to all tracks)
+
+This is the whole point of the package. Here are the levers, in order of how often they're used:
+
+- **Every task:** a preflight/exit check-back against the [constitution](core/constitution.md) +
+  green [gates](core/quality-gates.md). Without this, a task isn't considered done.
+- **Check-back weight scales with task size (depth tiers):** a trivial edit (typo, one line) →
+  **Inline** (one-line micro-exit); a focused logical unit → **Atomic** (a light preflight+exit);
+  a feature-sized task → **Full** (the full block). Gates are never relaxed at any tier. See
+  `core/constitution.md` → "Depth tiers".
+- **A change touching >1 file** (refactor, migration) → start with **plan mode** (Shift-Tab or
+  `/plan`): a plan before code, one you can edit in 30 seconds. If an edit broke something —
+  native `/rewind` (Esc-Esc). See `core/principles.md`.
+- **A load-bearing or irreversible decision** (module boundaries, technology choice, build-vs-buy,
+  an expensive-to-reverse call) → **`/panel`:** red team (+codex) → blue team → arbiter → ADR. Not
+  for anything trivial. See [core/adversarial-panel.md](core/adversarial-panel.md).
+- **An important output from any role** (a significant reviewer finding, a spec before an ADR) →
+  **a second pair of eyes:** an opt-in codex pass. See [core/second-model.md](core/second-model.md).
+- **A hard contract** (parser, validator, computation) → **C+:** test-first + an independent test
+  author + an adversarial review pass on the tests. See [core/spec-driven.md](core/spec-driven.md).
+- **A feature with a domain-nontrivial / irreversible cost** → the agent **doesn't start coding
+  without sufficient input** (spec/design/ADR): on such a task it stops itself and opens a
+  discovery, or asks you, rather than coding blind. This is a **conditional** self-stop, not a
+  ceremony for every little thing. Questioning follows the phase: an open question in the divergence phase,
+  a pick from a list (`AskUserQuestion` + Other) in the convergence phase. See
+  [core/pipeline.md](core/pipeline.md) → phase contracts + [core/task-protocol.md](core/task-protocol.md)
+  → "User Q&A" ([ADR-013](docs/adr/013-feature-discovery-trigger.md)).
+- **"How are we really doing / what's rotting"** → the ad-hoc `auditor` role ("assess the
+  project's state"): a map of the trouble spots, catches cross-task drift. Read-only, fixes
+  nothing. See `roles/auditor.md` (dormant).
+- **A UI feature** → the `designer` role (dormant): a wireframe as code, generated from the spec.
+  See `roles/designer.md`.
+- **The regimen has fallen behind a newer package version** → the ad-hoc `upgrader` role ("update
+  the regimen"): a report-first, package-owned upgrade driven by git diff, that doesn't touch your
+  content. See `roles/upgrader.md` (dormant) and track [A2](#a2--existing-project-with-an-outdated-harness-upgrade)
+  above.
+- **After any edits to the regimen** → `python3 regimen-doctor.py` (🟢 = the regimen is intact).
+- **Memory:** keep durable facts in `CLAUDE.md` (update it in place); keep the agent's
+  observations in auto-memory; every file <200 lines, a thin index plus lazy loading. See
   [core/memory.md](core/memory.md).
-- **PROJECT-STATE — снимок, не журнал.** `docs/PROJECT-STATE.md` отражает «где проект сейчас».
-  Архитектор на входе в день **перезаписывает его и выкидывает решённое**, а не копит — история «что
-  было» остаётся в git (`git log`), решения «почему» — в ADR. Если файл всё же раздулся,
-  `regimen-doctor.py` мягко предупредит. Подробнее — [core/memory.md](core/memory.md).
-- **Дебаг** сломанного → [core/debugging.md](core/debugging.md): логи всех слоёв сразу, правило
-  трёх попыток.
+- **PROJECT-STATE is a snapshot, not a journal.** `docs/PROJECT-STATE.md` reflects "where the
+  project stands now". On entering a new day, the architect **rewrites it and discards what's been
+  resolved**, rather than accumulating — the history of "what happened" stays in git (`git log`),
+  the "why" behind decisions goes in ADRs. If the file does bloat anyway,
+  `regimen-doctor.py` will gently warn you. More — [core/memory.md](core/memory.md).
+- **Debugging** something broken → [core/debugging.md](core/debugging.md): logs from every layer
+  at once, the three-attempt rule.
 
-> **Про дормантные роли.** `designer` и `auditor` доступны ad-hoc прямо сейчас (зовите по имени),
-> но в числовом пайплайне их нет — у них нет цифры в `roles.json`. Активировать цифрой стоит, когда
-> реальный опыт подтвердит пользу (гейты в [ADR-004](docs/adr/004-second-model-designer.md) /
-> [ADR-005](docs/adr/005-auditor-role.md)).
+> **About dormant roles.** `designer` and `auditor` are available ad hoc right now (call them by
+> name), but they're not in the numeric pipeline — they have no number in `roles.json`. It's worth
+> activating them with a number once real-world experience confirms their value (gates in
+> [ADR-004](docs/adr/004-second-model-designer.md) / [ADR-005](docs/adr/005-auditor-role.md)).
