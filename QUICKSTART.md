@@ -222,6 +222,9 @@ This is the whole point of the package. Here are the levers, in order of how oft
   content. See `roles/upgrader.md` (dormant) and track [A2](#a2--existing-project-with-an-outdated-harness-upgrade)
   above.
 - **After any edits to the regimen** → `python3 regimen-doctor.py` (🟢 = the regimen is intact).
+- **Closing a slice** → `python3 regimen-doctor.py --qg && <check> && <tests>` on a clean tree —
+  the machine done-gate: red = the slice isn't closed, whatever the reports say. Details —
+  [core/quality-gates.md](core/quality-gates.md) §Slice-close composite gate (ADR-017).
 - **Memory:** keep durable facts in `CLAUDE.md` (update it in place); keep the agent's
   observations in auto-memory; every file <200 lines, a thin index plus lazy loading. See
   [core/memory.md](core/memory.md).

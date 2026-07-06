@@ -204,8 +204,9 @@ Gate QG-NN-05 (core/quality-gates.md): the run goes through the app's declared s
 bespoke injection of wiring (dependencies, outcome hooks, triggers) that shipping already provides
 on its own; assert the OBSERVABLE EFFECT of the "invite" feature (the invite really was created and
 is visible), not mere presence.
-In the report: for every atomic acceptance criterion of the frozen scope — the assembled path +
-@qg:<scope-id>.
+Annotate each assembled test with @qg:<scope-id> — the checked-in annotation IS the durable
+evidence (regimen-doctor --qg reconciles it). In the report: for every atomic acceptance
+criterion of the frozen scope — the assembled path + the @qg reference (informational).
 ~~~
 
 ### After completion

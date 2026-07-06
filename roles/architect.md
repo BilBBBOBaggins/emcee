@@ -116,6 +116,11 @@ Output a status of at most half a page:
   (QG-NN-05, [core/quality-gates.md](../core/quality-gates.md)): a named run through a real composition
   root + an assertion of the feature's observability. Green units without this = NOT done; over-declaring done with
   an unwired feature is exactly the incident behind [ADR-015](../docs/adr/015-assembled-reachability-gate.md).
+- **Declaring the slice closed is machine-gated:** before "slice done" / "MVP done", run
+  `python3 regimen-doctor.py --qg && {{check-command}} && {{test-command}}` on a clean tree
+  ([core/quality-gates.md](../core/quality-gates.md) §Slice-close composite gate, ADR-017).
+  Red = the slice is not closed, whatever the role reports say; in autonomous mode the
+  orchestrator re-runs this gate itself and does not take the architect's word for it.
 - Target — ≤ ~1 screen. A wall-of-text file is a signal that things were appended instead of pruned. Pruning here
   is safe and reversible (git keeps everything). Discipline — [core/memory.md](../core/memory.md) → "Pruning".
 

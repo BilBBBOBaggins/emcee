@@ -133,7 +133,10 @@ project's `AGENTS.md` from it.
 - **`sync-roles.py`** — regenerates role tables from `roles.json`. The `--check` flag catches
   drift.
 - **`regimen-doctor.py`** — a readiness gate for the regimen in your project: checks for unfilled
-  placeholders, dangling links, role-map sync, settings, and commands. Copied into the project.
+  placeholders, dangling links, role-map sync, settings, and commands. Copied into the project
+  (together with its import `_pack_lib.py`). The `--qg` flag is the strict **slice-close gate**:
+  it reconciles the frozen scope against checked-in `@qg` evidence
+  ([core/quality-gates.md](core/quality-gates.md) §QG-NN-05, ADR-017).
 - **`render-handbook.py`** — builds two HTML files from the markdown sources: `handbook.html` (the
   full reference) and `quickstart.html` (onboarding). The HTML isn't committed — the `.md` files
   themselves are the source of truth; the HTML is regenerated with `python3 render-handbook.py`.

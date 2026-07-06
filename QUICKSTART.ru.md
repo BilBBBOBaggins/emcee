@@ -214,6 +214,9 @@
   report-first апгрейд package-owned по git-диффу, ваш контент не трогает. См. `roles/upgrader.md`
   (дормантная) и трек [А2](#а2--существующий-проект-с-устаревшим-харнессом-upgrade) выше.
 - **После любых правок регламента** → `python3 regimen-doctor.py` (🟢 = регламент цел).
+- **Закрытие слайса** → `python3 regimen-doctor.py --qg && <check> && <тесты>` на чистом дереве —
+  машинный done-гейт: красный = слайс не закрыт, что бы ни писали отчёты. Подробнее —
+  [core/quality-gates.md](core/quality-gates.md) §Slice-close composite gate (ADR-017).
 - **Память:** durable-факты держите в `CLAUDE.md` (обновляйте на месте), наблюдения агента — в
   auto-memory; каждый файл <200 строк, тонкий индекс + ленивая подгрузка. См.
   [core/memory.md](core/memory.md).
