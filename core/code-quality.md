@@ -33,6 +33,13 @@ responsibility. Not "a 1500-line class is fine if it's about one thing" — it i
 Nothing about one thing runs 1500 lines. But a LOC threshold crossed on its own doesn't yet prove a
 God Object — a long-but-coherent parser gets justified, not cut just to hit a number.
 
+Split safety (field lesson, 2026-07): **no behavioral net → net first.** If the file's tests are
+compile-only or absent, a mechanical split can silently change behavior with nothing to catch it —
+build a behavioral oracle (characterization tests over the real call paths) BEFORE splitting. A
+split/refactor commit is **pure-mechanical**: no logic changes smuggled in alongside the move. And
+never cut a seam between a call site and its private/anonymous-namespace helper — that pair is one
+responsibility; the seam goes between responsibility groups.
+
 ## Layered architecture — one-directional dependencies — [CQ-NN-02 · non-negotiable · accountability]
 
 If a project is split into layers (almost always a good idea), dependencies between layers are

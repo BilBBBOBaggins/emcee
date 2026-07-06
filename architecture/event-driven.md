@@ -257,6 +257,25 @@ Two styles:
 
 Details — see [microservices.md](microservices.md).
 
+### Ownership transfer: fencing epochs and the frozen saga
+
+Field-tested rules (2026-07, distributed ticketing with offline-capable edge nodes) for the
+hardest saga subclass — **moving ownership of a partition** (a data shard, a seat pool, a device
+assignment) between writers:
+
+- **One fenced writer per partition.** Every write carries a monotonic **fencing epoch** token;
+  the store rejects writes with a stale epoch. This turns "two nodes both think they own it"
+  (split-brain, the offline-edge classic) from silent corruption into a rejected write.
+- **Frozen saga for the move itself.** Ownership transfer is two-phase: freeze the partition under
+  the old owner (no writes accepted) → transfer → durable ACK from the new owner → unfreeze under
+  the new epoch. **No blind timeout-rollback:** an expired timer proves nothing about the other
+  side's state — a stuck transfer stays frozen and pages a human/compensator that can READ the
+  actual state, rather than guessing.
+- **Consistency is a conditional promise, not a property.** Name the invariants your consistency
+  rests on (single writer, monotonic epoch, durable ack, ...) — the system is correct WHILE they
+  hold, and every named invariant is a thing the design must enforce and tests must attack.
+  Unnamed assumptions are where distributed systems rot.
+
 ## Consumer patterns
 
 ### At-least-once delivery
@@ -375,6 +394,18 @@ Solution: factor ordering concerns into the design — sequence numbers, timesta
 Events become part of the API contract. All subscribers depend on the schema.
 
 Treated accordingly — versioning, documentation, deprecation process.
+
+### Physical durability mistaken for semantic durability
+
+When integrating with a legacy/downstream system, "the row is written and the WAL is flushed"
+(physical durability) is NOT "the downstream application accepted and now owns that state"
+(semantic durability). Raw-UPDATEing another system's operational database bypasses its
+invariants, caches, and audit trail — the write is durable and wrong.
+
+Solution (anti-corruption rule, field-tested 2026-07): never write another system's tables
+directly. Write to an append-only command/import table (or queue) it owns the consumption of, and
+treat only its **application-level ACK** as done — the same at-least-once + idempotency discipline
+as any other consumer.
 
 ## Event storage
 
