@@ -7,7 +7,7 @@
 > count as activation**.
 >
 > **Activation** (add a digit to `roles.json` → `python3 sync-roles.py`, a place in the
-> `core/task-protocol.md` pipeline, generator bootstrap, self-test invariant) — **gated by O1**
+> `core/task-protocol.md` pipeline, generator bootstrap, self-test invariant) — **gated by O1-D**
 > ([docs/adr/003-first-km-intake.md](../docs/adr/003-first-km-intake.md),
 > [ADR-004](../docs/adr/004-second-model-designer.md)): only after a retro on 2-3 real UI kickoffs that
 > showed real loss from "no wireframe." The **operator** decides, not the agent (constitution

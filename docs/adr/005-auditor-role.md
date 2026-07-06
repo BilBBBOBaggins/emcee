@@ -2,7 +2,9 @@
 
 Date: 2026-06-27
 Status: Accepted (the role + the `.claude/agents/auditor.md` subagent are implemented dormant;
-numeric activation of the digit 8 remains open — under a stop condition)
+numeric activation of the digit 8 remains open — under a stop condition. This activation gate
+("first confirmed, unique catch of drift", §Decision "Under a gate") is referred to as **O-audit**
+in `roles/auditor.md`)
 
 > Decision reached by running the adversarial panel (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md).
 

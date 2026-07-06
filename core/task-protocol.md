@@ -36,8 +36,10 @@ reference this section rather than introducing their own paths. `<D>` — day nu
 | ADR | `docs/adr/<NNN>-<slug>.md` | architect → everyone |
 | User scenarios | `docs/scenarios-<DT>-<slug>.md` | BA/SA → qa-uat |
 | Test cases | `docs/test-cases-<DT>-<slug>.md` | qa-uat → qa-e2e |
+| Process metrics | `docs/PROCESS-METRICS.md` | architect → operator |
+| Audit report (ad-hoc) | `docs/audit-<YYYY-MM-DD>.md` | auditor's map, entered by architect/operator → architect |
 
-Worked examples of each artifact — in `examples/docs/` of the emcee repo (not copied into the project
+Worked examples of key artifacts — in `examples/docs/` of the emcee repo (not copied into the project
 itself). If you rename the convention for the project — change it in this table, roles will pick it up.
 
 The role digit map (which digit = which role) — the single source is **`roles.json`**. Tables in every

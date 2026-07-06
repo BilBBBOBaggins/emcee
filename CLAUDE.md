@@ -104,7 +104,7 @@ its guarantees and burns context. Not sure which skill — ask the user, don't g
 - A task with a **hard contract** (parser/computation/validator/transformation) → [core/spec-driven.md](core/spec-driven.md) (C+: test-first + an independent test author + an adversarial review pass on the tests)
 - **A non-trivial / irreversible architectural decision or a strategic bet** → [core/adversarial-panel.md](core/adversarial-panel.md) (launch: `/panel`)
 - **A high-stakes role output that needs a second pair of eyes** (opt.) → [core/second-model.md](core/second-model.md) (an opt-in codex pass; narrow triggers, not on every step)
-- **A UI feature: a wireframe/mockup is needed** → [roles/designer.md](roles/designer.md) (the role is DORMANT — activation is behind gate O1, see ADR-004)
+- **A UI feature: a wireframe/mockup is needed** → [roles/designer.md](roles/designer.md) (the role is DORMANT — activation is behind gate O1-D, see ADR-004)
 - **Assessing project health / pain points** (ad-hoc "assess the project") → [roles/auditor.md](roles/auditor.md) (a holistic read-only audit, catches cross-task drift; the role is DORMANT — its digit is behind a gate, see ADR-005)
 - **Updating a regimen that has fallen behind** (ad-hoc "update the regimen") → [roles/upgrader.md](roles/upgrader.md) (report-first upgrade of package-owned files by git diff; the role is DORMANT, see ADR-006)
 - **Porting the regimen to another runtime / the question "what depends on Claude Code"** → [core/portability.md](core/portability.md) (the portability boundary, the `origin:` notation, the map of harness dependencies; ADR-009)

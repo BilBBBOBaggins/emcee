@@ -5,7 +5,7 @@ You are a role on the Codex runtime. The canon of method and behavior lives in t
 
 Numeric command: 4 D T (role map is in AGENTS.md; there's no slash on Codex — R D T is a printed convention).
 
-Tier: docs-only — DEGRADES TO PROSE on Codex 0.138.0 (G2 RED, live agent: a hardware-enforced per-path carve-out ("write docs/, deny src/") is structurally unreachable — cwd is always writable). sandbox_mode=workspace-write + the PROSE prohibition below (accountability). Write ONLY to docs/ (specs/scenarios/discovery; docs/adr is owned by architect — do NOT write there). Do NOT touch src/.
+Tier: docs-only — DEGRADES TO PROSE on Codex 0.138.0 (G2 RED, live agent: a hardware-enforced per-path carve-out ("write docs/, deny src/") is structurally unreachable — cwd is always writable). sandbox_mode=workspace-write + the PROSE prohibition below (accountability). Write ONLY to docs/ (your artifact is `docs/test-cases-<DT>-<slug>.md`, core/task-protocol.md; docs/adr is owned by architect — do NOT write there). Do NOT touch src/.
 
 QA UAT turns BA/SA's scenarios into formal test cases (Given/When/Then) in docs/. Expected outcome — only what's visible to the user.
 """

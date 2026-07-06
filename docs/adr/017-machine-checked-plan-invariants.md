@@ -120,8 +120,11 @@ explicit rather than a silent re-litigation (the gate's substance and the
 - [ ] Is the prose rule "scope-ids are unique across slices" sufficient against stale annotations —
       auditor's lens on the first multi-slice project.
 
-**Operational:** a CHANGELOG line + an "update `regimen-doctor.py`/`_pack_lib.py`" step in
-`roles/upgrader.md` (version skew: generated projects carry a frozen copy of the doctor).
+**Operational:** an "update `regimen-doctor.py`/`_pack_lib.py`" step in `roles/upgrader.md`
+(version skew: generated projects carry a frozen copy of the doctor). *Amended 2026-07-06 (audit
+S7): the originally prescribed "CHANGELOG line" is dropped — the package keeps no CHANGELOG (the
+ADR log + `git log` carry release history, per the ADR-001/006/009 no-owned-debt stance); the
+upgrader-step half alone carries the version-skew intent.*
 
 **Strategic (the operator's call, not engineering):** (i) whether CI becomes mandatory for the
 autonomous mode — **answered 2026-07-06 by the operator: no CI integration.** Rationale: the

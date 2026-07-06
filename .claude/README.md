@@ -12,7 +12,7 @@ Each file wraps a role in frontmatter (`name`, `description`, `tools`), making i
 
 | Subagent | tools | What it enforces |
 |----------|-------|--------------------|
-| `reviewer` | Read, Grep, Glob | "do NOT change code, do NOT run tests" — physically impossible |
+| `reviewer`, `auditor` (dormant, ad-hoc — ADR-005) | Read, Grep, Glob | "do NOT change code, do NOT run tests" — physically impossible |
 | `ba`, `qa-uat`, `sa` | + Write | write only documents, don't touch code |
 | `architect` | + Write, Task | documents (ADR/spec) + parallel reading via Task; no Edit/Bash on production |
 | `developer`, `qa-e2e`, `debugger`, `devops` | + Edit, Write, Bash | write code/tests/configs |

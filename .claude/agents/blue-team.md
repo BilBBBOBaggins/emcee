@@ -30,7 +30,7 @@ codex exec -s read-only -c 'sandbox_permissions=["disk-full-read-access"]' \
   -c tools.web_search=true -m <codex-model-id> -c model_reasoning_effort=xhigh -
 ~~~
 
-Check the live model id before running (`~/.codex/models_cache.json`; the top one is `gpt-5.5`). **If codex is unavailable** — don't stay silent: in a separate pass, refute your own defense from a different angle yourself (heightened self-critique) and mark in the output "there was no second model — higher residual risk of blind spots".
+Check the live model id before running (`~/.codex/models_cache.json` is authoritative — take the current top id; the single live-id footnote is `core/second-model.md` §How to call it, don't hardcode ids here). **If codex is unavailable** — don't stay silent: in a separate pass, refute your own defense from a different angle yourself (heightened self-critique) and mark in the output "there was no second model — higher residual risk of blind spots".
 
 ## Method
 

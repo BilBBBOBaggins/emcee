@@ -39,7 +39,7 @@ find where it breaks. Load-bearing claims and context:>
 EOF
 ~~~
 
-Check the live model id (`~/.codex/models_cache.json`; if `-m gpt-5.5` returns 400, take the current top one from there; the specific id here is an example, not a constant). If codex is physically unavailable (no CLI/network/other second model) — **don't skip the check, switch to fallback** (see `core/adversarial-panel.md` → "Second model", ADR-016): in a separate pass, try to refute your own findings from a different angle and **explicitly mark in the output** that there was no second model (a gap in the review, higher residual risk of blind spots).
+Check the live model id before running (`~/.codex/models_cache.json` is authoritative — take the current top id; the single live-id footnote is `core/second-model.md` §How to call it, don't hardcode ids here). If codex is physically unavailable (no CLI/network/other second model) — **don't skip the check, switch to fallback** (see `core/adversarial-panel.md` → "Second model", ADR-016): in a separate pass, try to refute your own findings from a different angle and **explicitly mark in the output** that there was no second model (a gap in the review, higher residual risk of blind spots).
 
 ## Method
 

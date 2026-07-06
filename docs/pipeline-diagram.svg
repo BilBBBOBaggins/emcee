@@ -86,7 +86,7 @@
   <path class="edge" d="M614,351 H654" marker-end="url(#ar)"/>
   <!-- loop back -->
   <path class="edgeb" d="M729,322 V306 H142 V322" marker-end="url(#arb)"/>
-  <text x="430" y="300" class="note" text-anchor="middle" fill="#2f4fc0">next roadmap slice</text>
+  <text x="430" y="300" class="note" text-anchor="middle" fill="#2f4fc0">slice closed (composite gate: doctor --qg + static + tests) → next roadmap slice</text>
 
   <rect x="844" y="322" width="240" height="58" rx="9" fill="#f6f7f9" stroke="#e2e4e9" stroke-width="1.5"/>
   <text x="858" y="343" class="note" font-weight="700" fill="#33363d">periodically:</text>

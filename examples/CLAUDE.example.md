@@ -83,6 +83,13 @@ npm run test -- --run InviteTeammateModal
 
 - Debugging something broken → [../core/debugging.md](../core/debugging.md)
 - Code quality questions → [../core/code-quality.md](../core/code-quality.md)
+- Memory between sessions → [../core/memory.md](../core/memory.md)
+- Writing or editing a skill → [../core/skills.md](../core/skills.md)
+- A task with a hard contract (parser/computation/validator) → [../core/spec-driven.md](../core/spec-driven.md)
+- A non-trivial / irreversible architectural decision → [../core/adversarial-panel.md](../core/adversarial-panel.md) (launch: `/panel`)
+- A high-stakes role output that needs a second pair of eyes (opt.) → [../core/second-model.md](../core/second-model.md)
+- UI wireframe/mockup → [../roles/designer.md](../roles/designer.md) (DORMANT, gate O1-D) · project health → [../roles/auditor.md](../roles/auditor.md) (DORMANT) · stale regimen → [../roles/upgrader.md](../roles/upgrader.md) (DORMANT)
+- Porting the regimen to another runtime → [../core/portability.md](../core/portability.md)
 - Backend stack → [../stack/go.md](../stack/go.md)
 - Frontend stack → [../stack/react-nextjs.md](../stack/react-nextjs.md)
 - Composition → [../architecture/modular-monolith.md](../architecture/modular-monolith.md), data isolation → [../architecture/multi-tenant.md](../architecture/multi-tenant.md)
