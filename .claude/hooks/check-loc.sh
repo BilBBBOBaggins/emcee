@@ -27,7 +27,7 @@ except Exception:
 
 case "$f" in
   *.h|*.hpp|*.hh|*.hxx) lim=$HEADER_LIMIT ;;
-  *.go|*.ts|*.tsx|*.py|*.cpp|*.cc|*.cxx) lim=$CODE_LIMIT ;;
+  *.go|*.ts|*.tsx|*.py|*.cpp|*.cc|*.cxx|*.rs|*.qml) lim=$CODE_LIMIT ;;
   *) exit 0 ;;
 esac
 

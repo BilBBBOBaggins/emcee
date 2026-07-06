@@ -231,6 +231,7 @@ INIT_CMDS = {
     "rust": "cargo init",
     "node": "npm init -y",
     "svelte": "npx sv create .",
+    "cpp-qt": "git init && touch CMakeLists.txt   # no standard scaffolder: author the root CMakeLists.txt by hand (stack/cpp-qt.md §Version and tools)",
 }
 
 # glob patterns for path-scoped activation of stack skills (`paths:` in the skill frontmatter).
@@ -243,6 +244,7 @@ STACK_PATHS = {
     "rust": "**/*.rs, Cargo.toml",
     "node": "**/*.js, **/*.ts, package.json",
     "svelte": "**/*.svelte, **/*.ts, **/*.js",
+    "cpp-qt": "**/*.cpp, **/*.h, **/*.hpp, **/*.qml, CMakeLists.txt",
 }
 
 
