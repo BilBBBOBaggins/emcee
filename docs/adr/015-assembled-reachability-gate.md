@@ -1,7 +1,7 @@
 # ADR-015: Assembled reachability of a feature as a done gate (QG-NN-05) — "green tests ≠ wired feature"
 
 Date: 2026-07-01 (Proposed) → 2026-07-02 (Accepted)
-Status: Accepted — ratified by the adversarial panel
+Status: Accepted — ratified by the adversarial panel. Enforcement wording amended by [ADR-017](017-machine-checked-plan-invariants.md) §"Amends ADR-015 / QG-NN-05" (launch points, waiver form, machine-owned section format) — read that section alongside this ADR.
 
 > Provenance — **empirical** (an autonomous package run over an MVP Balatro clone uncovered a defect class, verified by reading the code) + **panel ratification on 2026-07-02**: red → blue → arbiter, codex gpt-5.5 xhigh symmetrically on both sides. Arbiter's verdict: "build under conditions" — the direction held (no fatal defects), the text was refined with v2 amendments (P1–P8 + 3 arbiter clarifications + closing two loopholes from a targeted red re-check). Acceptance checks passed: (a) an adversarial dry run — a developer agent on the v2 text, unaware of the trap, did NOT smuggle in an outcome handle / a persisted fixture / a lowered root: it honestly presented a red gate, a wiring fix, an effect assertion, and a mutation check, and rejected closing the web feature via a cheap CLI root; (b) two independent agents' QG matrices for the day-1 example converged on the mechanics of atomization and equivalence classes. Panel artifacts live in the session scratchpad (red-r1/blue-r1/arbiter-r1/red-r2-recheck/dryrun-report).
 

@@ -29,8 +29,10 @@ package-owned parts up to date **without touching** user content.
      the ADR-017 field tree ran a checker generations behind the canon it was supposed to enforce)
      + executable wiring (on
      Claude Code — `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, generic
-     `.claude/skills/*`; on Codex — `AGENTS.md`, `.codex/agents/*`, `.codex/skills/*`;
-     `origin: harness:<name>`). These can be auto-updated.
+     `.claude/skills/*`; on Codex — `.codex/agents/*`, `.codex/skills/*`;
+     `origin: harness:<name>`). These can be auto-updated. The entry file is NOT wiring —
+     `CLAUDE.md`/`AGENTS.md` is ALWAYS mixed on both harnesses (on Codex it carries the project
+     content itself, ADR-012) → next class.
    - **mixed / user-owned** — the regimen entry file (`CLAUDE.md`/`AGENTS.md`), `roles.json`, `docs/`,
      `core/*.md` WITH `{{...}}` (filled in by the user), `roles/*.md` with filled-in `{{...}}`
      (especially `qa-e2e`, `qa-uat`). **Do NOT auto-touch.**

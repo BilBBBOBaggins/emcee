@@ -22,7 +22,7 @@ only the list, gate type, and check protocol. Read every session (see the regime
 | QG-NN-02 | Clean build with no warnings | [quality-gates.md](quality-gates.md) + `stack/*` "Clean build" | mechanical: compiler/linter |
 | QG-NN-03 | LOC thresholds: crossed → justify cohesion or split | [quality-gates.md](quality-gates.md) | accountability (warn: `.claude/hooks/check-loc.sh`) |
 | QG-NN-04 | "Broke it — fix it": don't disable/skip/weaken tests | [quality-gates.md](quality-gates.md) | accountability |
-| QG-NN-05 | Every atomic frozen-scope criterion is observable by effect under assembled reachability (declared shipping root, no bespoke injection; state-selection is allowed, an outcome/wiring handle is not) — [ADR-015](../docs/adr/015-assembled-reachability-gate.md) | [quality-gates.md](quality-gates.md) | accountability (warn slot: static-adjunct per-stack) |
+| QG-NN-05 | Every atomic frozen-scope criterion is observable by effect under assembled reachability (declared shipping root, no bespoke injection; state-selection is allowed, an outcome/wiring handle is not) — [ADR-015](../docs/adr/015-assembled-reachability-gate.md) | [quality-gates.md](quality-gates.md) | accountability (quality) + mechanical (evidence presence: `regimen-doctor.py --qg` strict 🔴 at slice close, ADR-017; warn slot: static-adjunct per-stack) |
 | CQ-NN-01 | No TODO/FIXME | [code-quality.md](code-quality.md) | mechanical(opt): `.claude/hooks/check-no-todo.sh` |
 | CQ-NN-02 | Layers unidirectional, no back-imports | [code-quality.md](code-quality.md) | accountability |
 | CQ-NN-03 | No commented-out code | [code-quality.md](code-quality.md) | accountability |
