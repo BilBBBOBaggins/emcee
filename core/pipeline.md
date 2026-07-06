@@ -68,6 +68,23 @@ your priorities ─/kickoff→ state snapshot (PROJECT-STATE) ─architect→ da
         spec/scenarios/test-cases (SA/BA/qa-uat, as needed) ←─────────────┘
 ```
 
+**Closing a slice — the done boundary is machine-gated ([ADR-017](../docs/adr/017-machine-checked-plan-invariants.md)).**
+"Slice done" / "MVP done" is declared only after the composite slice-close gate passes on a clean
+tree at the project root:
+
+~~~bash
+python3 regimen-doctor.py --qg && {{check-command}} && {{test-command}}
+~~~
+
+An **orchestrator driving the pipeline autonomously** (a dispatcher over the roles) MUST run this
+gate itself before accepting `projectDone`/slice-done from the architect — the architect's
+self-assessment is not the done signal (the ADR-015/017 incident class: an over-declared "done"
+with implemented-but-unwired features). Red = the slice is not closed, whatever the role report
+says. In interactive mode the same command is run at slice close by the architect (the user
+commits); a local `pre-push` hook on the slice branch is optional hardening. Deliberately NOT
+per-commit and NOT mid-slice, and no hosted-CI integration is shipped — details and rationale in
+[quality-gates.md](quality-gates.md) §Slice-close composite gate.
+
 ## How one task passes through roles
 
 **Default (lightweight, solo; a.k.a. solo-collapse) — most tasks:**

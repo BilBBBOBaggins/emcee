@@ -53,7 +53,11 @@ Three phases, order mandatory:
    the machine actually knows: the orchestrator's `projectDone`/slice-done (a paragraph on the
    orchestrator's duty in `core/pipeline.md`) and CI/pre-push (a snippet in
    `core/quality-gates.md`). Composition lives **outside** the doctor (it stays read-only and
-   stack-independent). This returns QG-NN-01/02 to the gate (live incident: run 2's QA files with
+   stack-independent). *Amended 2026-07-06 (operator ruling, see Consequences → Strategic):* **no
+   hosted-CI integration is shipped** — the canon records the provider-neutral command and the
+   boundary semantics only; enforcement points are the orchestrator (autonomous mode, mandatory)
+   and the architect/user at slice close, with a local `pre-push` hook as optional prose, no
+   per-provider config owned by the package (the ADR-001/006/009 owned-debt class). This returns QG-NN-01/02 to the gate (live incident: run 2's QA files with
    strict errors on a clean product) and the clean-tree requirement closes the index≠HEAD gap.
 
 3. **Phase 3 (optional, opt-in) — "readiness context" hook.** A PostToolUse hook on writes to
@@ -120,8 +124,13 @@ explicit rather than a silent re-litigation (the gate's substance and the
 `roles/upgrader.md` (version skew: generated projects carry a frozen copy of the doctor).
 
 **Strategic (the operator's call, not engineering):** (i) whether CI becomes mandatory for the
-autonomous mode — without CI composition the gate rests on discipline; the question is ripe;
-(ii) the ceremony budget of the autonomous mode (open item of ADR-015).
+autonomous mode — **answered 2026-07-06 by the operator: no CI integration.** Rationale: the
+autonomous pilots are local trees where hosted CI cannot run, so for autonomous mode "CI" reduces
+to the orchestrator's duty (phase 2's pipeline.md paragraph) anyway; the composite command is
+provider-neutral, and owning per-provider config would be the ADR-001/006/009 debt class. The
+solo-without-orchestrator residual (launch discipline) is thereby accepted **permanently**, not as
+an open question. (ii) the ceremony budget of the autonomous mode (open item of ADR-015) — still
+open.
 
 ## Alternatives considered
 

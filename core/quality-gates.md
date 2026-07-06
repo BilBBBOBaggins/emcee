@@ -253,6 +253,24 @@ to a characteristic case and asserts the feature's **observable effect**.
   catches "what isn't wired in." Units below give correctness, the assembled suite above gives
   reachability; the layers complement each other.
 
+**Slice-close composite gate ([ADR-017](../docs/adr/017-machine-checked-plan-invariants.md) phase 2):**
+the machine boundary of "slice done" is one composite command on a clean tree:
+
+~~~bash
+python3 regimen-doctor.py --qg && {{check-command}} && {{test-command}}
+~~~
+
+— evidence presence (this gate) + clean static (QG-NN-02) + green tests (QG-NN-01); the clean-tree
+requirement closes "in the index but not committed". It runs only at boundaries the machine knows as
+"slice closed": the **orchestrator's** `projectDone`/slice-done in autonomous mode (mandatory,
+[pipeline.md](pipeline.md) §Closing a slice), the architect/user at slice close in interactive mode,
+optionally a local `pre-push` hook on the slice branch. Deliberately NOT per-commit and NOT
+mid-slice — `--qg` legitimately reds while evidence is still landing. **No hosted-CI integration is
+shipped** (operator ruling 2026-07-06, recorded in ADR-017): the command is provider-neutral by
+construction — `python3` + `git` + the stack commands — so any runner that has a slice-close event
+can call it; owning per-provider config is the owned-debt class rejected by ADR-001/006/009. On solo
+without an orchestrator, launch discipline remains an accepted residual (ADR-015/017).
+
 **Gate owner:** QA E2E ([../roles/qa-e2e.md](../roles/qa-e2e.md)) — the assembled-behavior suite as a
 blocking done-gate on top of the developer's contracts. **On solo-collapse** (no separate QA track) the
 owner is the developer themself: this is exactly where the hole hurts most (no one to independently check
