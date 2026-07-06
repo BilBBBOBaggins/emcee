@@ -192,13 +192,13 @@ git commit -m "docs(invites): UAT test cases for invite teammate feature"
 `2 1 2`. QA E2E turns the test cases from `test-cases-1-2-…` into E2E tests per [roles/qa-e2e.md](../../roles/qa-e2e.md): action through the UI → visible result → server-side verification (the invite really was created) → UI after the server responds.
 
 - **Input:** `docs/test-cases-1-2-invite-teammate.md`.
-- **Output:** E2E tests in the `build-qa/` circuit (see [core/quality-gates.md](../../core/quality-gates.md) — circuit separation).
+- **Output:** E2E tests in the `build-qa/` track (see [core/quality-gates.md](../../core/quality-gates.md) — separation of testing tracks).
 
 ### Prompt for Claude Code
 
 ~~~
 Read docs/test-cases-1-2-invite-teammate.md. Implement the cases as E2E (Playwright) in the
-build-qa/ circuit: every action goes through the UI of the built app, verification is a visible
+build-qa/ track: every action goes through the UI of the built app, verification is a visible
 result + server-side verification (the invite really was created) + UI after the server responds.
 Gate QG-NN-05 (core/quality-gates.md): the run goes through the app's declared shipping root — no
 bespoke injection of wiring (dependencies, outcome hooks, triggers) that shipping already provides

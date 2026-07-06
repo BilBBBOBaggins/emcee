@@ -23,11 +23,12 @@ task that changes the shipping entry point must update this line
 ([core/quality-gates.md](../../core/quality-gates.md) §Reachability).
 
 - `INV-01` — the owner invites a teammate by email with a role; after accepting, the invitee sees
-  the team. Evidence: `tests/assembled/invite_flow_test.go` (annotation `@qg:INV-01`).
+  the team. Evidence: `build-qa/invite-teammate.spec.ts` (annotation `@qg:INV-01` — the Playwright
+  suite created by day-1 Task 5).
 - `INV-02` — a repeat invite to a pending email is rejected with a user-visible error.
   Evidence: same file (`@qg:INV-02`).
 - `INV-03` — the toast auto-hides after 5 seconds — waiver: ergonomics with no outcome
-  differential, E2E circuit, not a gate.
+  differential, E2E track, not a gate.
 
 ## In progress
 

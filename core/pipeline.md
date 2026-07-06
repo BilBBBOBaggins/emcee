@@ -17,7 +17,7 @@ so starting a project = **`/kickoff`** (not "enter a number").
 "Kickoff"). It:
 
 1. **Figures out the essence — routing questions only** (one at a time): what product, for whom, stack, and
-   **routing signals** (whether a separate QA loop is needed, a domain with an expert, UI) — to choose
+   **routing signals** (whether a separate QA track is needed, a domain with an expert, UI) — to choose
    lightweight vs full mode, stack, which roles to stand up, the first slice. **Stop rule:** the architect
    does NOT collect happy path, edge cases, business rules, acceptance criteria, current process — that's
    domain discovery → **a separate task for SA** ([roles/sa.md](../roles/sa.md)), don't duplicate it.
@@ -58,7 +58,8 @@ The cycle repeats as long as there's a roadmap slice:
 2. **Roles execute** their tasks (`R D T`). Every task: constitution preflight → work → gates
    green → constitution exit → **your commit** (the agent doesn't commit).
 3. **Periodically:** status (`N`), replanning, `/panel` on load-bearing decisions, ad-hoc `auditor` on drift.
-4. Complexity grows → roles activate (SA for a new domain, designer for UI).
+4. Complexity grows → more roles get brought in (SA for a new domain; designer stays ad-hoc — its
+   digit activation remains behind gate O1-D, ADR-004).
 
 **Where things come from (the chain):**
 
@@ -91,7 +92,7 @@ per-commit and NOT mid-slice, and no hosted-CI integration is shipped — detail
 
 `developer` takes a task from the guide → writes code + tests (including user-facing checks) →
 `reviewer` reads the set of changed files declared by the developer, in a clean context → you commit. Bug →
-`debugger`. A load-bearing fork along the way → stop, `/panel`. **qa-e2e as a separate loop is NOT
+`debugger`. A load-bearing fork along the way → stop, `/panel`. **qa-e2e as a separate track is NOT
 needed — the developer codes and runs the tests themselves.**
 
 **[Complex] full pipeline — a feature with a domain and UI** (complex SaaS-class):
@@ -104,7 +105,7 @@ needed — the developer codes and runs the tests themselves.**
 5. **developer** — implementation per the guide.
 6. **qa-uat** — from the scenarios → `docs/test-cases-<DT>-<slug>.md` (expectations in user-visible
    terms, + negative/stress/concurrency). **Designs cases, doesn't write code.**
-7. **qa-e2e** — codes and runs the cases on the full stack, diagnoses chain breaks. **Separate loop.**
+7. **qa-e2e** — codes and runs the cases on the full stack, diagnoses chain breaks. **Separate track.**
 8. **reviewer** — static check. Systemic problems → `auditor`/`architect`.
 
 **qa-uat vs qa-e2e — not a duplicate:** qa-uat = *what* to check (the product benchmark, user-visible);

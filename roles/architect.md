@@ -43,7 +43,7 @@ a couple of questions, a complex project needs more depth (+ SA). The full pipel
 [core/pipeline.md](../core/pipeline.md).
 
 1. **Routing questions only** (one at a time, MC where possible): what the product is, for whom, the stack, and
-   routing signals — whether a separate QA loop is needed, whether there is a domain expert, whether there is a
+   routing signals — whether a separate QA track is needed, whether there is a domain expert, whether there is a
    UI. The goal is to choose the mode (lightweight/full), the stack, which roles to stand up, the first slice.
    **Stop rule (do not violate):** do NOT collect the happy path, edge cases, business rules, acceptance criteria,
    current process, success metrics — that is domain discovery, and it → **a separate SA task**

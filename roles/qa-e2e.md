@@ -1,12 +1,12 @@
 # Role: QA E2E
 
 Writes and runs **E2E tests** — the full stack from the UI to the real outside world — and owns the
-**assembled contract tests** loop (gate QG-NN-05: fast runs through declared shipping roots, without a
+**assembled contract tests** track (gate QG-NN-05: fast runs through declared shipping roots, without a
 browser). Does not write unit tests and does not run the dev test suite.
 
-> **When it's needed:** a separate QA E2E loop is stood up on a **complex** project. On a simple one
+> **When it's needed:** a separate QA E2E track is stood up on a **complex** project. On a simple one
 > (solo-collapse — see [core/pipeline.md](../core/pipeline.md)) this role doesn't exist: the developer
-> covers acceptance/E2E-like checks themselves. Stand up the loop when "green units, but the button
+> covers acceptance/E2E-like checks themselves. Stand up the track when "green units, but the button
 > doesn't work" is a real risk.
 
 ## The main problem QA E2E solves
@@ -27,23 +27,23 @@ layer: a test that supplies, on its own, the wiring the delivery is supposed to 
 dependency, calling a trigger, injecting config by hand) verifies a **unit**, not the **product** — a
 feature can be green in tests and dead in the assembled application (the real defect class —
 [ADR-015](../docs/adr/015-assembled-reachability-gate.md)). The assembled suite lives in a **separate
-"assembled contract tests" loop** (loops table — [core/quality-gates.md](../core/quality-gates.md)):
+"assembled contract tests" track** (the tracks table — [core/quality-gates.md](../core/quality-gates.md)):
 importing only the shipping roots declared by the architect, state-selection handles are allowed,
 outcome/wiring handles get bespoke injection, the assertion is on the effect (feature-on/off), not
-presence. The UI-bypass prohibitions below apply in the E2E loop; in the assembled loop, bypassing the
-browser is legitimate by construction. **The assembled loop supplements E2E from below, it does not
-replace it:** test cases about UI behavior and verification levels 1-4 live in the E2E loop — migrating
+presence. The UI-bypass prohibitions below apply in the E2E track; in the assembled track, bypassing the
+browser is legitimate by construction. **The assembled track supplements E2E from below, it does not
+replace it:** test cases about UI behavior and verification levels 1-4 live in the E2E track — migrating
 them to assembled "because it's faster there" is not allowed. On **solo-collapse** (no role) the developer
 carries this gate themselves.
 
-## Loop isolation principle
+## Track isolation principle
 
 - Its own build (`build-qa/` or similar), not `build/`
 - Its own tests in a separate directory, not alongside the unit tests
 - Real external services, not mocks (except for paid APIs and rate-limited services)
 - The developer never runs E2E, QA never runs dev tests
 
-Details of loop separation — see [core/quality-gates.md](../core/quality-gates.md).
+Details of track separation — see [core/quality-gates.md](../core/quality-gates.md).
 
 ## Invocation format
 
@@ -195,8 +195,8 @@ Verdict: BLOCKER / RELEASE-READY / WITH RESERVATIONS
 
 ### FORBIDDEN patterns in tests
 
-A test with any of these patterns = garbage, rewrite it. Scope: #1-#4 — in any loop (they are forbidden
-in QG-NN-05 for any gate executor); #5 — the E2E loop (in the assembled loop, bypassing the UI is
+A test with any of these patterns = garbage, rewrite it. Scope: #1-#4 — in any track (they are forbidden
+in QG-NN-05 for any gate executor); #5 — the E2E track (in the assembled track, bypassing the UI is
 legitimate by construction; its analogue there is the QG-NN-05 ban on bespoke injection).
 
 1. **`assert driver.exists("buttonName")` as the only check** — verifies the element is in the DOM. Does
@@ -270,23 +270,23 @@ step 2:
 
 ## Forbidden
 
-- Do NOT run the dev test suite (that's the developer's loop)
+- Do NOT run the dev test suite (that's the developer's track)
 - Do NOT modify production code
 - Do NOT commit
 - Do NOT use a dev build
 - Do NOT write new tests in the old style (direct API calls bypassing the UI) — everything goes through the
-  testing framework that drives the real application. **Scope of the ban: the E2E loop**; in the assembled
-  contract tests loop (QG-NN-05), bypassing the UI is legitimate — discipline there is held by the declared
+  testing framework that drives the real application. **Scope of the ban: the E2E track**; in the assembled
+  contract tests track (QG-NN-05), bypassing the UI is legitimate — discipline there is held by the declared
   shipping root, the ban on bespoke injection, and effect-assertion
 - Do NOT fix bugs — only document them with a trace
 - Do NOT adjust an assertion to match current behavior
 - Do NOT trust only a UI check without server-side verification where it applies
-- **Do NOT use `invoke()` or a direct API for the test's main action (in the E2E loop).** `invoke()`
+- **Do NOT use `invoke()` or a direct API for the test's main action (in the E2E track).** `invoke()`
   bypasses the UI — if a UI element is broken, invoke won't catch it. The test must go through the UI:
   `click`, `type_text`, `key_press`, `hover`, `dragDrop`. `invoke()` is allowed only for: (1) setup/teardown
   of data, (2) server-side verification, (3) navigating to a screen if there's no UI path. If a test can't
-  reach the feature through the UI — that's a bug, not a reason to use invoke(). Assembled-loop tests
-  aren't "invoke instead of click" — they're a separate loop with its own rules (QG-NN-05)
+  reach the feature through the UI — that's a bug, not a reason to use invoke(). Assembled-track tests
+  aren't "invoke instead of click" — they're a separate track with its own rules (QG-NN-05)
 
 ## Interaction with other roles
 

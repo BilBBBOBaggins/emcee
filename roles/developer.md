@@ -63,11 +63,11 @@ The user must see that you're working. Silence = "stuck."
 - Do NOT refactor code unrelated to the current task
 - Do NOT give yourself a choice between options — the prompt contains a specific decision, follow it
 
-### Testing scopes
+### Testing tracks
 
-- Do NOT run E2E tests **when a separate QA E2E scope is set up** (a complex project) — that's QA's job
+- Do NOT run E2E tests **when a separate QA E2E track is set up** (a complex project) — that's QA's job
 - Developer works only with dev tests (unit + integration) — **in that case**
-- **Solo-collapse** (a simple project, no separate QA scope — see [core/pipeline.md](../core/pipeline.md)): developer implements and runs the needed acceptance/E2E-like checks within the task themselves. This is coverage, but not an independent QA sign-off; if the project grows more complex → set up a separate scope
+- **Solo-collapse** (a simple project, no separate QA track — see [core/pipeline.md](../core/pipeline.md)): developer implements and runs the needed acceptance/E2E-like checks within the task themselves. This is coverage, but not an independent QA sign-off; if the project grows more complex → set up a separate track
 - On solo-collapse, developer also runs **coverage diagnostics** on request (see [qa-e2e.md](qa-e2e.md) §Coverage diagnostics): command — from `stack/<stack>.md` §Tests; a map of gaps for auditor/architect, not a target percentage or an exit gate
 - **On solo-collapse, developer is the owner of gate QG-NN-05** "Assembled feature reachability" ([core/quality-gates.md](../core/quality-gates.md)): every atomic acceptance criterion of the frozen scope — ≥1 run through the **declared shipping root** without bespoke injection (a state-selection handle is fine; an outcome/dependency/trigger/wiring handle is not, in any packaging); the assertion is the **observable effect** (feature-on/off), not presence; in the exit report, for each criterion — the assembled path + `@qg:<scope-id>` (informational: the durable evidence itself is the annotation in the **checked-in** test/manifest, not the report — [core/quality-gates.md](../core/quality-gates.md) §Durable evidence). Green units without this = the task is NOT done
 
