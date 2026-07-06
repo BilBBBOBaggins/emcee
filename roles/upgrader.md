@@ -72,6 +72,12 @@ package-owned parts up to date **without touching** user content.
    only after report-first and **never commits** (constitution). A separate "regimen upgrade" commit
    — so the diff is visible in history.
 
+**The reverse channel (field find → package) is ATOMIC.** When a fix discovered in a project flows
+upstream into the package, the code change and its selftest fixture/invariant land in ONE package
+commit — a half-delivered upstream (fixture committed, lib change left in the worktree) makes the
+package HEAD red on a fresh clone (observed 2026-07-06: an md-scan fixture landed while the
+`_pack_lib.py` change it depended on sat uncommitted).
+
 ## Forbidden
 
 - Do NOT auto-overwrite files with user `{{...}}` or project content.
