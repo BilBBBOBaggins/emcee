@@ -20,7 +20,12 @@ LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 # are not part of the regimen (Jinja templates with legitimate {{...}}; scratchpad — temporary
 # panel/session artifacts, core/adversarial-panel.md §Run process — with draft stub links).
 SKIP_DIRS = (".git", "node_modules", ".venv", "venv", "site-packages",
-             "__pycache__", ".tox", "dist", "build", ".mypy_cache", "scratchpad")
+             "__pycache__", ".tox", "dist", "build", ".mypy_cache", "scratchpad",
+             # vendored/build trees of common toolchains (field find 2026-07-06, a C++/CMake
+             # project: cmake FetchContent vendors googletest under build-*/_deps — its README
+             # has a malformed link that red-flags the doctor; cargo's is target/). Exact
+             # segments only — build-qa/ stays visible (ADR-017/K2).
+             "_deps", "target")
 
 # Generator-fragment marker (overlays/codex/_agents-header.md): its links are written
 # relative to the PROJECT ROOT where the fragment materializes (AGENTS.md), not relative
@@ -83,7 +88,10 @@ def iter_lines(text: str, keepends: bool = False):
 
 
 def iter_links(text: str):
-    """Iterate [text](path) links OUTSIDE code fences (``` and ~~~).
+    """Iterate [text](path) links OUTSIDE code fences (``` and ~~~) and OUTSIDE inline
+    `code` spans — code snippets like a C++ lambda `[&](...)` or a regex `["']([^"']*)`
+    parse as links otherwise (field find 2026-07-06, a C++/CMake project; same doctrine as
+    count_placeholders: backticked text is documentation, not a link).
 
     Yield (lineno, match, target), where target is the cleaned local path (local_target),
     or None for skipped links. lineno is 1-based.
@@ -91,7 +99,7 @@ def iter_links(text: str):
     for ln, line, in_fence in iter_lines(text):
         if in_fence:
             continue
-        for m in LINK.finditer(line):
+        for m in LINK.finditer(re.sub(r"`[^`\n]*`", "", line)):
             yield ln, m, local_target(m.group(2))
 
 
