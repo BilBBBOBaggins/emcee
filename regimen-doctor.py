@@ -11,7 +11,8 @@ whether build/test commands are filled in.
 
 Exit 0 = regimen is green; exit 1 = there's a 🔴 (fix before the first real task).
 This is NOT the package's selftest.py (that checks the package itself) — this checks your project.
-Changes nothing: only reads and reports.
+Changes nothing in the project; note that the role-drift check RUNS the project's own
+`sync-roles.py --check` as a subprocess — run the doctor only on trees you trust.
 """
 import argparse
 import json
@@ -381,7 +382,8 @@ def main():
                     help="strict QG-NN-05: a vacuous/format-drifted Frozen-scope section, "
                          "missing @qg-evidence, duplicate scope-ids or a non-git tree = 🔴 "
                          "(the slice-close done-gate: orchestrator projectDone/slice-done, "
-                         "CI, pre-push, task exit)")
+                         "the architect/user at slice close, optionally a local pre-push; "
+                         "NOT mid-slice — ADR-017)")
     args = ap.parse_args()
     root = os.path.abspath(args.dir)
 

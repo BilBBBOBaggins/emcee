@@ -238,7 +238,9 @@ to a characteristic case and asserts the feature's **observable effect**.
   `Shipping root(s): …` paragraph; prose notes go **outside** the section; scope-ids are **unique
   across slices** (a reused id would be silently satisfied by a stale annotation).
   `regimen-doctor.py` performs the presence check: 🟡 in a normal run; `--qg` — strict 🔴 as the
-  **slice-close done-gate** (orchestrator `projectDone`/slice-done, CI, pre-push, task exit), where
+  **slice-close done-gate** (orchestrator `projectDone`/slice-done, the architect/user at slice
+  close, optionally a local `pre-push` — §Slice-close below; deliberately NOT mid-slice/per-task,
+  no hosted CI), where
   a vacuous or format-drifted section, a duplicate id, a non-git tree, or missing evidence all
   fail — a vacuous pass was exactly the ADR-017 incident class. Evidence is read from the **git
   index** ("checked-in", not worktree prose): `@qg` annotations count only in code/test files or

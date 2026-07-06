@@ -20,7 +20,9 @@
   (`workspace-write` + honor; G2 RED: a per-path carve-out is unreachable on Codex, cwd is always writable).
 - **Skills — `.codex/skills/<name>/SKILL.md`** (format identical to Claude Code; body — a pointer into `core/*.md`).
 - **Hook gates = accountability.** KL-7 (live `codex exec`): hooks from config do not fire in headless
-  mode → for a hard gate on Codex use CI/pre-commit, not runtime hooks. Opt-in example —
+  mode → for a hard gate on Codex use local git hooks (pre-commit for per-commit checks like
+  LOC/no-todo; the ADR-017 slice-close composite runs only at slice boundaries — orchestrator or a
+  local pre-push, no hosted CI is shipped), not runtime hooks. Opt-in example —
   `.codex/hooks.json.example`.
 - **Memory** — Codex has its own mechanism (`AGENTS.md` hierarchy + Codex memories opt-in), not the
   Claude-Code `CLAUDE.md` hierarchy; the memory discipline (`core/memory.md`) carries over as-is.
