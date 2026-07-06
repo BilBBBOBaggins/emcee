@@ -103,6 +103,7 @@ emcee/
 ├── new-project.py                  # generator: assembles the regimen (--mode new|overlay)
 ├── sync-roles.py                   # regenerates role tables from roles.json (--check catches drift)
 ├── regimen-doctor.py               # checks regimen readiness in a project; copied into the project
+├── _pack_lib.py                    # shared helpers (doctor/generator import); copied with the doctor as a pair
 ├── render-handbook.py              # builds HTML: handbook.html (reference) + quickstart.html
 ├── selftest.py                     # self-test: generator and package-invariant checks
 ├── roles.json                      # SOLE source of the role map (number → role)
@@ -406,6 +407,7 @@ rationale:
 | [014](docs/adr/014-prompt-canon-consistency-fixes.md) | Consistency fixes for the prompt canon (single source for commands, wording reconciliation). |
 | [015](docs/adr/015-assembled-reachability-gate.md) | Assembled reachability as a done-gate (QG-NN-05): "green tests ≠ wired feature." |
 | [016](docs/adr/016-panel-second-model-mandatory-when-available.md) | Second model mandatory for the panel when available, symmetric across red/blue. |
+| [017](docs/adr/017-machine-checked-plan-invariants.md) | Machine-checked plan invariants: hardened doctor `--qg` + the composite slice-close gate. |
 
 ## Template evolution
 

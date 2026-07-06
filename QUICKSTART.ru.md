@@ -125,13 +125,13 @@
 
 | Авто-обновить (чистый package-owned, без `{{}}`) | Слить вручную через `git diff` (ваш контент) |
 |---|---|
-| чистые `core/*.md` (где нет `{{`): constitution, debugging, memory, spec-driven, adversarial-panel, second-model | `CLAUDE.md` (имя/стек/команды/правила) |
-| `sync-roles.py`, `regimen-doctor.py` | `roles.json` (если переназначали цифры) |
-| `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, `.claude/skills/{debugging,code-quality,memory,spec-driven}` | `docs/` (ваши day-guides, PROJECT-STATE, specs, ADR) |
-| **новые** файлы: `core/second-model.md`, `roles/{designer,auditor,upgrader}.md`, `.claude/agents/auditor.md` | `core/*.md` и `roles/*.md` **с заполненными `{{}}`** (quality-gates, code-quality, qa-e2e, qa-uat и др.) |
+| чистые `core/*.md` (где нет `{{`): constitution, principles, debugging, memory, skills, spec-driven, adversarial-panel, second-model, portability | входной файл — `CLAUDE.md`/`AGENTS.md` (имя/стек/команды/правила) |
+| `sync-roles.py`, `regimen-doctor.py` **вместе с `_pack_lib.py`** (доктор его импортирует — обновляются парой; устаревшая копия любого из них = тихий перекос) | `roles.json` (если переназначали цифры) |
+| обвязка: `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, `.claude/skills/*`; на Codex — `.codex/agents/*`, `.codex/skills/*` | `docs/` (ваши day-guides, PROJECT-STATE, specs, ADR) |
+| **новые** файлы: всё, что есть в свежей генерации, но отсутствует в вашем проекте (сравните деревья — новые `core/*.md`, новые роли, новая обвязка) | `core/*.md` и `roles/*.md` **с заполненными `{{}}`** (core: task-protocol, quality-gates, pipeline, code-quality; роли: architect, developer, qa-e2e, qa-uat, ba, upgrader) |
 
 > ⚠️ **Не делайте `cp -r core/*`.** Каталог `core/` содержит файлы с вашими заполненными
-> `{{placeholders}}` (quality-gates, code-quality, principles, task-protocol) — слепая перезапись
+> `{{placeholders}}` (task-protocol, quality-gates, pipeline, code-quality) — слепая перезапись
 > их сотрёт. (Файл `render-handbook.py` — package-only, в проект не копируется, в вашем проекте его
 > и нет.)
 
@@ -145,7 +145,8 @@
        --backend <стек> --testing <как было> --wiring yes
    ```
 3. **Авто-обновите только чистый package-owned** (левая колонка таблицы): покопийно перенесите
-   чистые core-файлы, tool-скрипты, `.claude/*` и новые файлы. Файлы с `{{}}` не трогайте.
+   чистые core-файлы, tool-скрипты (`sync-roles.py`, `regimen-doctor.py` + `_pack_lib.py`),
+   обвязку (`.claude/*`; на Codex `.codex/*`) и новые файлы. Файлы с `{{}}` не трогайте.
 4. **Mixed и ваш контент (правая колонка) — слейте руками** через `git diff` против
    `/tmp/regimen-new/<файл>`. Перенесите новые секции регламента (например, в `CLAUDE.md` →
    «По ситуации» добавьте указатели на `second-model` / `designer` / `auditor` / `upgrader`),

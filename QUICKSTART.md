@@ -128,13 +128,13 @@ updated automatically, and what only by hand:
 
 | Auto-update (clean package-owned, no `{{}}`) | Merge by hand via `git diff` (your content) |
 |---|---|
-| clean `core/*.md` (no `{{` in them): constitution, debugging, memory, spec-driven, adversarial-panel, second-model | `CLAUDE.md` (name/stack/commands/rules) |
-| `sync-roles.py`, `regimen-doctor.py` | `roles.json` (if you renumbered roles) |
-| `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, `.claude/skills/{debugging,code-quality,memory,spec-driven}` | `docs/` (your day guides, PROJECT-STATE, specs, ADRs) |
-| **new** files: `core/second-model.md`, `roles/{designer,auditor,upgrader}.md`, `.claude/agents/auditor.md` | `core/*.md` and `roles/*.md` **with filled-in `{{}}`** (quality-gates, code-quality, qa-e2e, qa-uat, etc.) |
+| clean `core/*.md` (no `{{` in them): constitution, principles, debugging, memory, skills, spec-driven, adversarial-panel, second-model, portability | the entry file — `CLAUDE.md`/`AGENTS.md` (name/stack/commands/rules) |
+| `sync-roles.py`, `regimen-doctor.py` **together with `_pack_lib.py`** (the doctor imports it — they upgrade as a pair; a stale copy of either is a silent skew) | `roles.json` (if you renumbered roles) |
+| wiring: `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, `.claude/skills/*`; on Codex — `.codex/agents/*`, `.codex/skills/*` | `docs/` (your day guides, PROJECT-STATE, specs, ADRs) |
+| **new** files: anything present in the fresh generation but absent from your project (compare the trees — new `core/*.md`, new roles, new wiring) | `core/*.md` and `roles/*.md` **with filled-in `{{}}`** (core: task-protocol, quality-gates, pipeline, code-quality; roles: architect, developer, qa-e2e, qa-uat, ba, upgrader) |
 
 > ⚠️ **Don't `cp -r core/*`.** The `core/` directory contains files with your filled-in
-> `{{placeholders}}` (quality-gates, code-quality, principles, task-protocol) — a blind overwrite
+> `{{placeholders}}` (task-protocol, quality-gates, pipeline, code-quality) — a blind overwrite
 > will erase them. (`render-handbook.py` is package-only, isn't copied into the project, and isn't
 > in your project at all.)
 
@@ -148,8 +148,9 @@ Steps:
        --backend <stack> --testing <as before> --wiring yes
    ```
 3. **Auto-update only the clean package-owned files** (left column of the table): copy over the
-   clean core files, tool scripts, `.claude/*`, and new files, file by file. Leave files with `{{}}`
-   untouched.
+   clean core files, the tool scripts (`sync-roles.py`, `regimen-doctor.py` + `_pack_lib.py`),
+   the wiring (`.claude/*`; on Codex `.codex/*`), and new files, file by file. Leave files with
+   `{{}}` untouched.
 4. **Mixed files and your content (right column) — merge by hand** via `git diff` against
    `/tmp/regimen-new/<file>`. Carry over new regimen sections (for example, in `CLAUDE.md` →
    "Situational", add pointers to `second-model` / `designer` / `auditor` / `upgrader`), keeping

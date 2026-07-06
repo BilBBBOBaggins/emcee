@@ -1,6 +1,7 @@
 # Master of Ceremonies
 
 🇬🇧 [In English](README.md)
+
 Регламент агентной разработки на **Claude Code и Codex** — основную работу делает агент, а не человек. Короткое имя пакета и репозитория — `emcee`.
 
 ## Что это такое
@@ -101,6 +102,7 @@ emcee/
 ├── new-project.py                  # генератор: собирает регламент (--mode new|overlay)
 ├── sync-roles.py                   # перегенерирует таблицы ролей из roles.json (--check ловит рассинхрон)
 ├── regimen-doctor.py               # проверка готовности регламента в проекте; копируется в проект
+├── _pack_lib.py                    # общие хелперы (импорт доктора/генератора); копируется в проект парой с доктором
 ├── render-handbook.py              # собирает HTML: handbook.html (справочник) + quickstart.html
 ├── selftest.py                     # самотест: проверки генератора и инвариантов пакета
 ├── roles.json                      # ЕДИНСТВЕННЫЙ источник карты ролей (цифра → роль)
@@ -383,6 +385,7 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 | [014](docs/adr/014-prompt-canon-consistency-fixes.md) | Фиксы консистентности промпт-канона (single-source команд, сверка формулировок). |
 | [015](docs/adr/015-assembled-reachability-gate.md) | Достижимость фичи в сборе как done-гейт (QG-NN-05): «зелёные тесты ≠ фича подключена». |
 | [016](docs/adr/016-panel-second-model-mandatory-when-available.md) | Вторая модель панели обязательна при доступности, симметрично red/blue. |
+| [017](docs/adr/017-machine-checked-plan-invariants.md) | Машинно-проверяемые инварианты плана: усиленный `--qg` доктора + композитный slice-close гейт. |
 
 ## Эволюция шаблонов
 
