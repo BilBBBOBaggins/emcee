@@ -13,7 +13,7 @@ import glob, json, os, re, subprocess, sys, tempfile, shutil
 
 PACK = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PACK)
-from _pack_lib import md_files, SANDBOX_MODE_RE  # shared primitives (finding #4; consolidation C1)
+from _pack_lib import md_files, read, SANDBOX_MODE_RE  # shared primitives (finding #4; consolidation C1)
 from _pack_lib import dangling as _dangling
 
 GEN = os.path.join(PACK, "new-project.py")
@@ -92,9 +92,9 @@ def validate_project(tag: str, root: str, *, name: str, wiring: bool,
         p = os.path.join(root, rel)
         check(os.path.exists(p), f"[{tag}] {rel} exists")
         if os.path.exists(p):
-            b = open(p, encoding="utf-8").read()
+            b = read(p)
             check("{{" in b, f"[{tag}] {rel} kept {{{{...}}}} (no .format collapse)")
-            check("<<NAME>>" not in b and "<<STACKS>>" not in b, f"[{tag}] {rel} has no leaked sentinels")
+            check("<<NAME>>" not in b, f"[{tag}] {rel} has no leaked sentinels")
 
     # stacks
     for s in stacks:
@@ -309,7 +309,7 @@ def main() -> int:
         # "do not include any other fields"). No codex skill must carry paths:.
         cxskills = glob.glob(os.path.join(cx, ".codex", "skills", "**", "SKILL.md"), recursive=True)
         paths_leak = [os.path.relpath(p, cx) for p in cxskills
-                      if any(l.startswith("paths:") for l in open(p, encoding="utf-8"))]
+                      if any(l.startswith("paths:") for l in read(p).splitlines())]
         check(not paths_leak, "[codex] zero paths: in codex-skill frontmatter (a Claude-only key)" +
               (f" — {paths_leak}" if paths_leak else ""))
         # sync-roles is green in the codex project (AGENTS.md in sync)
@@ -331,7 +331,7 @@ def main() -> int:
         leak_claude, bhome_over = [], []
         for p in md_files(cx):
             rel = os.path.relpath(p, cx)
-            text = open(p, encoding="utf-8").read()
+            text = read(p)
             if rel in B_HOMES:
                 n = text.count("CLAUDE.md")
                 if n > B_HOMES[rel]:
@@ -445,7 +445,7 @@ def main() -> int:
         for p in md_files(PACK):
             if "/examples/" in p:
                 continue
-            t = open(p, encoding="utf-8").read()
+            t = read(p)
             for b in bad:
                 if b in t:
                     hits.append(f"{os.path.relpath(p, PACK)}:{b}")
@@ -466,6 +466,16 @@ def main() -> int:
         cp = subprocess.run([sys.executable, os.path.join(PACK, "sync-roles.py"), "--check"],
                             capture_output=True, text=True)
         check(cp.returncode == 0, "[pack] sync-roles --check is green (roles.json ↔ tables)")
+
+        # README ADR tables don't lag behind docs/adr/ — this drifted twice with no gate
+        # (audit 2026-07-03 E1: stuck at 013; audit 2026-07-06 S1: stuck at 016).
+        adr_files = sorted(glob.glob(os.path.join(PACK, "docs", "adr", "[0-9][0-9][0-9]-*.md")))
+        if adr_files:
+            latest_adr = os.path.basename(adr_files[-1])
+            for readme in ("README.md", "README.ru.md"):
+                t = open(os.path.join(PACK, readme), encoding="utf-8").read()
+                check(f"](docs/adr/{latest_adr})" in t,
+                      f"[pack] {readme} ADR table includes the latest ADR ({latest_adr})")
 
         # tripwire: new-project.fill_claude cuts sections by the EXACT headings of the CLAUDE.md template
         # (regex `## Stack`→`## Architecture`, `## Testing philosophy`→`## Project specifics`).
@@ -550,7 +560,7 @@ def main() -> int:
                     if tracked.returncode == 0 and tracked.stdout.strip()
                     else [p for p in md_files(PACK) if "/scratchpad/" not in p.replace(os.sep, "/")])
             for p in scan:
-                low = open(p, encoding="utf-8").read().lower()
+                low = read(p).lower()
                 for b in leak_words:
                     if b in low:
                         leak_hits.append(f"{os.path.relpath(p, PACK)}:{b}")
@@ -622,6 +632,17 @@ def main() -> int:
                            files=[("tests/a.test.ts", "// @qg:INV-05\n")]), qg=True)
         check(r.returncode == 0,
               "[qg] --qg: indented continuation of a wrapped item is legal (example-file style)")
+        # the two allowlist/parser branches previously without a fixture (audit 2026-07-06 S9):
+        r = doctor(qg_tree(qbase, "manifest", ROOTS + ITEM,
+                           files=[("qg-manifest.txt",
+                                   "@qg:INV-01 tests/assembled/invite.test.ts::e2e\n")]), qg=True)
+        check(r.returncode == 0 and "1 scope-id" in r.stdout,
+              "[qg] --qg: evidence carried only by a generated qg-manifest.* counts (second carrier)")
+        r = doctor(qg_tree(qbase, "html-comment", ROOTS +
+                           "<!-- one atomic criterion per line -->\n" + ITEM +
+                           "<!-- multi-line\nfill-in hint\n-->\n", files=[EVID]), qg=True)
+        check(r.returncode == 0 and "1 scope-id" in r.stdout,
+              "[qg] --qg: HTML comments (incl. multi-line) inside the section parse, not unparseable")
 
         # segment-match SKIP_DIRS: a project under a parent build/ is still fully scanned,
         # build/ INSIDE the project is still pruned (md_files blast radius, _pack_lib)
@@ -630,13 +651,15 @@ def main() -> int:
         check(doctor(pb).returncode == 1 and "placeholders" in doctor(pb).stdout.lower(),
               "[qg] project under a parent build/ dir is scanned (was: whole tree silently skipped)")
         mt = os.path.join(qbase, "mdtest")
-        for rel in ("build/skip.md", "build-qa/seen.md", "src/seen2.md"):
+        for rel in ("build/skip.md", "build-qa/seen.md", "src/seen2.md",
+                    "build-tidy/_deps/gtest/README.md", "target/doc/skip.md"):
             p = os.path.join(mt, rel)
             os.makedirs(os.path.dirname(p), exist_ok=True)
             open(p, "w").close()
         got = {os.path.relpath(p, mt) for p in md_files(mt)}
         check(got == {os.path.join("build-qa", "seen.md"), os.path.join("src", "seen2.md")},
-              f"[qg] md_files: build/ pruned as a segment, build-qa/ visible (got: {sorted(got)})")
+              f"[qg] md_files: build//_deps//target/ pruned as segments, build-qa/ visible "
+              f"(got: {sorted(got)})")
     finally:
         shutil.rmtree(base, ignore_errors=True)
 

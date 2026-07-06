@@ -235,7 +235,6 @@ def rewrite_links_standalone(html_text: str) -> str:
         href = m.group(1)
         if href.startswith(("http://", "https://", "mailto:", "#")):
             return m.group(0)
-        anchor = href.split("#")[-1] if href.startswith("#") else ""
         base = os.path.basename(href.split("#")[0])
         if base in BASENAME_TO_ANCHOR:
             return f'href="handbook.html#{BASENAME_TO_ANCHOR[base]}"'

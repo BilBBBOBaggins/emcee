@@ -555,9 +555,8 @@ def main():
                            f"Domain \"{x}\".")
 
         # 6) docs/ bootstrap
-        stacks_str = ", ".join(stack_bullets) or "—"
         safe_write(os.path.join(target, "docs", "PROJECT-STATE.md"),
-                   PROJECT_STATE_STUB.replace("<<NAME>>", name).replace("<<STACKS>>", stacks_str),
+                   PROJECT_STATE_STUB.replace("<<NAME>>", name),
                    overlay, skipped, target)
         # Day-0 (delegating init) — only for kickstarting a new project.
         if not overlay:
