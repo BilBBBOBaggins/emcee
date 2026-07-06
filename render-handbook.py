@@ -99,6 +99,8 @@ ORDER = [
     ("docs/adr/015-assembled-reachability-gate.md", "ADR-015: Assembled feature reachability (QG-NN-05)"),
     ("docs/adr/016-panel-second-model-mandatory-when-available.md",
      "ADR-016: Second model for the panel — mandatory when available"),
+    ("docs/adr/017-machine-checked-plan-invariants.md",
+     "ADR-017: Machine-checked plan invariants (hardened --qg gate)"),
 ]
 
 

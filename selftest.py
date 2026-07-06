@@ -36,6 +36,42 @@ def gen(target: str, **flags) -> subprocess.CompletedProcess:
     return subprocess.run(args, capture_output=True, text=True, stdin=subprocess.DEVNULL)
 
 
+def qg_tree(base: str, name: str, scope_body: str | None, files=(), git=True,
+            files_after_add=()):
+    """Synthetic project for the hardened QG-NN-05 checker (ADR-017): docs/PROJECT-STATE.md
+    with the given Frozen-scope section body (None = no section) + extra files.
+    "Checked-in" = the git index, so trees are `git init` + `git add -A` by default;
+    files_after_add land in the worktree only (the unstaged-evidence case)."""
+    root = os.path.join(base, name)
+    os.makedirs(os.path.join(root, "docs"), exist_ok=True)
+    state = "# PROJECT-STATE — t\n\n## Snapshot\n- x\n"
+    if scope_body is not None:
+        state += "\n## Frozen scope (QG-NN-05)\n" + scope_body + "\n## Next day\n- x\n"
+    with open(os.path.join(root, "docs", "PROJECT-STATE.md"), "w", encoding="utf-8") as f:
+        f.write(state)
+    for rel, body in files:
+        p = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(body)
+    if git:
+        subprocess.run(["git", "init", "-q"], cwd=root, capture_output=True)
+        subprocess.run(["git", "add", "-A"], cwd=root, capture_output=True)
+    for rel, body in files_after_add:
+        p = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(body)
+    return root
+
+
+def doctor(root: str, qg: bool = False) -> subprocess.CompletedProcess:
+    args = [sys.executable, os.path.join(PACK, "regimen-doctor.py"), "--dir", root]
+    if qg:
+        args.append("--qg")
+    return subprocess.run(args, capture_output=True, text=True)
+
+
 def validate_project(tag: str, root: str, *, name: str, wiring: bool,
                      stacks: list[str], new_stacks: list[str], variants_expected: int):
     # basics
@@ -175,19 +211,23 @@ def main() -> int:
         os.makedirs(os.path.join(s, "tests"), exist_ok=True)
         open(os.path.join(s, "tests", "assembled_test.go"), "w", encoding="utf-8").write(
             "// @qg:QGT-01\nfunc TestAssembled(t *testing.T) {}\n")
+        # "checked-in" = the git index (ADR-017): the fixture must be a repo with staged files
+        subprocess.run(["git", "init", "-q"], cwd=s, capture_output=True)
+        subprocess.run(["git", "add", "-A"], cwd=s, capture_output=True)
         dq = subprocess.run([sys.executable, os.path.join(s, "regimen-doctor.py"), "--dir", s],
                             cwd=s, capture_output=True, text=True)
-        check("WITHOUT @qg-evidence: QGT-02 (1/2)" in dq.stdout,
+        check("WITHOUT checked-in @qg-evidence" in dq.stdout and "QGT-02 (1/2)" in dq.stdout,
               "[qg] the doctor names exactly the uncovered scope-id (QGT-02; waiver QGT-03 is outside the check)")
         dqs = subprocess.run([sys.executable, os.path.join(s, "regimen-doctor.py"), "--dir", s, "--qg"],
                              cwd=s, capture_output=True, text=True)
         check(dqs.returncode == 1 and "QGT-02" in dqs.stdout,
               "[qg] strict --qg: an uncovered criterion = rc=1 (a slice's done-gate)")
         open(os.path.join(s, "tests", "assembled_test.go"), "a", encoding="utf-8").write("// @qg:QGT-02\n")
+        subprocess.run(["git", "add", "-A"], cwd=s, capture_output=True)  # stage the new evidence
         dqg = subprocess.run([sys.executable, os.path.join(s, "regimen-doctor.py"), "--dir", s, "--qg"],
                              cwd=s, capture_output=True, text=True)
-        check("@qg-evidence is in place (2 scope-id" in dqg.stdout,
-              "[qg] evidence was added — the doctor is green on QG-NN-05 (2/2, no waiver needed)")
+        check("@qg-evidence is in place (2 scope-id" in dqg.stdout and "waived: QGT-03" in dqg.stdout,
+              "[qg] evidence was added — the doctor is green on QG-NN-05 (2/2) and lists the waiver")
         open(stub_state, "w", encoding="utf-8").write(stub_body)  # restore the stub — the full project isn't touched further
 
         # scan for "N D T" digits (2026-07-03 audit S3/D2): a stale digit in a subagent's prose
@@ -515,6 +555,88 @@ def main() -> int:
                     if b in low:
                         leak_hits.append(f"{os.path.relpath(p, PACK)}:{b}")
         check(not leak_hits, "[pack] no leaked author context" + (f" {leak_hits}" if leak_hits else ""))
+
+        # ---- QG-NN-05 hardened checker (ADR-017 phase 1) ----
+        # The pre-hardening checker had PROVEN false-green paths (vacuous pass, prose spoofing,
+        # no git awareness) and false-reds (`build-qa/` skipped by a substring match) — each case
+        # below pins one of them. Fixture vocabulary:
+        ROOTS = "Shipping root(s): `src/main.ts` (web) — fixed by the architect.\n"
+        ITEM = "- `INV-01` — invite flow works end to end.\n"
+        EVID = ("tests/assembled/invite.test.ts", "// @qg:INV-01\n")
+        qbase = os.path.join(base, "qg")
+
+        r = doctor(qg_tree(qbase, "vac-nostate", None, git=False), qg=True)
+        check(r.returncode == 1 and "vacuous" in r.stdout,
+              "[qg] --qg: missing Frozen-scope section = 🔴 vacuous (was: silent exit 0)")
+        r = doctor(qg_tree(qbase, "vac-nostate2", None, git=False))
+        check(r.returncode == 0 and "QG-NN-05:" not in r.stdout,
+              "[qg] soft run: missing section stays silent (kickoff/mid-slice is legitimate)")
+        r = doctor(qg_tree(qbase, "vac-empty", ROOTS), qg=True)
+        check(r.returncode == 1 and "vacuous" in r.stdout,
+              "[qg] --qg: section with only the roots line = 🔴 vacuous (no scope items)")
+
+        drift = qg_tree(qbase, "drift", ROOTS + "- [ ] INV-01 done\n- [ ] INV-02 done\n")
+        r = doctor(drift, qg=True)
+        check(r.returncode == 1 and "parse as neither" in r.stdout,
+              "[qg] --qg: format drift = 🔴 (was: 🟡 even under --qg)")
+        r = doctor(drift)
+        check(r.returncode == 0 and "🟡 QG-NN-05" in r.stdout,
+              "[qg] soft run: format drift = 🟡, non-blocking")
+        r = doctor(qg_tree(qbase, "partial", ROOTS + ITEM + "- INV-02 without backticks\n",
+                           files=[EVID]), qg=True)
+        check(r.returncode == 1 and "parse as neither" in r.stdout,
+              "[qg] --qg: partially drifted section = 🔴, no silent scope shrink")
+
+        r = doctor(qg_tree(qbase, "prose-spoof", ROOTS + ITEM,
+                           files=[("docs/day-1-guide.md", "assembled path: @qg:INV-01\n")]), qg=True)
+        check(r.returncode == 1 and "INV-01" in r.stdout,
+              "[qg] --qg: @qg in committed prose (.md) is NOT evidence (allowlist)")
+        r = doctor(qg_tree(qbase, "ok-buildqa", ROOTS + ITEM,
+                           files=[("build-qa/invite.test.ts", "// @qg:INV-01\n")]), qg=True)
+        check(r.returncode == 0 and "1 scope-id" in r.stdout,
+              "[qg] --qg: evidence in build-qa/ IS seen (was: false-red via substring SKIP_DIRS)")
+        r = doctor(qg_tree(qbase, "unstaged", ROOTS + ITEM, files_after_add=[EVID]), qg=True)
+        check(r.returncode == 1 and "INV-01" in r.stdout,
+              "[qg] --qg: worktree-only evidence (not in the git index) doesn't count as checked-in")
+        nogit = qg_tree(qbase, "nogit", ROOTS + ITEM, files=[EVID], git=False)
+        r = doctor(nogit, qg=True)
+        check(r.returncode == 1 and "not a git repository" in r.stdout,
+              "[qg] --qg: non-git tree = 🔴 (checked-in semantics unverifiable)")
+        check(doctor(nogit).returncode == 0, "[qg] soft run: non-git tree = 🟡, non-blocking")
+
+        r = doctor(qg_tree(qbase, "dup", ROOTS + ITEM + "- `INV-01` — duplicated criterion.\n",
+                           files=[EVID]), qg=True)
+        check(r.returncode == 1 and "duplicate" in r.stdout,
+              "[qg] --qg: duplicate scope-ids = 🔴 (one annotation must not close several criteria)")
+        r = doctor(qg_tree(qbase, "waiver", ROOTS + ITEM +
+                           "- `INV-03` — toast auto-hides — waiver: ergonomics, no output differential.\n",
+                           files=[EVID]), qg=True)
+        check(r.returncode == 0 and "waived: INV-03" in r.stdout,
+              "[qg] --qg: explicit `waiver: <reason>` excluded from reconciliation AND listed")
+        r = doctor(qg_tree(qbase, "waiver-legacy", ROOTS +
+                           "- `INV-04` — supports the waiver flow end to end.\n"), qg=True)
+        check(r.returncode == 1 and "INV-04" in r.stdout,
+              "[qg] --qg: the bare word \"waiver\" (no colon) no longer smuggles an item out")
+        r = doctor(qg_tree(qbase, "wrapped", ROOTS +
+                           "- `INV-05` — a long criterion that wraps onto\n  the next indented line.\n",
+                           files=[("tests/a.test.ts", "// @qg:INV-05\n")]), qg=True)
+        check(r.returncode == 0,
+              "[qg] --qg: indented continuation of a wrapped item is legal (example-file style)")
+
+        # segment-match SKIP_DIRS: a project under a parent build/ is still fully scanned,
+        # build/ INSIDE the project is still pruned (md_files blast radius, _pack_lib)
+        pb = qg_tree(os.path.join(qbase, "build"), "inner", None, git=False,
+                     files=[("docs/leftover.md", "unfilled {{x}}\n")])
+        check(doctor(pb).returncode == 1 and "placeholders" in doctor(pb).stdout.lower(),
+              "[qg] project under a parent build/ dir is scanned (was: whole tree silently skipped)")
+        mt = os.path.join(qbase, "mdtest")
+        for rel in ("build/skip.md", "build-qa/seen.md", "src/seen2.md"):
+            p = os.path.join(mt, rel)
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            open(p, "w").close()
+        got = {os.path.relpath(p, mt) for p in md_files(mt)}
+        check(got == {os.path.join("build-qa", "seen.md"), os.path.join("src", "seen2.md")},
+              f"[qg] md_files: build/ pruned as a segment, build-qa/ visible (got: {sorted(got)})")
     finally:
         shutil.rmtree(base, ignore_errors=True)
 

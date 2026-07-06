@@ -200,9 +200,12 @@ Last updated: {{YYYY-MM-DD}}
 - Stack/commands — in the regimen entry file (don't duplicate here).
 
 ## Frozen scope (QG-NN-05)
-<!-- Filled in by the architect when a slice is frozen (core/quality-gates.md §Reachability):
-     items «- `SCOPE-ID` — atomic criterion»; in the assembled test — annotation @qg:SCOPE-ID.
-     Evidence check: python3 regimen-doctor.py (strict done-gate: --qg). -->
+<!-- Filled in by the architect when a slice is frozen (core/quality-gates.md §Reachability).
+     The section is strictly machine-owned (ADR-017): items «- `SCOPE-ID` — atomic criterion»
+     (waiver form: «… — waiver: <reason>»), scope-ids unique across slices, prose notes go
+     OUTSIDE the section. Durable evidence = annotation @qg:SCOPE-ID in a CHECKED-IN code/test
+     file or qg-manifest.* (a mention in .md prose doesn't count).
+     Evidence check: python3 regimen-doctor.py (slice-close done-gate: --qg). -->
 - Shipping root(s): {{delivery artifact → entry-point}}
 - {{SCOPE-ID and criterion}}
 

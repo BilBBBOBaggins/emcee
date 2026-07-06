@@ -228,13 +228,22 @@ to a characteristic case and asserts the feature's **observable effect**.
   inputs. A correctly chosen state exercises real wiring: with no wiring, no seed will produce an effect,
   and the test fails.
 - **Durable evidence:** the link "scope criterion ↔ assembled test" is materialized checked-in — a
-  `@qg:<scope-id>` annotation in the test, or a generated manifest; PROJECT-STATE holds a reference, not
-  a copy. The presence of evidence is machine-checkable (reconciling annotations against the scope list);
-  quality is reviewer + spot-check. **Machine reference and checker:** the `## Frozen scope (QG-NN-05)`
-  section in `docs/PROJECT-STATE.md`, items of the form ``- `SCOPE-ID` — atomic criterion`` (a `waiver`
-  marker on the line = out of reconciliation); `regimen-doctor.py` performs the presence check (🟡 in a
-  normal run, `--qg` — strict 🔴 as a slice done-gate for CI/pre-commit/exit). Example fill-in —
-  `examples/docs/PROJECT-STATE.example.md`.
+  `@qg:<scope-id>` annotation in the test, or a generated manifest (canonical name `qg-manifest.*`);
+  PROJECT-STATE holds a reference, not a copy. The presence of evidence is machine-checkable
+  (reconciling annotations against the scope list); quality is reviewer + spot-check. **Machine
+  reference and checker** (hardened by [ADR-017](../docs/adr/017-machine-checked-plan-invariants.md)):
+  the `## Frozen scope (QG-NN-05)` section in `docs/PROJECT-STATE.md` is strictly machine-owned —
+  items of the form ``- `SCOPE-ID` — atomic criterion`` (waiver form: `… — waiver: <reason>`; a
+  waived item is out of reconciliation but listed in the checker's output), plus one
+  `Shipping root(s): …` paragraph; prose notes go **outside** the section; scope-ids are **unique
+  across slices** (a reused id would be silently satisfied by a stale annotation).
+  `regimen-doctor.py` performs the presence check: 🟡 in a normal run; `--qg` — strict 🔴 as the
+  **slice-close done-gate** (orchestrator `projectDone`/slice-done, CI, pre-push, task exit), where
+  a vacuous or format-drifted section, a duplicate id, a non-git tree, or missing evidence all
+  fail — a vacuous pass was exactly the ADR-017 incident class. Evidence is read from the **git
+  index** ("checked-in", not worktree prose): `@qg` annotations count only in code/test files or
+  `qg-manifest.*`; a mention in markdown/README/logs is not evidence, and the `@qg` reference in an
+  exit report is informational only. Example fill-in — `examples/docs/PROJECT-STATE.example.md`.
 - **Optional static adjunct (warn):** dead-export / grepping production calls catches the "zero prod
   calls" subclass cheaply, but does NOT catch an optional parameter with a default at a live call site
   (the boss case of ADR-015) — a complement, not a replacement for the assembled test. The command is

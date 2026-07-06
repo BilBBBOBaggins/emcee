@@ -24,7 +24,10 @@ package-owned parts up to date **without touching** user content.
    ```
 2. **Classify by FILE** (the owned/user boundary is computable per file, not per line):
    - **clean package-owned** — files WITHOUT user `{{...}}` and without project content: clean
-     `core/*.md` (those without `{{`), `sync-roles.py`, `regimen-doctor.py` + executable wiring (on
+     `core/*.md` (those without `{{`), `sync-roles.py`, `regimen-doctor.py` **together with its
+     import `_pack_lib.py`** (they upgrade as a pair; a stale doctor copy is a real, observed skew —
+     the ADR-017 field tree ran a checker generations behind the canon it was supposed to enforce)
+     + executable wiring (on
      Claude Code — `.claude/agents/*`, `.claude/commands/*`, `.claude/hooks/*`, generic
      `.claude/skills/*`; on Codex — `AGENTS.md`, `.codex/agents/*`, `.codex/skills/*`;
      `origin: harness:<name>`). These can be auto-updated.

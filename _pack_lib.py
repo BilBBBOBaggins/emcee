@@ -41,10 +41,14 @@ def read(p: str) -> str:
 
 
 def md_files(root: str):
-    """All .md under root, skipping vendor/build/drafts (SKIP_DIRS)."""
-    for dp, _, fns in os.walk(root):
-        if any(os.sep + d in dp + os.sep for d in SKIP_DIRS):
-            continue
+    """All .md under root, skipping vendor/build/drafts (SKIP_DIRS).
+
+    SKIP_DIRS are matched as exact path segments BELOW root (walk pruning), not as
+    substrings of the absolute path: `build-qa/` (the canonical QA circuit) is not `build/`,
+    and a project that happens to live under a parent directory named `build/`/`dist/` must
+    not silently drop out of every scan (both were real bugs — ADR-017 phase 1)."""
+    for dp, dns, fns in os.walk(root):
+        dns[:] = [d for d in dns if d not in SKIP_DIRS]
         for fn in fns:
             if fn.endswith(".md"):
                 yield os.path.join(dp, fn)

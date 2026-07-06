@@ -23,7 +23,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Shared primitives (finding #4 of the 2026-06-29 audit; consolidation C1 of the 2026-07-03 audit):
 # .md traversal, reading, dangling links, placeholders, sandbox modes.
-from _pack_lib import md_files, dangling, count_placeholders, read, SANDBOX_MODE_RE, SKIP_DIRS
+from _pack_lib import md_files, dangling, count_placeholders, read, SANDBOX_MODE_RE
 
 
 def check_placeholders(root):
@@ -237,56 +237,132 @@ def check_stack_file(root):
 QG_SCOPE_HEAD = re.compile(r"^##\s+Frozen scope\b", re.M)
 QG_ID_ITEM = re.compile(r"^\s*[-*]\s+`([A-Za-z0-9][A-Za-z0-9_.-]*)`")
 QG_ANNOT = re.compile(r"@qg:([A-Za-z0-9][A-Za-z0-9_.-]*)")
+QG_BULLET = re.compile(r"^\s*[-*]\s")
+# The one legal non-bullet element of the section: the shipping-roots paragraph
+# (canonized by ADR-017; both the paragraph form and a `- Shipping root(s): …` bullet parse).
+QG_ROOTS = re.compile(r"^\s*(?:[-*]\s+)?Shipping root", re.I)
+
+# Evidence allowlist (ADR-017): `@qg:` annotations count only in code/test files (by
+# extension) or in a generated manifest named `qg-manifest.*` — a mention in markdown/README/
+# logs/reports is prose, not durable evidence. Flagged unanimous-blind-spot candidate: if this
+# list false-reds a legitimate non-code evidence carrier on a real project, STOP and return
+# the question (ADR-017 phase-1 stop condition) — don't silently widen the scan onto prose.
+QG_EVIDENCE_EXTS = frozenset((
+    "py", "pyi", "ts", "tsx", "js", "jsx", "mjs", "cjs", "go", "rs", "java", "kt", "kts",
+    "swift", "m", "mm", "c", "h", "cc", "cpp", "hpp", "cxx", "hxx", "cs", "rb", "php",
+    "scala", "clj", "ex", "exs", "erl", "hs", "ml", "lua", "r", "jl", "dart", "vue",
+    "svelte", "sh", "bash", "zsh", "ps1", "bat", "sql", "feature"))
+QG_MANIFEST_PREFIX = "qg-manifest."
 
 
-def check_qg_evidence(root):
-    """QG-NN-05 durable evidence (core/quality-gates.md §Reachability, ADR-015): every
-    scope-id from PROJECT-STATE's "## Frozen scope" section must have a checked-in annotation
-    `@qg:<scope-id>` somewhere in the project (an assembled test or a generated manifest).
-    An item marked "waiver" in the line is outside the check (waiver on record).
-    Checks for the PRESENCE of evidence (the gate's machine backing); quality is reviewer/spot-check.
-    Returns (ok, missing, total) | ("format", None, None) — the section exists but not a single
-    item parses (format drift) | None — no section / still placeholders."""
-    p = os.path.join(root, "docs", "PROJECT-STATE.md")
-    if not os.path.exists(p):
-        return None
-    body = read(p)
+def parse_frozen_scope(body):
+    """Parse PROJECT-STATE's `## Frozen scope` section (strictly machine-owned, ADR-017).
+
+    Returns a dict:
+      state: 'no-section' | 'stub' ({{...}} still inside) | 'empty' (no scope items) | 'ok'
+      ids: ids needing evidence · waived: ids with an explicit `waiver: <reason>` ·
+      dups: duplicated ids · unparseable: section lines that are neither an
+      ``- `SCOPE-ID` — criterion`` item, its indented continuation, the Shipping-roots
+      paragraph, an HTML comment, nor blank (prose notes belong OUTSIDE the section)."""
     m = QG_SCOPE_HEAD.search(body)
     if not m:
-        return None
+        return {"state": "no-section"}
     sect = body[m.end():]
+    nl = sect.find("\n")  # drop the rest of the heading line itself ("(QG-NN-05)")
+    sect = sect[nl + 1:] if nl >= 0 else ""
     nxt = re.search(r"^##\s", sect, re.M)
     if nxt:
         sect = sect[:nxt.start()]
     if "{{" in sect:
-        return None  # the section is still a stub — the slice isn't frozen
-    want, items = [], 0
-    for line in sect.splitlines():
-        if re.match(r"^\s*[-*]\s", line):
-            items += 1
-        im = QG_ID_ITEM.match(line)
-        if im and "waiver" not in line.lower():
-            want.append(im.group(1))
-    if not want:
-        return ("format", None, None) if items > 1 else None  # 1 item = the shipping-root line
-    found = set()
-    for dp, _, fns in os.walk(root):
-        if any(os.sep + d in dp + os.sep for d in SKIP_DIRS):
+        return {"state": "stub"}
+    items, unparseable = [], []
+    mode, cur = None, None  # mode: None | 'bullet' | 'roots' | 'comment'
+    for raw in sect.splitlines():
+        s = raw.strip()
+        if mode == "comment":
+            if "-->" in s:
+                mode = None
             continue
-        for fn in fns:
-            fp = os.path.join(dp, fn)
-            if os.path.abspath(fp) == os.path.abspath(p):
-                continue  # PROJECT-STATE holds a reference, not evidence
-            try:
-                if os.path.getsize(fp) > 2_000_000:
-                    continue
-                t = read(fp)
-            except OSError:
-                continue
-            if "@qg:" in t:
-                found |= set(QG_ANNOT.findall(t))
-    missing = [w for w in want if w not in found]
-    return (not missing, missing, len(want))
+        if not s:
+            mode, cur = None, None
+            continue
+        if s.startswith("<!--"):
+            mode = "comment" if "-->" not in s else None
+            continue
+        if QG_ROOTS.match(raw):
+            mode, cur = "roots", None
+            continue
+        if QG_BULLET.match(raw):
+            im = QG_ID_ITEM.match(raw)
+            if im:
+                cur = {"id": im.group(1), "text": [s]}
+                items.append(cur)
+                mode = "bullet"
+            else:
+                unparseable.append(s[:80])
+                mode, cur = None, None
+            continue
+        if mode == "roots":
+            continue  # roots paragraph continuation (until a blank line)
+        if mode == "bullet" and raw[:1].isspace() and cur is not None:
+            cur["text"].append(s)  # wrapped continuation of the current item
+            continue
+        unparseable.append(s[:80])
+        mode, cur = None, None
+    if not items and not unparseable:
+        return {"state": "empty"}
+    ids, waived, dups, seen = [], [], [], set()
+    for it in items:
+        if it["id"] in seen:
+            dups.append(it["id"])
+        seen.add(it["id"])
+        (waived if "waiver:" in " ".join(it["text"]).lower() else ids).append(it["id"])
+    return {"state": "ok", "ids": ids, "waived": waived, "dups": dups,
+            "unparseable": unparseable}
+
+
+def qg_evidence_from_index(root):
+    """`@qg:<id>` annotations from the git INDEX ("checked-in" semantics, ADR-017: a
+    worktree-only edit of a tracked file is not checked in), filtered by the evidence
+    allowlist. Returns (found_ids, err) with err ∈ {None, 'no-git', 'no-repo'}."""
+    try:
+        r = subprocess.run(["git", "grep", "--cached", "-I", "-z", "-e", "@qg:"],
+                           cwd=root, capture_output=True, text=True)
+    except FileNotFoundError:
+        return set(), "no-git"
+    if r.returncode not in (0, 1):
+        return set(), "no-repo"
+    found = set()
+    for line in r.stdout.split("\n"):
+        if "\0" not in line:
+            continue
+        path, content = line.split("\0", 1)
+        base = os.path.basename(path).lower()
+        ext = base.rsplit(".", 1)[-1] if "." in base else ""
+        if base.startswith(QG_MANIFEST_PREFIX) or ext in QG_EVIDENCE_EXTS:
+            found |= set(QG_ANNOT.findall(content))
+    return found, None
+
+
+def check_qg_evidence(root):
+    """QG-NN-05 durable evidence (core/quality-gates.md §Reachability, ADR-015; checker
+    hardened by ADR-017): every scope-id of PROJECT-STATE's "## Frozen scope" section must
+    have a `@qg:<scope-id>` annotation in the git index within the evidence allowlist.
+    Checks the PRESENCE of evidence (the gate's machine backing); quality is
+    reviewer/spot-check; completeness of the section vs. the product-level scope document
+    is the architect's (named residual, ADR-017). Returns a dict for main() to grade:
+    state ('no-state' | parse_frozen_scope states), and when state == 'ok' also
+    ids/waived/dups/unparseable + missing (ids without evidence) + git_err."""
+    p = os.path.join(root, "docs", "PROJECT-STATE.md")
+    if not os.path.exists(p):
+        return {"state": "no-state"}
+    res = parse_frozen_scope(read(p))
+    if res["state"] != "ok":
+        return res
+    found, err = qg_evidence_from_index(root)
+    res["git_err"] = err
+    res["missing"] = [] if err else [w for w in res["ids"] if w not in found]
+    return res
 
 
 def check_state_size(root, limit=200):
@@ -302,8 +378,10 @@ def main():
     ap = argparse.ArgumentParser(description="Regimen readiness gate (read-only).")
     ap.add_argument("--dir", default=".", help="project root (default: current)")
     ap.add_argument("--qg", action="store_true",
-                    help="strict QG-NN-05: missing @qg-evidence for the frozen scope = 🔴 "
-                         "(a slice's done-gate; for CI/pre-commit/exit)")
+                    help="strict QG-NN-05: a vacuous/format-drifted Frozen-scope section, "
+                         "missing @qg-evidence, duplicate scope-ids or a non-git tree = 🔴 "
+                         "(the slice-close done-gate: orchestrator projectDone/slice-done, "
+                         "CI, pre-push, task exit)")
     args = ap.parse_args()
     root = os.path.abspath(args.dir)
 
@@ -365,19 +443,46 @@ def main():
     bucket[sf[0]].append(sf[1])
 
     qg = check_qg_evidence(root)
-    if qg is not None:
-        ok, missing, total = qg
-        if ok == "format":
-            warn.append("QG-NN-05: PROJECT-STATE's \"Frozen scope\" section exists, but not a "
-                        "single item parses — format: \"- `SCOPE-ID` — criterion\" "
-                        "(core/quality-gates.md §Reachability)")
-        elif ok:
-            green.append(f"QG-NN-05: @qg-evidence is in place ({total} scope-id ↔ annotations)")
+    if qg["state"] != "ok":
+        # Vacuous states: legitimate mid-slice/kickoff (silent in a normal run), but the
+        # slice-close gate has nothing to verify — under --qg silence would be a false green
+        # (the ADR-017 incident class: a real "done" tree passed vacuously).
+        if args.qg:
+            vac = {"no-state": "docs/PROJECT-STATE.md is missing",
+                   "no-section": "PROJECT-STATE has no \"## Frozen scope\" section",
+                   "stub": "the \"Frozen scope\" section is still a {{...}} stub",
+                   "empty": "the \"Frozen scope\" section has no scope items"}
+            red.append(f"QG-NN-05 (--qg): vacuous — {vac[qg['state']]}. The slice-close gate "
+                       f"has nothing to reconcile: freeze the scope in machine form first "
+                       f"(core/quality-gates.md §Reachability, ADR-017)")
+    else:
+        problems = []
+        if qg["unparseable"]:
+            problems.append("lines that parse as neither \"- `SCOPE-ID` — criterion\" nor the "
+                            "Shipping-roots paragraph (prose notes go OUTSIDE the section): "
+                            + "; ".join(f"\"{u}\"" for u in qg["unparseable"]))
+        if qg["dups"]:
+            problems.append(f"duplicate scope-ids (one annotation would close several "
+                            f"criteria): {', '.join(qg['dups'])}")
+        if qg["git_err"]:
+            problems.append("\"checked-in\" is unverifiable: "
+                            + ("git is not on PATH" if qg["git_err"] == "no-git"
+                               else "not a git repository")
+                            + " — QG-NN-05 requires checked-in durable evidence")
+        if qg["missing"]:
+            problems.append(f"criteria WITHOUT checked-in @qg-evidence (git index, "
+                            f"code/tests/qg-manifest.* only — prose doesn't count): "
+                            f"{', '.join(qg['missing'])} "
+                            f"({len(qg['missing'])}/{len(qg['ids'])})")
+        if problems:
+            bucket_qg = red if args.qg else warn
+            for pr in problems:
+                bucket_qg.append(f"QG-NN-05: {pr} — the slice isn't done until fixed "
+                                 f"(core/quality-gates.md §Reachability, ADR-015/017)")
         else:
-            msg = (f"QG-NN-05: frozen-scope criteria WITHOUT @qg-evidence: {', '.join(missing)} "
-                   f"({len(missing)}/{total}) — the slice isn't done until evidence is checked in "
-                   f"(core/quality-gates.md §Reachability, ADR-015)")
-            (red if args.qg else warn).append(msg)
+            waived = f"; waived: {', '.join(qg['waived'])}" if qg["waived"] else ""
+            green.append(f"QG-NN-05: @qg-evidence is in place "
+                         f"({len(qg['ids'])} scope-id ↔ annotations{waived})")
 
     ss = check_state_size(root)
     if ss is not None:
