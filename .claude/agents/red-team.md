@@ -32,7 +32,7 @@ You are a single model and prone to blind spots. Request an independent attack f
 
 ~~~bash
 codex exec -s read-only -c 'sandbox_permissions=["disk-full-read-access"]' \
-  -c tools.web_search=true -m <codex-model-id> -c model_reasoning_effort=xhigh - <<'EOF'
+  -c tools.web_search=true -m <codex-model-id> -c model_reasoning_effort=<max-effort> - <<'EOF'
 <onboarding: read the repository and docs; then attack the decision below along the same axes —
 find where it breaks. Load-bearing claims and context:>
 ...
