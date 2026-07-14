@@ -1,7 +1,7 @@
 ---
 name: auditor
 description: Holistic read-only audit of the whole project's health + a map of pain points. Catches cross-task architectural drift that per-task reviewer and architect status can't see. Does NOT fix, does NOT run anything. Ad-hoc "assess the project." The role is DORMANT (no digit — activation is gated, ADR-005).
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, Bash
 model: fable
 ---
 
@@ -32,3 +32,12 @@ into a separate `docs/audit-<date>.md` linked from there — by the **architect 
 there the architect draws a slice for the day-guide breakdown.
 
 Do NOT fix, do NOT commit, do NOT report findings without `file:line`.
+
+## Second-model (codex) access
+
+Bash on this role's surface exists primarily to call the second model. The canonical command,
+live model id and effort live in `core/second-model.md` (ADR-001) — do not hardcode ids here.
+Read-only roles (auditor/reviewer) must NOT write or commit via shell: Bash is for codex and
+non-mutating checks only. When a package trigger names a second-model pass (adversarial panel,
+high-stakes audit findings, C+ canon acceptance) and codex is genuinely unavailable, fall back
+honestly per second-model.md — flagged with the literal error, never silently.
