@@ -112,7 +112,7 @@ its guarantees and burns context. Not sure which skill — ask the user, don't g
 - Architecture patterns → [architecture/](architecture/)
 - Domain specifics → [domain/](domain/)
 
-**The rule before committing to architecture.** Before sinking engineering months into a load-bearing decision (module/service boundaries, consistency model, technology/platform choice, build-vs-buy, a strategic bet) or into anything expensive to roll back — run [core/adversarial-panel.md](core/adversarial-panel.md): red team (attacks + brings in codex) → blue team (defends honestly) → arbiter (binding verdict) → v2 synthesis → ADR. Not for the trivial and easily revertible — that's the regular architect's job.
+**The rule before committing to architecture.** Before sinking engineering months into a load-bearing decision (module/service boundaries, consistency model, technology/platform choice, build-vs-buy, a strategic bet) or into anything expensive to roll back — run [core/adversarial-panel.md](core/adversarial-panel.md): red team (attacks + brings in codex) → blue team (defends honestly) → arbiter (binding verdict) → v2 synthesis → ADR. Not for the trivial and easily revertible — that's the regular architect's job. Every ADR carries a `Panel: run/skipped because …` field (the skip reason is reviewed, not taken on faith); decisions touching frozen semantics, money/CAS/crypto/PII, boundaries or migration contracts get a compact panel with codex on all three roles — no skip (see the panel file, "Burden of proof is inverted").
 
 ## Testing philosophy
 

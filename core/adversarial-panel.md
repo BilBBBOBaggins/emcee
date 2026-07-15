@@ -22,6 +22,21 @@ Before a **non-trivial** decision where the cost of error is months of work or i
 **Do not** run it for: trivial implementation choices, things that are easy to revert, code style. For
 those — the regular architect ([../roles/architect.md](../roles/architect.md)).
 
+**Burden of proof is inverted.** Self-classification of "load-bearing vs trivial" by the same architect
+who makes the decision drifts toward skipping (field data from an autonomous production run: 1 panel per
+~34 ADRs; a retro second-model pass contested 2 of 4 sampled solo rulings). Two rules close the hole:
+
+1. Every ADR carries a **`Panel:` field** — `run (link to verdict)` or `skipped because <reason>`. The
+   skip reason is a first-class review object: triviality and easy reversibility are **proven, not
+   declared**, and review may block the ADR over an unjustified skip.
+2. **Class trigger, no skip allowed**: a decision touching frozen semantics (spec / frozen scope),
+   money/CAS/crypto/PII, module perimeters and boundaries, or migration contracts goes through a
+   **compact panel** — scoped to the single question, red → blue → arbiter, **each of the three roles
+   calls codex** (red and blue as symmetric refute/defend passes, arbiter as an independent fact-check
+   of disputed points); the second-model fallback ladder applies, a real call failure is flagged with
+   the literal error. Process ADRs (day entries, tranche slicing, record errata) stay solo + review,
+   with the `Panel:` field from rule 1.
+
 This is the concrete mechanism for decisions that [../roles/architect.md](../roles/architect.md) flags
 as "option A vs B vs C" and for which an ADR is written.
 
