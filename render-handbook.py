@@ -101,6 +101,8 @@ ORDER = [
      "ADR-016: Second model for the panel — mandatory when available"),
     ("docs/adr/017-machine-checked-plan-invariants.md",
      "ADR-017: Machine-checked plan invariants (hardened --qg gate)"),
+    ("docs/adr/018-second-model-reachability-and-panel-burden.md",
+     "ADR-018: Second-model reachability + inverted panel burden of proof"),
 ]
 
 
