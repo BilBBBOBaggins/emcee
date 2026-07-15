@@ -361,8 +361,10 @@ If you want the rules to be enforced by more than just the agent's discipline, `
 **optional** executable wiring. You can skip copying it — prose mode works without it.
 
 - **`.claude/agents/`** — roles as real subagents with frontmatter. Tool scoping turns prose-mode
-  restrictions into hardware guarantees: reviewer and auditor are physically read-only; BA /
-  QA-UAT / SA can only write documents; the architect has no Edit/Bash access in production. This is
+  restrictions into hardware guarantees: reviewer and auditor cannot edit the repo; BA /
+  QA-UAT / SA can only write documents; the architect has no Edit access. Every role carries Bash
+  scoped to second-model (codex) calls per [core/second-model.md](core/second-model.md) — read-only
+  roles must not write or commit through it ([ADR-018](docs/adr/018-second-model-reachability-and-panel-burden.md)). This is
   also where the adversarial panel lives (`red-team`, `blue-team`, `arbiter` — see
   [core/adversarial-panel.md](core/adversarial-panel.md)) along with the dormant `auditor`
   (dispatched ad hoc without a number, like the panel).
@@ -408,6 +410,7 @@ rationale:
 | [015](docs/adr/015-assembled-reachability-gate.md) | Assembled reachability as a done-gate (QG-NN-05): "green tests ≠ wired feature." |
 | [016](docs/adr/016-panel-second-model-mandatory-when-available.md) | Second model mandatory for the panel when available, symmetric across red/blue. |
 | [017](docs/adr/017-machine-checked-plan-invariants.md) | Machine-checked plan invariants: hardened doctor `--qg` + the composite slice-close gate. |
+| [018](docs/adr/018-second-model-reachability-and-panel-burden.md) | Second model reachable from every role (scoped Bash) + inverted burden of proof for the panel (`Panel:` field, class trigger). |
 
 ## Template evolution
 

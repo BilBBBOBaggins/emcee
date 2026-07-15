@@ -342,8 +342,10 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 **опциональная** исполняемая обвязка. Её можно не копировать — прозовый режим работает без неё.
 
 - **`.claude/agents/`** — роли как настоящие субагенты с frontmatter. Tool-scoping делает прозовые
-  запреты аппаратными: reviewer и auditor физически read-only; BA / QA-UAT / SA пишут только
-  документы; architect без Edit/Bash на проде. Сюда же входит адверсивная панель (`red-team`,
+  запреты аппаратными: reviewer и auditor не могут править репозиторий; BA / QA-UAT / SA пишут только
+  документы; architect без Edit. Bash есть у каждой роли, но выдан под вызовы второй модели (codex)
+  по [core/second-model.md](core/second-model.md) — read-only роли через него не пишут и не коммитят
+  ([ADR-018](docs/adr/018-second-model-reachability-and-panel-burden.md)). Сюда же входит адверсивная панель (`red-team`,
   `blue-team`, `arbiter` — см. [core/adversarial-panel.md](core/adversarial-panel.md)) и дормантный
   `auditor` (диспатчится ad-hoc без цифры, как панель).
 - **`.claude/skills/`** — авто-подтяг **знаний** (Agent Skills). Это тонкие триггеры с `description`,
@@ -386,6 +388,7 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 | [015](docs/adr/015-assembled-reachability-gate.md) | Достижимость фичи в сборе как done-гейт (QG-NN-05): «зелёные тесты ≠ фича подключена». |
 | [016](docs/adr/016-panel-second-model-mandatory-when-available.md) | Вторая модель панели обязательна при доступности, симметрично red/blue. |
 | [017](docs/adr/017-machine-checked-plan-invariants.md) | Машинно-проверяемые инварианты плана: усиленный `--qg` доктора + композитный slice-close гейт. |
+| [018](docs/adr/018-second-model-reachability-and-panel-burden.md) | Вторая модель достижима из каждой роли (scoped Bash) + инверсия бремени для панели (поле `Panel:`, класс-триггер). |
 
 ## Эволюция шаблонов
 
