@@ -103,6 +103,17 @@ Output a status of at most half a page:
 - Risks: what could go wrong
 - Open questions: what needs a user answer
 
+**Estimate-dilation meta-trigger** ([ADR-020](../docs/adr/020-estimate-dilation-meta-trigger.md)). When a
+stage or slice **overruns its estimate by a set multiple** (default **3×**; the project may tune and
+record the value), it is **mandatory** to re-estimate the remaining work and review the
+decomposition **granularity**, and to **record why** the blow-out happened (coarse slicing / a wrong
+premise — cf. [ADR-019](../docs/adr/019-definition-of-ready-premise-executability.md) / genuine
+under-understanding). This is a **self-correction and budgeting signal for a human over the loop**, fired on
+the fact of the multiple against the recorded estimate — **not** a stop, a budget cap, or a nudge to cut
+corners (the package's north star is quality over tokens; the review never asks for less or faster work). Its
+point is that a large dilation stops being silent drift and becomes a recorded event while the loop runs,
+instead of surfacing only in a later audit.
+
 ### Updating PROJECT-STATE — a snapshot, not a journal
 
 `docs/PROJECT-STATE.md` is a hot snapshot of "where we are now", not a cumulative log. When updating it

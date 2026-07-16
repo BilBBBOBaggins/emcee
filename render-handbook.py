@@ -105,6 +105,8 @@ ORDER = [
      "ADR-018: Second-model reachability + inverted panel burden of proof"),
     ("docs/adr/019-definition-of-ready-premise-executability.md",
      "ADR-019: Definition of Ready — premise-executability gate"),
+    ("docs/adr/020-estimate-dilation-meta-trigger.md",
+     "ADR-020: Estimate-dilation meta-trigger"),
 ]
 
 
