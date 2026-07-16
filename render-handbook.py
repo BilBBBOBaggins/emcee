@@ -107,6 +107,8 @@ ORDER = [
      "ADR-019: Definition of Ready — premise-executability gate"),
     ("docs/adr/020-estimate-dilation-meta-trigger.md",
      "ADR-020: Estimate-dilation meta-trigger"),
+    ("docs/adr/021-documentation-actualization-cadence.md",
+     "ADR-021: Documentation actualization cadence"),
 ]
 
 

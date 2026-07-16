@@ -415,6 +415,7 @@ rationale:
 | [018](docs/adr/018-second-model-reachability-and-panel-burden.md) | Second model reachable from every role (scoped Bash) + inverted burden of proof for the panel (`Panel:` field, class trigger). |
 | [019](docs/adr/019-definition-of-ready-premise-executability.md) | Definition of Ready: a premise-executability gate on the day plan (preconditions, read-ports, mandate, precedents verified against source). |
 | [020](docs/adr/020-estimate-dilation-meta-trigger.md) | Estimate-dilation meta-trigger: an estimate exceeded by a set multiple forces a recorded re-estimation + granularity review (not a stop, not a corner-cut). |
+| [021](docs/adr/021-documentation-actualization-cadence.md) | Documentation actualization cadence: "statuses = fact" at every day exit + a housekeeping sweep every ~3 days; human-facing docs gate stage close. |
 
 ## Template evolution
 

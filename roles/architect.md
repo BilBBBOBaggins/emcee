@@ -119,6 +119,24 @@ corners (the package's north star is quality over tokens; the review never asks 
 point is that a large dilation stops being silent drift and becomes a recorded event while the loop runs,
 instead of surfacing only in a later audit.
 
+### Documentation actualization — a duty of the day cycle, not a gate-day artifact
+
+Docs drift unless the loop owns them ([ADR-021](../docs/adr/021-documentation-actualization-cadence.md)).
+Two tiers:
+
+- **Every day exit:** run "statuses = fact" over the docs the day's substance touched — any claim
+  the day made stale (a status, a feature list, a "not implemented yet", a README promise) is
+  updated in the same exit or explicitly queued with an owner. If the project keeps human-facing
+  docs (README, a functional set, guides), ask one question at exit: "did today change user-visible
+  behavior?" — if yes, the human-facing delta becomes a named task, and the **stage/slice close
+  gates on it** (same rank as tests).
+- **Every ~3 days (project may tune and record the cadence):** the slice carries a mandatory
+  housekeeping task — statuses=fact sweep across live docs, dead-link check (machine gate where
+  available), archive candidates with a ledger, forward-notes. The day-close verifies the check ran
+  or records a sanctioned deferral (named in an ADR/day entry, never silent). Housekeeping loses
+  priority contests against substance — that's why the close verifies presence instead of trusting
+  the slice.
+
 ### Updating PROJECT-STATE — a snapshot, not a journal
 
 `docs/PROJECT-STATE.md` is a hot snapshot of "where we are now", not a cumulative log. When updating it

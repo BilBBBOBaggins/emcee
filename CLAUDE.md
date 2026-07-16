@@ -178,6 +178,12 @@ Docs are written for their audience, and differently per audience:
 
 Editing a human-facing doc — keep it human-readable; creating a new ADR — include an "In short" section.
 
+**Documentation follows delivered functionality** ([ADR-021](docs/adr/021-documentation-actualization-cadence.md)):
+a stage whose substance changed user-visible behavior does not close with the human-facing docs
+describing the previous stage. Day exit runs "statuses = fact" over the docs the day touched; every
+~3 days the slice carries a housekeeping task (statuses sweep, dead links, archive candidates) —
+the cadence and duties live in [roles/architect.md](roles/architect.md) → "Documentation actualization".
+
 ## Evolution of this document
 
 This regimen entry file is alive. Rules are added when the agent makes a mistake that formalization can prevent. Rules are removed when they are over-specialized for a context that's gone. Every 1–3 months — review the whole document and delete what's stale.
