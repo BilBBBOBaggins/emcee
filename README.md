@@ -411,6 +411,7 @@ rationale:
 | [016](docs/adr/016-panel-second-model-mandatory-when-available.md) | Second model mandatory for the panel when available, symmetric across red/blue. |
 | [017](docs/adr/017-machine-checked-plan-invariants.md) | Machine-checked plan invariants: hardened doctor `--qg` + the composite slice-close gate. |
 | [018](docs/adr/018-second-model-reachability-and-panel-burden.md) | Second model reachable from every role (scoped Bash) + inverted burden of proof for the panel (`Panel:` field, class trigger). |
+| [019](docs/adr/019-definition-of-ready-premise-executability.md) | Definition of Ready: a premise-executability gate on the day plan (preconditions, read-ports, mandate, precedents verified against source). |
 
 ## Template evolution
 

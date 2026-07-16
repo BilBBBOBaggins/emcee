@@ -68,6 +68,31 @@ coding (see "Protocol for ambiguity" below). Silent deviation is not allowed. **
 by the task's depth tier** ([constitution.md](constitution.md) §Depth tiers — canon: the Inline tier
 requires no preflight at all; the full form here is for a feature-sized task).
 
+## Definition of Ready — premises are verified against source, not assumed
+
+A task is dispatched only when it is **ready**: the premises it builds on are checked against the code on
+disk, not asserted from a plausible-sounding guide. The producer of the guide owns this gate
+([roles/architect.md](../roles/architect.md) → "Breaking the next slice into day guides"; reviewer applies
+it when reviewing a guide) — [ADR-019](../docs/adr/019-definition-of-ready-premise-executability.md). Four
+grep-verifiable checks, each recorded as a source hit (file:line / command output), not a claim:
+
+1. **Preconditions exist on disk** — every file/module/migration/fixture/declared root the task builds on
+   is present now, at the named path (not "an earlier unconfirmed task will create it").
+2. **The consumer's read-port exists** — for every resource the task assumes gets read/consumed (a schema
+   column read by a query, a config key loaded by a component, an event consumed by a handler, a symbol
+   imported across a boundary), the read-port on that consumer is grep-verifiable. A value written with no
+   reader, or a reader that does not exist yet, is a **premise defect**.
+3. **Mandate + tools cover the task** — the assigned role can perform it with the tools it has (read-only
+   isn't asked to edit; a shell-less surface isn't handed a shell task — cf. ADR-018).
+4. **Cited precedents are verified** — any "we already do X / this follows pattern Y" justification is
+   checked against the source it cites; a precedent that contradicts doctrine is worse than none.
+
+**On intake, the executor applies the same lens:** if the task rests on a premise you cannot point at in
+the source (a missing read-port, an absent precondition, a precedent that isn't there), do not build on it —
+STOP and flag the gap (see "Protocol for ambiguity" below) rather than cascade a whole task off a false
+premise. Field root: in a long autonomous run, plausible-but-non-executable premises in the plan were the
+single most repeated cause of lost days.
+
 ## Exiting a task
 
 Exit completeness also scales by depth tier ([constitution.md](constitution.md) §Depth tiers: Inline tier —

@@ -103,6 +103,8 @@ ORDER = [
      "ADR-017: Machine-checked plan invariants (hardened --qg gate)"),
     ("docs/adr/018-second-model-reachability-and-panel-burden.md",
      "ADR-018: Second-model reachability + inverted panel burden of proof"),
+    ("docs/adr/019-definition-of-ready-premise-executability.md",
+     "ADR-019: Definition of Ready — premise-executability gate"),
 ]
 
 

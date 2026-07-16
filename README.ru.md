@@ -389,6 +389,7 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 | [016](docs/adr/016-panel-second-model-mandatory-when-available.md) | Вторая модель панели обязательна при доступности, симметрично red/blue. |
 | [017](docs/adr/017-machine-checked-plan-invariants.md) | Машинно-проверяемые инварианты плана: усиленный `--qg` доктора + композитный slice-close гейт. |
 | [018](docs/adr/018-second-model-reachability-and-panel-burden.md) | Вторая модель достижима из каждой роли (scoped Bash) + инверсия бремени для панели (поле `Panel:`, класс-триггер). |
+| [019](docs/adr/019-definition-of-ready-premise-executability.md) | Definition of Ready: гейт исполнимости предпосылок дневного плана (предусловия, порты-читатели, мандат, прецеденты — проверены по исходнику). |
 
 ## Эволюция шаблонов
 
