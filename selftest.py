@@ -660,6 +660,54 @@ def main() -> int:
         check(got == {os.path.join("build-qa", "seen.md"), os.path.join("src", "seen2.md")},
               f"[qg] md_files: build//_deps//target/ pruned as segments, build-qa/ visible "
               f"(got: {sorted(got)})")
+
+        # ---- link-gate extension: internal links check_dead_links can't see ----
+        # Field lesson: a single broken internal markdown link in a project doc turned the doctor
+        # red only PARTIALLY and froze a whole working day. check_link_extensions closes three blind
+        # spots beyond single-line [text](path) — each must turn the doctor 🔴 (a hard gate).
+        lbase = os.path.join(base, "links")
+
+        def link_proj(name, files):
+            root = os.path.join(lbase, name)
+            for rel, body in files:
+                p = os.path.join(root, rel)
+                os.makedirs(os.path.dirname(p), exist_ok=True)
+                with open(p, "w", encoding="utf-8") as f:
+                    f.write(body)
+            return root
+
+        # clean: a valid self-#anchor (incl. a two-hyphen slug from a removed em-dash — the GitHub
+        # rule that a whitespace-collapsing slug would false-red), a valid reference def+use, and a
+        # multi-line link to a real file → all resolve → green + rc=0.
+        clean = link_proj("clean", [
+            ("README.md",
+             "# Title\n\n## Real Heading\n\n## A — dashed heading\n\n"
+             "- jump to [the section](#real-heading)\n"
+             "- and to [the dashed one](#a--dashed-heading)\n"
+             "- a [reference link][home] resolves\n"
+             "- a target that wraps onto\n  [the next line](\n  other.md)\n\n"
+             "[home]: other.md\n"),
+            ("other.md", "# Other\n")])
+        rok = doctor(clean)
+        check(rok.returncode == 0 and
+              "anchors / multi-line / reference-style links resolve" in rok.stdout,
+              "[links] clean anchors/multi-line/reference-style links pass (rc=0)")
+
+        # (a) a dead #anchor — the file exists but the heading doesn't (invisible to check_dead_links)
+        ra = doctor(link_proj("anchor", [("d.md", "# Title\n\nsee [x](#no-such-heading)\n")]))
+        check(ra.returncode == 1 and "Broken internal links" in ra.stdout
+              and "no-such-heading" in ra.stdout,
+              "[links] dead #anchor = 🔴 (was invisible: check_dead_links doesn't validate fragments)")
+
+        # (b) a multi-line link whose target does not resolve (the single-line scanner never sees it)
+        rb = doctor(link_proj("multiline", [("d.md", "# T\n\n[text](\nmissing.md)\n")]))
+        check(rb.returncode == 1 and "multi-line link" in rb.stdout and "missing.md" in rb.stdout,
+              "[links] multi-line link to a missing file = 🔴")
+
+        # (c) a reference-style link with no matching definition
+        rf = doctor(link_proj("refstyle", [("d.md", "# T\n\nan [orphan][undef] link\n")]))
+        check(rf.returncode == 1 and "reference-style link" in rf.stdout and "undef" in rf.stdout,
+              "[links] reference-style link with an undefined reference = 🔴")
     finally:
         shutil.rmtree(base, ignore_errors=True)
 

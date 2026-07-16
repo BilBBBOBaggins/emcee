@@ -23,8 +23,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Shared primitives (finding #4 of the 2026-06-29 audit; consolidation C1 of the 2026-07-03 audit):
-# .md traversal, reading, dangling links, placeholders, sandbox modes.
-from _pack_lib import md_files, dangling, count_placeholders, read, SANDBOX_MODE_RE
+# .md traversal, reading, dangling links, placeholders, sandbox modes, link/line iteration.
+from _pack_lib import (md_files, dangling, count_placeholders, read, SANDBOX_MODE_RE,
+                       iter_links, iter_lines, target_exists, local_target,
+                       GENERATOR_FRAGMENT_MARKER)
 
 
 def check_placeholders(root):
@@ -41,8 +43,159 @@ def check_placeholders(root):
 def check_dead_links(root):
     """Dangling local links [text](path). Traversal, filtering and the resolution predicate — the
     shared _pack_lib.dangling primitive (same as in selftest.py); it skips generator fragments
-    (CODEX-DELTA-HEADER — links from the root of the materialization point) on its own."""
+    (CODEX-DELTA-HEADER — links from the root of the materialization point) on its own.
+
+    check_dead_links only sees SINGLE-LINE [text](path) links and never validates the #fragment:
+    a link to a real file with a dead anchor, a [text](path) split across lines, or a reference-style
+    [text][ref] whose definition is missing all slip through — see check_link_extensions."""
     return [f"{rel}:{ln}  [{txt}]({t})" for rel, ln, txt, t in dangling(root)]
+
+
+# --- Link-gate extension: internal-link checks BEYOND check_dead_links ---
+# Field origin: in an autonomous production run a single broken internal markdown link in a
+# project doc turned the doctor red only PARTIALLY and froze a whole working day — the classes
+# below were the blind spots. All findings here are 🔴 (a hard gate, like check_dead_links):
+#   (a) anchors  #fragment  → must be a GitHub-style slug of a heading in the target file (own
+#       file for a pure #anchor); non-ASCII (e.g. Cyrillic) is preserved in the slug.
+#   (b) multi-line links — a [text](path) whose text or target is split across a newline, which
+#       the line-based scanner in check_dead_links/_pack_lib never sees.
+#   (c) reference-style — a [ref]: path definition is a target; a [text][ref] usage whose ref is
+#       undefined is broken.
+# Fence/inline-code exclusions are reused from _pack_lib (iter_lines/iter_links).
+ATX_HEADING = re.compile(r"^ {0,3}(#{1,6})\s+(.*?)\s*$")
+REF_DEF = re.compile(r"^ {0,3}\[([^\]]+)\]:\s+(\S+)")
+REF_USE = re.compile(r"\[([^\]]*)\]\[([^\]]*)\]")
+INLINE_CODE = re.compile(r"`[^`\n]*`")
+# A [..](..) link whose delimiters stay adjacent (`](`) but whose text or target spans a newline —
+# exactly the [text\n](path) / [text](\npath) forms of (b). ([^\]] and [^)] already match
+# newlines, so no DOTALL is needed; the "\n in the match" filter keeps single-line links —
+# which check_dead_links already owns — out of this check.
+MULTILINE_LINK = re.compile(r"\[[^\]]*\]\(([^)]*)\)")
+
+
+def github_slug(text):
+    """GitHub-style heading anchor slug: lowercase, drop markdown link syntax, strip punctuation
+    (keeping unicode word chars — Cyrillic included — whitespace and hyphens), each whitespace
+    char → one hyphen. Whitespace is NOT collapsed: GitHub's github-slugger does `.replace(/\\s/g,
+    '-')` per character, so a heading like `## B — new project` (the em-dash removed leaves two
+    spaces) slugs to `b--new-project` with TWO hyphens — collapsing would false-red that anchor."""
+    s = text.strip().lower()
+    s = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", s)   # [text](url) → text
+    s = re.sub(r"\[([^\]]*)\]\[[^\]]*\]", r"\1", s)  # [text][ref] → text
+    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
+    return re.sub(r"\s", "-", s.strip())
+
+
+def _heading_slugs(body):
+    """The set of anchor slugs a file's ATX headings generate (fenced headings ignored; duplicate
+    slugs get GitHub's -1/-2 suffixes, so a link to the N-th repeat still validates)."""
+    seen, slugs = {}, set()
+    for _ln, line, in_fence in iter_lines(body):
+        if in_fence:
+            continue
+        m = ATX_HEADING.match(line)
+        if not m:
+            continue
+        slug = github_slug(m.group(2).rstrip("#").rstrip())
+        if not slug:
+            continue
+        if slug in seen:
+            seen[slug] += 1
+            slugs.add(f"{slug}-{seen[slug]}")
+        else:
+            seen[slug] = 0
+            slugs.add(slug)
+    return slugs
+
+
+def _masked_text(body):
+    """body with fenced-block lines and inline-code spans blanked, newlines preserved — a whole-text
+    surface for the multi-line link scan that keeps line numbers aligned with the original."""
+    return "\n".join("" if in_fence else INLINE_CODE.sub("", line)
+                     for _ln, line, in_fence in iter_lines(body))
+
+
+def check_link_extensions(root):
+    """Project-level link checks beyond check_dead_links (a)-(c above). Returns a sorted list of
+    finding strings. Generator-fragment files (their links resolve at the materialization point)
+    are skipped, mirroring _pack_lib.dangling."""
+    findings = []
+    slug_cache = {}
+
+    def slugs_for(path):
+        if path not in slug_cache:
+            slug_cache[path] = _heading_slugs(read(path))
+        return slug_cache[path]
+
+    for p in md_files(root):
+        rel = os.path.relpath(p, root)
+        body = read(p)
+        if GENERATOR_FRAGMENT_MARKER in body.split("\n", 1)[0]:
+            continue
+        d = os.path.dirname(p)
+
+        # (a) anchors — reuse iter_links (fence/inline-code aware); read the RAW target for the #frag
+        for ln, m, _t in iter_links(body):
+            raw = m.group(2).strip()
+            if "#" not in raw:
+                continue  # no anchor — file existence is check_dead_links' job
+            path_part, _, anchor = raw.partition("#")
+            anchor = anchor.strip()
+            if not anchor:
+                continue
+            if path_part == "":
+                target_path = p  # pure #anchor → own file's headings
+            else:
+                if path_part.startswith(("http", "mailto")) or "{{" in path_part or " " in path_part:
+                    continue
+                cand = os.path.normpath(os.path.join(d, path_part))
+                if not os.path.exists(cand):
+                    continue  # missing file → check_dead_links owns it (no double report)
+                if not cand.endswith(".md"):
+                    continue  # can't enumerate headings of a non-markdown target
+                target_path = cand
+            if anchor.lower() not in {s.lower() for s in slugs_for(target_path)}:
+                where = "this file" if path_part == "" else path_part
+                findings.append(f"{rel}:{ln}  [{m.group(1)}]({raw})  — anchor #{anchor} "
+                                f"has no matching heading in {where}")
+
+        # (b) multi-line links — whole-text scan on the masked surface, only matches spanning a \n
+        masked = _masked_text(body)
+        for m in MULTILINE_LINK.finditer(masked):
+            if "\n" not in m.group(0):
+                continue  # single-line link → owned by check_dead_links
+            t = local_target(m.group(1))
+            if t is None or target_exists(d, t):
+                continue
+            ln = masked[:m.start()].count("\n") + 1
+            findings.append(f"{rel}:{ln}  multi-line link → {t}  — target does not resolve")
+
+        # (c) reference-style — collect definitions first (markdown allows forward refs), then usages
+        defs = {}
+        for ln, line, in_fence in iter_lines(body):
+            if in_fence:
+                continue
+            dm = REF_DEF.match(INLINE_CODE.sub("", line))
+            if dm:
+                label = re.sub(r"\s+", " ", dm.group(1).strip()).lower()
+                defs.setdefault(label, (ln, dm.group(2).strip()))
+        for ln, tgt in defs.values():
+            t = local_target(tgt)
+            if t is not None and not target_exists(d, t):
+                findings.append(f"{rel}:{ln}  reference definition → {tgt}  — target does not resolve")
+        for ln, line, in_fence in iter_lines(body):
+            if in_fence:
+                continue
+            code_stripped = INLINE_CODE.sub("", line)
+            if REF_DEF.match(code_stripped):
+                continue  # a definition line, not a usage
+            for um in REF_USE.finditer(code_stripped):
+                text, label = um.group(1), um.group(2).strip()
+                key = re.sub(r"\s+", " ", (label or text).strip()).lower()
+                if key not in defs:
+                    findings.append(f"{rel}:{ln}  reference-style link [{text}][{label}]  — "
+                                    f"undefined reference '{key}'")
+    return sorted(set(findings))
 
 
 CANON_DIRS = {"core", "roles", "architecture", "stack", "domain"}
@@ -402,6 +555,14 @@ def main():
         red.append("Dangling local links:\n" + "\n".join(f"       {d}" for d in dead))
     else:
         green.append("no dangling links")
+
+    ext = check_link_extensions(root)
+    if ext:
+        red.append("Broken internal links — dead #anchor / multi-line / reference-style "
+                   "(check_dead_links doesn't catch these):\n" +
+                   "\n".join(f"       {e}" for e in ext))
+    else:
+        green.append("anchors / multi-line / reference-style links resolve")
 
     refs = check_harness_canon_refs(root)
     if refs:
