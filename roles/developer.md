@@ -52,7 +52,7 @@ The user must see that you're working. Silence = "stuck."
 
 ### Git operations
 
-- Do NOT commit — only the user commits, manually
+- Do NOT commit — only the user commits, manually. **Exception — autonomous mode / a guide that assigns you the commit:** then you commit your OWN produced substance the moment the gate is green, and never defer approved work to a non-existent "the owner/human commits" step — that strands green substance and reds the day-close (anti-pattern: [core/task-protocol.md](../core/task-protocol.md) → "Stranding your own approved substance on a green gate").
 - Do NOT use `git stash`, `git stash pop`, `git stash drop`, `git bisect`, `git reset --hard`, `git checkout -- <file>` — agents work in parallel, these commands overwrite others' changes
 
 ### Task boundaries

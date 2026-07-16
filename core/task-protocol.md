@@ -146,6 +146,22 @@ git commit -m "<message from the guide>"
 
 The user copies and runs it manually.
 
+### Anti-pattern: stranding your own approved substance on a green gate
+
+The rule above is the **human-in-the-loop** default: the agent prints, the user runs. Where committing is
+instead the executing role's own responsibility — an **autonomous run**, or a day guide that assigns the
+commit to the role — the invariant is: **each role commits its OWN produced substance the moment its gate
+is green.** Approved work must land in git on the green gate, committed by whoever owns the commit.
+
+The **forbidden anti-pattern**: a role that produced and got approval for substance leaves it **uncommitted**
+and defers it to "the owner" or "the human" — citing a handoff that **does not actually exist**. This
+fabricates a mismatch between the approved record and git history: the day closes **red** (the gate saw
+green work that never got committed), and any downstream courier or gate that reads history instead of the
+in-flight record **STOP-cascades** on the phantom gap. If you produced it and it passed the gate, you commit
+it — do not invent a "someone else commits this" step to hand your own green substance off into limbo.
+(This does not license a role to commit *outside* its lane: a read-only or docs-only role still commits only
+what its mandate lets it produce; the point is not to strand what you *were* entitled to produce.)
+
 ### Commit message format
 
 The message is `<type>(<scope>): <what changed>`, in the imperative mood. Type: `feat` / `fix` /
