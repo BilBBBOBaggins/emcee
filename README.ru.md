@@ -177,8 +177,8 @@ emcee/
 После генерации скрипт печатает чеклист: незаполненные `{{...}}`, висячие ссылки на невыбранные
 модули, в режиме `overlay` — список нетронутых существующих файлов, и следующие шаги.
 
-**А если вашего стека ещё нет в `stack/`?** Укажите любое имя (`--backend rust`) — генератор
-создаст **скелет** `stack/rust.md` из шаблона [stack/_TEMPLATE.md](stack/_TEMPLATE.md). В скелете
+**А если вашего стека ещё нет в `stack/`?** Укажите любое имя (`--backend elixir`) — генератор
+создаст **скелет** `stack/elixir.md` из шаблона [stack/_TEMPLATE.md](stack/_TEMPLATE.md). В скелете
 будут все нужные секции, включая обязательный раздел «Чистая сборка», на который ссылается
 [core/quality-gates.md](core/quality-gates.md). Заодно генератор выдаст готовый промпт, которым
 Claude Code дозаполнит этот файл. Новые `architecture/` и `domain/` — это просто свободные
@@ -259,9 +259,11 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 
 ### stack/ — правила под язык и фреймворк
 
+- `cpp-qt.md` — C++23 / Qt 6 desktop (CMake, QML, GoogleTest + Qt Quick Test, clang-tidy).
 - `go.md` — Go 1.23+ (Echo, sqlc, slog, testify).
 - `python.md` — Python 3.12+ (uv, ruff, mypy strict, FastAPI, pytest).
 - `react-nextjs.md` — Next.js App Router, TypeScript strict, shadcn/ui, TanStack Query.
+- `rust.md` — Rust stable, workspace (clippy warnings-as-errors, thiserror, tokio).
 
 Для своих стеков добавляйте новые файлы (см. `stack/_TEMPLATE.md`).
 
@@ -406,7 +408,7 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 
 Добавлять не превентивно, а когда реальный проект потребует:
 
-- **Stack:** `rust.md`, `qt-cpp.md`, `svelte.md`.
+- **Stack:** `svelte.md` (`rust.md` и `cpp-qt.md` уже добавлены из реальных проектов).
 - **Architecture:** `hexagonal.md`, `bff-pattern.md` (CQRS и event-sourcing уже покрыты в
   `architecture/event-driven.md`).
 - **Domain:** `consumer-product.md`, `marketplace.md`, `internal-tool.md`, `gaming.md`.

@@ -186,8 +186,8 @@ After generation, the script prints a checklist: unfilled `{{...}}` placeholders
 modules that weren't selected, and — in `overlay` mode — a list of existing files left untouched,
 plus next steps.
 
-**What if your stack isn't in `stack/` yet?** Give it any name (`--backend rust`) — the generator
-will create a **skeleton** `stack/rust.md` from the [stack/_TEMPLATE.md](stack/_TEMPLATE.md)
+**What if your stack isn't in `stack/` yet?** Give it any name (`--backend elixir`) — the generator
+will create a **skeleton** `stack/elixir.md` from the [stack/_TEMPLATE.md](stack/_TEMPLATE.md)
 template. The skeleton has all the required sections, including the mandatory "Clean build" section
 that [core/quality-gates.md](core/quality-gates.md) references. The generator also hands you a
 ready-made prompt for Claude Code to fill in the rest of the file. New `architecture/` and
@@ -272,9 +272,11 @@ context isn't loaded with anything unneeded):
 
 ### stack/ — language and framework rules
 
+- `cpp-qt.md` — C++23 / Qt 6 desktop (CMake, QML, GoogleTest + Qt Quick Test, clang-tidy).
 - `go.md` — Go 1.23+ (Echo, sqlc, slog, testify).
 - `python.md` — Python 3.12+ (uv, ruff, mypy strict, FastAPI, pytest).
 - `react-nextjs.md` — Next.js App Router, TypeScript strict, shadcn/ui, TanStack Query.
+- `rust.md` — Rust stable workspace (clippy warnings-as-errors, thiserror, tokio).
 
 Add new files for your own stacks (see `stack/_TEMPLATE.md`).
 
@@ -429,7 +431,7 @@ repository.
 
 Add these not preemptively, but when a real project calls for them:
 
-- **Stack:** `rust.md`, `qt-cpp.md`, `svelte.md`.
+- **Stack:** `svelte.md` (`rust.md` and `cpp-qt.md` have since landed from real projects).
 - **Architecture:** `hexagonal.md`, `bff-pattern.md` (CQRS and event sourcing are already covered in
   `architecture/event-driven.md`).
 - **Domain:** `consumer-product.md`, `marketplace.md`, `internal-tool.md`, `gaming.md`.

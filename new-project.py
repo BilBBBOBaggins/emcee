@@ -14,8 +14,8 @@ Examples:
       --backend go --frontend react-nextjs \
       --arch modular-monolith,multi-tenant --domain b2b-saas \
       --testing bdd --wiring yes
-  ./new-project.py --name "Edge Proxy" --dir ../edge --backend rust --frontend none
-      # rust isn't described yet -> creates a stack/rust.md skeleton
+  ./new-project.py --name "Edge Proxy" --dir ../edge --backend elixir --frontend none
+      # elixir isn't described yet -> creates a stack/elixir.md skeleton
 
 No flags in a terminal — asks interactively.
 """
