@@ -99,6 +99,16 @@ Rules:
 
 This isn't cosmetic, it's communication. Long explanations aren't needed — one line is enough.
 
+**Every referenced artifact carries a link.** When output addressed to the user mentions a project
+artifact by its code or short name — an ADR ("ADR-040"), a quality gate ("QG-NN-05"), a task
+("51-2"), an open question / decision request ("CD-27"), a spec section, a review finding — the
+mention carries a path to the file where the artifact lives, as a markdown link relative to the
+project root (`[ADR-040](docs/adr/040-….md)`), with `file:line` when the point is a specific place.
+A bare code forces the user to go hunting for what it means; a link lets them fall through in one
+click. This applies wherever the user reads the agent: statuses, decision requests ("requires your
+decision"), day reports, review verdicts. Field-driven rule: users of status reports lost context
+on every bare `CD-NN` code.
+
 ## Task completeness
 
 A task is not considered done until all criteria are met:

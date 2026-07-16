@@ -103,6 +103,11 @@ Output a status of at most half a page:
 - Risks: what could go wrong
 - Open questions: what needs a user answer
 
+Every artifact mentioned by code — an ADR, a gate, a task id, a decision request — carries a
+markdown link to its file ([core/principles.md](../core/principles.md) → "Visibility of work",
+"every referenced artifact carries a link"): the user must be able to fall through to the source
+in one click, especially from "Open questions" — a bare `CD-27` with no link strands them.
+
 **Estimate-dilation meta-trigger** ([ADR-020](../docs/adr/020-estimate-dilation-meta-trigger.md)). When a
 stage or slice **overruns its estimate by a set multiple** (default **3×**; the project may tune and
 record the value), it is **mandatory** to re-estimate the remaining work and review the
