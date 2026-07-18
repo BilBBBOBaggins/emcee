@@ -60,3 +60,13 @@ tier — and say so in the report, never silently. Don't hardcode the id into co
 / no second model — the honest fallback: reinforced self-critique from a different angle + a flag
 "no second model was available, residual blind-spot risk is higher" (as in the panel), rather than a
 silent skip.
+
+**Harness shell timeout can kill a long second-model pass.** The call runs through the agent's
+shell tool, whose execution ceiling belongs to the harness, not to codex — on Claude Code the
+default cap is 10 minutes, after which the command gets SIGTERM (exit 143) mid-thought. Field
+precedent: max-effort passes on a large onboarding exceeded it repeatedly, forcing recorded
+effort downgrades. The package ships a 60-minute ceiling in `.claude/settings.json.example`
+(`env.BASH_DEFAULT_TIMEOUT_MS` / `BASH_MAX_TIMEOUT_MS` = 3600000) — enable it (rename to
+`settings.json`) and the cap stops being the binding constraint. A pass killed by the ceiling
+anyway is handled like any real call failure: record the literal error (exit 143) and either
+re-run or step down one effort tier under record — never silently.
