@@ -119,6 +119,17 @@ corners (the package's north star is quality over tokens; the review never asks 
 point is that a large dilation stops being silent drift and becomes a recorded event while the loop runs,
 instead of surfacing only in a later audit.
 
+**The check is cued at day exit, not left to recall.** The first field application exposed the gap: a
+"mandatory" duty with no checkpoint is a duty the loop can silently skip — a slice ran ~4× its estimate
+across several days of honest rework and the trigger never fired, because nothing forced the ratio to be
+computed. So the comparison is a **standing day-exit item**, sibling to documentation actualization below:
+at each day exit the architect measures the in-flight slice/stage's cumulative actual against its recorded
+estimate. Crossing the threshold makes the trigger's output — re-estimate, granularity review, recorded
+why — a **named artifact of that exit**, and the **day-close verifies it ran or records a sanctioned
+deferral** (named in the day entry, never silent) — the same enforcement shape [ADR-021](../docs/adr/021-documentation-actualization-cadence.md)
+gives docs. If no estimate was recorded for the slice, that absence is itself the finding: record it and
+set one, so the next exit has a baseline to measure against.
+
 ### Documentation actualization — a duty of the day cycle, not a gate-day artifact
 
 Docs drift unless the loop owns them ([ADR-021](../docs/adr/021-documentation-actualization-cadence.md)).

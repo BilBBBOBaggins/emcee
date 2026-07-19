@@ -73,3 +73,19 @@ regimen's obligation is the re-estimation-and-review-under-record, so the drift 
   short recorded review when a threshold is crossed.
 - **Threshold is tunable, default 3×.** A multiple, not an absolute time, so it scales with the size of
   the stage; the project records its chosen value so "dilation" is a defined fact, not a judgment call.
+
+## Field note (2026-07-19): the trigger needs a cue, not just a mandate
+
+The first field application caught the ADR's own blind spot. In an autonomous run a slice overran its
+estimate by ~4× across several days of honest, converging rework — squarely in trigger territory — and the
+meta-trigger **never fired**. Nothing was wrong with the work or the threshold; the defect was that the
+duty was written as "mandatory" with **no checkpoint that forces the ratio to be computed**. A mandatory
+duty with no cue is one the loop silently skips: the architect kept slicing the next return without ever
+comparing actual against estimate, and the blow-out again surfaced only in a later read — the exact failure
+class this ADR was meant to end, reappearing one level up.
+
+The fix (in [architect.md](../../roles/architect.md) → "Estimate-dilation meta-trigger") is to **cue the
+check at day exit** as a standing item and let the **day-close verify it ran or records a sanctioned
+deferral** — the same enforcement shape [ADR-021](021-documentation-actualization-cadence.md) gives
+documentation. The lesson generalizes: a process obligation is only as live as the checkpoint that fires
+it; "the role must remember to" is not enforcement.
