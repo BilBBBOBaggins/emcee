@@ -60,6 +60,25 @@ If the task is given not in the three-number format — this is a direct review 
       ([core/task-protocol.md](../core/task-protocol.md) → "User Q&A") — a finding.
     - **"Too clever" code** — dense one-liners, patterns not from this codebase — read with
       double suspicion: a clean build (QG-NN-02) on a dynamic stack won't catch these.
+12. **Enumerable-contract surfaces: audit the whole matrix, not the first blocker** — when the change
+    touches a surface whose valid states are a **closed, enumerable set** (an ACL/permission matrix —
+    every GRANT/REVOKE/DEFAULT PRIVILEGE; a state machine — every transition; an error taxonomy; a
+    validation rule-set), find-first-blocker review is the **wrong tool**: it turns a finite matrix into
+    N serial review rounds, one hole surfacing per pass. Instead **enumerate the cells and check each
+    against the intended matrix in one pass** — write out every grant/transition/code the surface
+    defines, assert each against what it *should* be, and return the **complete** finding list, not just
+    the first violation. Trigger to recognize the class: "the correct set here is finite and I can write
+    it out." The cells can be a single surface (grants, an enum's variants, a state machine's
+    (state × event) transitions, an error/validation set) **or an interaction matrix** — every pair of
+    concurrent operations over shared state × their interleavings (the TOCTOU class), which leaks one
+    race per round exactly the same way. Field root: a money-slot ACL form leaked across six review
+    rounds — over-broad PUBLIC EXECUTE, then a column grant, then DEFAULT PRIVILEGES, then a guard
+    boundary — each a real, distinct defect, but one under-audited contract that a single completeness
+    pass would have surfaced at once.
+    Kin to the adversarial test lens (item 9): both ask "what is the full set, and what is missing from
+    it," not "is this one thing wrong." The full contract is best fixed **before** the build too — the
+    architect/SA enumerates it at entry (DoR, [core/task-protocol.md](../core/task-protocol.md)) so the
+    build targets a fixed matrix, not a growing one.
 
 ### Verification pass
 
