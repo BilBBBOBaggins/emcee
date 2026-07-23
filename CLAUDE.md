@@ -35,6 +35,8 @@ Rule: {{layer-1}} → {{layer-2}} → {{layer-3}}. Back-imports are forbidden.
 - Two numbers `R D` = role R enters the context of day D with no specific task (usually for review or planning).
 - Three numbers `R D T` = role R takes task T from day D's guide.
 
+**The numbers ARE the command — dispatch, don't clarify.** A message consisting only of 1–3 numbers is always this grammar, never an ambiguous input: act immediately, exactly as `/role` would. Replying with a menu of commands, asking "what would you like to work on?", or requesting confirmation is a protocol violation ([core/task-protocol.md](core/task-protocol.md) → "System of short commands"). Sole exception: the number directly answers a question the assistant just asked.
+
 Role map:
 
 <!-- ROLES-TABLE:START (generated from roles.json; do not edit by hand — change roles.json and run `python3 sync-roles.py`) -->

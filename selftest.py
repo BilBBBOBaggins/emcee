@@ -512,11 +512,22 @@ def main() -> int:
               f"DELIBERATELY, after re-reading the N-overlay debt (ADR-010 §Consequences) — this is a tripwire, not a bug.")
 
         # hooks are in place, executable and wired into settings.json.example
-        for h in ("check-loc.sh", "checkpoint-precompact.sh", "check-no-todo.sh"):
+        for h in ("check-loc.sh", "checkpoint-precompact.sh", "check-no-todo.sh", "numeric-command.sh"):
             hp = os.path.join(PACK, ".claude", "hooks", h)
             check(os.path.exists(hp) and os.access(hp, os.X_OK), f"[pack] hook {h} exists and is executable")
         sj = json.load(open(os.path.join(PACK, ".claude", "settings.json.example")))
         check("PreCompact" in sj.get("hooks", {}), "[pack] settings.json.example contains the PreCompact hook")
+        check("UserPromptSubmit" in sj.get("hooks", {}),
+              "[pack] settings.json.example contains the UserPromptSubmit hook (numeric-command dispatch)")
+
+        # numeric-command.sh contract: 1-3 bare numbers -> injects the dispatch order; text -> silent
+        ncmd = os.path.join(PACK, ".claude", "hooks", "numeric-command.sh")
+        for p, wants in (("35", True), ("1 5 24", True), ("0 5", True),
+                         ("how are you", False), ("35 files changed", False), ("1.5", False)):
+            out = subprocess.run([ncmd], input=json.dumps({"prompt": p}),
+                                 capture_output=True, text=True)
+            check(out.returncode == 0 and bool(out.stdout.strip()) == wants,
+                  f"[pack] numeric-command.sh({p!r}) -> {'inject' if wants else 'silent'}, rc=0")
 
         # constitution: every ID from constitution.md's registry is tagged on the canonical rule
         const = open(os.path.join(PACK, "core", "constitution.md"), encoding="utf-8").read()

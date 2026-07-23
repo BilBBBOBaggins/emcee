@@ -361,7 +361,9 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
   (red → blue → arbiter + codex) и доводит до ADR.
 - **`.claude/hooks/` + `settings.json.example`** — хуки-гейты: `check-loc.sh` (warn-сигнал по
   размеру отредактированного файла — будит SRP-суждение, не блокирует), `checkpoint-precompact.sh`
-  (recovery-чекпойнт перед сжатием контекста), `check-no-todo.sh` (opt-in Stop-хук конституции) +
+  (recovery-чекпойнт перед сжатием контекста), `numeric-command.sh` (харденинг триггера
+  `N` / `R D` / `R D T`: сообщение из одних чисел получает механическую контекст-инъекцию
+  «диспетчеризуй сейчас, не отвечай меню»), `check-no-todo.sh` (opt-in Stop-хук конституции) +
   опциональный Stop-хук на тесты.
 
 Включение и детали — [.claude/README.md](.claude/README.md).

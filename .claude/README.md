@@ -70,7 +70,9 @@ good/bad triggers. Skill content is harness-neutral; the discovery mechanism is 
 
 `checkpoint-precompact.sh` — a PreCompact hook: before context compaction it writes a recovery checkpoint (time, trigger, transcript path) to `docs/checkpoints.md`, so state isn't lost on compaction (see [core/memory.md](../core/memory.md)).
 
-Both are enabled by renaming `settings.json.example` → `settings.json` (it already has `PostToolUse` and `PreCompact` wired in).
+`numeric-command.sh` — a UserPromptSubmit hook: if the user's message consists **only of 1–3 numbers** (the `N` / `R D` / `R D T` grammar), it injects a dispatch order into context — "this is the numeric command, launch the role now, don't answer with a menu". The bare-number trigger is otherwise prose-only and models sometimes hedge on a single-token message instead of dispatching (field case: `35` in a fresh session got a command menu instead of the architect entering day 35 — see [core/task-protocol.md](../core/task-protocol.md) → "The trigger is binding"). Any other message produces no output — ordinary prompts and `/role` are untouched.
+
+All three are enabled by renaming `settings.json.example` → `settings.json` (it already has `UserPromptSubmit`, `PostToolUse` and `PreCompact` wired in).
 
 `settings.json` is strict JSON: **no comments and no extra keys** (Claude Code will reject a file with unknown fields). That's why `settings.json.example` is clean, valid JSON — it can be renamed as-is.
 

@@ -21,6 +21,17 @@ Common patterns:
 
 If the message doesn't look like a command — it's a direct prompt, execute it as written.
 
+**The trigger is binding (anti-hedge).** A message consisting only of 1–3 numbers IS this command —
+dispatch immediately. Replying with a menu of commands, asking "what would you like to work on?", or
+requesting confirmation is a protocol violation: a bare number is a single token with no verb, which
+is exactly where a model hedges instead of acting (field case: `35` as the first message of a fresh
+session got back a command menu instead of the architect entering day 35). Sole exception: the number
+directly answers a question the agent itself just asked. On Claude Code the trigger is additionally
+enforced mechanically — `.claude/hooks/numeric-command.sh` (a UserPromptSubmit hook, wired in
+`settings.json.example`) injects the dispatch order into context on match; on runtimes without
+working hooks (Codex headless — KL-7, [portability.md](portability.md)) this prose rule is the only
+barrier, which is why it is part of the protocol, not a style hint.
+
 ## Canonical artifact names
 
 The whole role pipeline reads and writes files under fixed names. Names are defined **here** — roles

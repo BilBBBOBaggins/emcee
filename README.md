@@ -382,7 +382,9 @@ If you want the rules to be enforced by more than just the agent's discipline, `
   panel (red → blue → arbiter + codex) through to an ADR.
 - **`.claude/hooks/` + `settings.json.example`** — gate hooks: `check-loc.sh` (a warning signal
   based on the size of the edited file — prompts SRP judgment, doesn't block),
-  `checkpoint-precompact.sh` (a recovery checkpoint before context compaction), `check-no-todo.sh`
+  `checkpoint-precompact.sh` (a recovery checkpoint before context compaction),
+  `numeric-command.sh` (hardens the `N` / `R D` / `R D T` trigger: a numbers-only message gets a
+  mechanical "dispatch now, don't answer with a menu" context injection), `check-no-todo.sh`
   (an opt-in Stop hook for the constitution), plus an optional Stop hook for tests.
 
 Enabling it and further detail — [.claude/README.md](.claude/README.md).
