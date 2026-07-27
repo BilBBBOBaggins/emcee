@@ -396,6 +396,36 @@ def main() -> int:
         check(not os.path.exists(os.path.join(ov, "docs", "day-0-guide.md")),
               "[mode-overlay] Day-0 isn't created (the project already exists)")
 
+        # ---- overlay auto-detection: stack + build variant from the existing project's files ----
+        # No --backend/--frontend flags: non-interactive ask() takes the detected defaults.
+        dt = os.path.join(base, "overlay-detect")
+        os.makedirs(dt)
+        open(os.path.join(dt, "pom.xml"), "w").write("<project/>\n")
+        open(os.path.join(dt, "package.json"), "w").write('{"dependencies": {"next": "14.0.0"}}\n')
+        r = gen(dt, name="Legacy Shop", arch="", domain="", testing="test-along",
+                wiring="no", mode="overlay")
+        check(r.returncode == 0, "[detect] generator ran on a marker-file project (rc=0)")
+        check(os.path.exists(os.path.join(dt, "stack", "java.md")),
+              "[detect] backend java picked up from pom.xml")
+        check(os.path.exists(os.path.join(dt, "stack", "react-nextjs.md")),
+              "[detect] frontend react-nextjs picked up from package.json (next dep)")
+        check("Maven" in r.stdout, "[detect] the build variant (Maven) is named in the report")
+        entry = open(os.path.join(dt, "CLAUDE.md"), encoding="utf-8").read() \
+            if os.path.exists(os.path.join(dt, "CLAUDE.md")) else ""
+        check("java (detected: pom.xml → Maven)" in entry,
+              "[detect] the entry file's Stack bullet carries the detection evidence")
+
+        # explicit flag wins over detection; the variant is still reported for the record
+        dt2 = os.path.join(base, "overlay-detect-override")
+        os.makedirs(dt2)
+        open(os.path.join(dt2, "composer.json"), "w").write('{"require": {"laravel/framework": "^11"}}\n')
+        r = gen(dt2, name="Legacy Php", backend="go", frontend="none",
+                arch="", domain="", testing="test-along", wiring="no", mode="overlay")
+        check(r.returncode == 0 and os.path.exists(os.path.join(dt2, "stack", "go.md"))
+              and not os.path.exists(os.path.join(dt2, "stack", "php.md")),
+              "[detect] explicit --backend beats detection (go, not php)")
+        check("Laravel" in r.stdout, "[detect] the php variant (Laravel) is still reported")
+
         # ---- refusal on a non-empty directory (default mode new) ----
         r2 = gen(s, name="Bare2", backend="none", frontend="none",
                  arch="", domain="", testing="test-along", wiring="no")

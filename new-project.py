@@ -20,7 +20,7 @@ Examples:
 No flags in a terminal — asks interactively.
 """
 from __future__ import annotations
-import argparse, os, re, shutil, sys
+import argparse, json, os, re, shutil, sys
 
 PACK = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PACK)
@@ -253,6 +253,90 @@ STACK_PATHS = {
     "delphi": "**/*.pas, **/*.dpr, **/*.dproj, **/*.dfm, **/*.fmx",
 }
 
+# ---------- stack auto-detection (overlay mode) ----------
+# Overlay lays the regimen onto an EXISTING project -> the stack is already a fact on disk.
+# Detection reads marker files and offers the result as the DEFAULT answer (an explicit
+# --backend/--frontend always wins). The evidence — including the build/framework variant
+# (Maven vs Gradle, Laravel vs Symfony, VCL vs FMX) — travels into the entry file's "## Stack"
+# bullet, so kickoff on the overlaid project sees the variant as a recorded fact instead of
+# re-deriving it from the code.
+
+DETECT_PRUNE = {".git", "node_modules", "vendor", "dist", "build", "target", "out",
+                "__pycache__", ".venv", "venv", "bin", "obj", "__history", "__recovery"}
+
+
+def detect_stacks(root: str) -> list[dict]:
+    """Scan an existing project (depth <= 3, noise dirs pruned) for stack marker files.
+    Returns [{slug, role: 'backend'|'frontend', evidence}]; empty list = nothing recognized."""
+    keys = {"go.mod": "go", "Cargo.toml": "rust", "pom.xml": "maven",
+            "build.gradle": "gradle", "build.gradle.kts": "gradle",
+            "composer.json": "composer", "package.json": "npm",
+            "pyproject.toml": "py", "setup.py": "py", "requirements.txt": "py",
+            "CMakeLists.txt": "cmake"}
+    hits: dict[str, str] = {}                     # marker key -> shallowest relative path
+    for dirpath, dirs, files in os.walk(root):
+        rel = os.path.relpath(dirpath, root)
+        depth = 0 if rel == "." else rel.count(os.sep) + 1
+        dirs[:] = [] if depth >= 3 else [d for d in dirs
+                                         if d not in DETECT_PRUNE and not d.startswith(".")]
+        for fn in files:
+            k = keys.get(fn) or {".dproj": "dproj", ".dpr": "dpr"}.get(os.path.splitext(fn)[1])
+            if k:
+                hits.setdefault(k, fn if rel == "." else os.path.join(rel, fn))
+
+    def grab(relpath: str) -> str:
+        try:
+            return open(os.path.join(root, relpath), encoding="utf-8", errors="ignore").read()
+        except OSError:
+            return ""
+
+    def deps_of(relpath: str, *sections: str) -> dict:
+        try:
+            data = json.loads(grab(relpath))
+            return {k: v for s in sections for k, v in (data.get(s) or {}).items()}
+        except (ValueError, AttributeError):
+            return {}
+
+    out: list[dict] = []
+
+    def add(slug, role, evidence):
+        out.append({"slug": slug, "role": role, "evidence": evidence})
+
+    if "go.mod" in hits:
+        add("go", "backend", hits["go.mod"])
+    if "rust" in hits:
+        add("rust", "backend", hits["rust"])
+    if "maven" in hits and "gradle" in hits:
+        add("java", "backend", f"{hits['maven']} + {hits['gradle']} → Maven AND Gradle both present")
+    elif "maven" in hits:
+        add("java", "backend", f"{hits['maven']} → Maven")
+    elif "gradle" in hits:
+        add("java", "backend", f"{hits['gradle']} → Gradle")
+    if "composer" in hits:
+        ev, deps = hits["composer"], deps_of(hits["composer"], "require", "require-dev")
+        if "laravel/framework" in deps:
+            ev += " → Laravel"
+        elif any(k.startswith("symfony/") for k in deps):
+            ev += " → Symfony"
+        add("php", "backend", ev)
+    if "dproj" in hits or "dpr" in hits:
+        ev = hits.get("dproj") or hits.get("dpr")
+        m = re.search(r"<FrameworkType>(\w+)</FrameworkType>", grab(hits.get("dproj", "")))
+        add("delphi", "backend", ev + (f" → {m.group(1)}" if m else ""))
+    if "py" in hits:
+        add("python", "backend", hits["py"])
+    if "cmake" in hits and re.search(r"\bQt[56]?\b", grab(hits["cmake"])):
+        add("cpp-qt", "backend", f"{hits['cmake']} → Qt")
+    if "npm" in hits:
+        ev, deps = hits["npm"], deps_of(hits["npm"], "dependencies", "devDependencies")
+        if "next" in deps:
+            add("react-nextjs", "frontend", ev + " → next")
+        elif "svelte" in deps or "@sveltejs/kit" in deps:
+            add("svelte", "frontend", ev + " → svelte")
+        elif not any(d["role"] == "backend" for d in out):
+            add("node", "backend", ev)
+    return out
+
 
 def init_commands_for(stacks: list[str]) -> str:
     lines = []
@@ -367,10 +451,29 @@ def main():
     target = a.dir or ask("Project directory", f"../{slugify(name)}")
     target = os.path.abspath(target)
 
+    # Mode: new = kickstart (empty directory + Day-0 init guide); overlay = lay the regimen onto
+    # an existing project, without overwriting anything (see docs/adr/001-scope-process-overlay.md).
+    # Asked BEFORE the stack: in overlay mode the existing project's files answer the stack
+    # question themselves (detect_stacks), and the detection becomes the prompt's default.
+    mode = a.mode or ask("Mode (new = new project / overlay = existing)", "new")
+    if mode not in ("new", "overlay"):
+        print(f"⚠ unknown mode '{mode}', using 'new'", file=sys.stderr)
+        mode = "new"
+    overlay = mode == "overlay"
+
+    detected = detect_stacks(target) if overlay and os.path.isdir(target) else []
+    if detected:
+        print("Detected in the existing project:")
+        for d in detected:
+            print(f"  {d['role']}: {d['slug']}  ({d['evidence']})")
+    det_default = {r: next((d["slug"] for d in detected if d["role"] == r), "none")
+                   for r in ("backend", "frontend")}
+
     def pick_stack(role, flag):
         if flag is not None:
             return flag
-        v = ask(f"{role} stack (from [{', '.join(stacks_av)}], a new name, or none)", "none")
+        v = ask(f"{role} stack (from [{', '.join(stacks_av)}], a new name, or none)",
+                det_default[role.lower()])
         return v
 
     backend = pick_stack("Backend", a.backend)
@@ -390,13 +493,6 @@ def main():
         harness = "claude-code"
     _wlabel = ".claude/" if harness == "claude-code" else ".codex/"
     wiring = (a.wiring or ask(f"Lay down optional {_wlabel} wiring? (yes/no)", "yes")) == "yes"
-    # Mode: new = kickstart (empty directory + Day-0 init guide); overlay = lay the regimen onto
-    # an existing project, without overwriting anything (see docs/adr/001-scope-process-overlay.md).
-    mode = a.mode or ask("Mode (new = new project / overlay = existing)", "new")
-    if mode not in ("new", "overlay"):
-        print(f"⚠ unknown mode '{mode}', using 'new'", file=sys.stderr)
-        mode = "new"
-    overlay = mode == "overlay"
 
     # validate choices
     for x in archs:
@@ -457,7 +553,11 @@ def main():
     warns: list[str] = []
     skipped: list[str] = []                      # overlay: files that already existed — left untouched
     created_target = not os.path.isdir(target)
-    stack_bullets = existing_stacks + [slugify(s) for s in new_stacks]
+    # Detection evidence lands in the entry file's "## Stack" bullets (only for slugs that
+    # actually got chosen — an explicit flag may have overridden the detection).
+    det_note = {d["slug"]: d["evidence"] for d in detected}
+    stack_bullets = [f"{s} (detected: {det_note[s]})" if s in det_note else s
+                     for s in existing_stacks + [slugify(x) for x in new_stacks]]
     try:
         # 1) core/ + roles/
         safe_copy_tree(os.path.join(PACK, "core"), os.path.join(target, "core"), overlay, skipped, target)

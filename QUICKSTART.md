@@ -83,7 +83,10 @@ Overlay the regimen next to your code in `overlay` mode:
 ```
 
 `overlay` mode **overwrites nothing**: your `README.md`, code, and `CLAUDE.md` are left untouched.
-No `day-0-guide` is created, because the project is already initialized.
+No `day-0-guide` is created, because the project is already initialized. You can drop
+`--backend`: the stack is auto-detected from the project's marker files (`pom.xml`/`build.gradle`,
+`composer.json`, `go.mod`, `*.dproj`, …) and offered as the default; the detected build/framework
+variant (Maven vs Gradle, Laravel vs Symfony) is recorded in the entry file's `## Stack` section.
 
 1. **`CLAUDE.md`.** If you already had your own `CLAUDE.md`, the regimen's copy was placed
    alongside it as `CLAUDE.regimen.md` — merge it into yours by hand (or adopt it as the base). If

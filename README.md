@@ -69,7 +69,11 @@ The `new-project.py` generator has a `--mode` flag with two values.
 - **`new`** — kickstart a new project in an empty directory. Generates the regimen scaffold, and
   from there the agent initializes the stack itself with init commands.
 - **`overlay`** — lay the regimen onto an **existing** project without overwriting anything. Your
-  `README.md`, code, and your own `CLAUDE.md` stay untouched.
+  `README.md`, code, and your own `CLAUDE.md` stay untouched. The stack is **auto-detected** from
+  the project's marker files (`pom.xml`/`build.gradle`, `composer.json`, `go.mod`, `*.dproj`, …)
+  including the build/framework variant (Maven vs Gradle, Laravel vs Symfony); the detection is the
+  prompt's default — an explicit `--backend`/`--frontend` always wins — and the evidence is recorded
+  in the entry file's `## Stack` section.
 
 The `overlay` mode has two sub-cases: a project **without** our regimen, and a project **with an
 outdated** regimen (which needs an upgrade — see track A2 in [QUICKSTART.md](QUICKSTART.md)).
@@ -421,6 +425,7 @@ rationale:
 | [019](docs/adr/019-definition-of-ready-premise-executability.md) | Definition of Ready: a premise-executability gate on the day plan (preconditions, read-ports, mandate, precedents verified against source). |
 | [020](docs/adr/020-estimate-dilation-meta-trigger.md) | Estimate-dilation meta-trigger: an estimate exceeded by a set multiple forces a recorded re-estimation + granularity review (not a stop, not a corner-cut). |
 | [021](docs/adr/021-documentation-actualization-cadence.md) | Documentation actualization cadence: "statuses = fact" at every day exit + a housekeeping sweep every ~3 days; human-facing docs gate stage close. |
+| [022](docs/adr/022-obligations-governance-autonomous-profile.md) | Obligations governance for autonomous runs (build under conditions): additions are provisional and expire without owner ratification + churn-cap on repeated acceptances; ratification gated on history-replay/vignette/event-matrix gates. |
 
 ## Template evolution
 
