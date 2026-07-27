@@ -260,7 +260,10 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 ### stack/ — правила под язык и фреймворк
 
 - `cpp-qt.md` — C++23 / Qt 6 desktop (CMake, QML, GoogleTest + Qt Quick Test, clang-tidy).
+- `delphi.md` — Delphi 12+ / Object Pascal (MSBuild, FireDAC, DUnitX, warnings-и-hints-как-гейт).
 - `go.md` — Go 1.23+ (Echo, sqlc, slog, testify).
+- `java.md` — Java 21 LTS (Maven, Spring Boot 3, Error Prone + Checkstyle, JUnit 5 + Testcontainers).
+- `php.md` — PHP 8.3+ (strict_types везде, PHPStan level max, PER-CS, PHPUnit 11).
 - `python.md` — Python 3.12+ (uv, ruff, mypy strict, FastAPI, pytest).
 - `react-nextjs.md` — Next.js App Router, TypeScript strict, shadcn/ui, TanStack Query.
 - `rust.md` — Rust stable, workspace (clippy warnings-as-errors, thiserror, tokio).

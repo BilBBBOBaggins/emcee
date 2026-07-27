@@ -273,7 +273,10 @@ context isn't loaded with anything unneeded):
 ### stack/ — language and framework rules
 
 - `cpp-qt.md` — C++23 / Qt 6 desktop (CMake, QML, GoogleTest + Qt Quick Test, clang-tidy).
+- `delphi.md` — Delphi 12+ / Object Pascal (MSBuild, FireDAC, DUnitX, warnings-and-hints-as-gate).
 - `go.md` — Go 1.23+ (Echo, sqlc, slog, testify).
+- `java.md` — Java 21 LTS (Maven, Spring Boot 3, Error Prone + Checkstyle, JUnit 5 + Testcontainers).
+- `php.md` — PHP 8.3+ (strict_types everywhere, PHPStan level max, PER-CS, PHPUnit 11).
 - `python.md` — Python 3.12+ (uv, ruff, mypy strict, FastAPI, pytest).
 - `react-nextjs.md` — Next.js App Router, TypeScript strict, shadcn/ui, TanStack Query.
 - `rust.md` — Rust stable workspace (clippy warnings-as-errors, thiserror, tokio).

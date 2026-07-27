@@ -232,6 +232,9 @@ INIT_CMDS = {
     "node": "npm init -y",
     "svelte": "npx sv create .",
     "cpp-qt": "git init && touch CMakeLists.txt   # no standard scaffolder: author the root CMakeLists.txt by hand (stack/cpp-qt.md §Version and tools)",
+    "java": "curl -s https://start.spring.io/starter.tgz -d type=maven-project -d javaVersion=21 | tar -xz   # Spring Boot; plain library: mvn -B archetype:generate",
+    "php": "composer init   # framework app: symfony new . / composer create-project laravel/laravel .",
+    "delphi": "git init   # no CLI scaffolder: create the .dpr/.dproj in the RAD Studio IDE (stack/delphi.md §Version and tools)",
 }
 
 # glob patterns for path-scoped activation of stack skills (`paths:` in the skill frontmatter).
@@ -245,6 +248,9 @@ STACK_PATHS = {
     "node": "**/*.js, **/*.ts, package.json",
     "svelte": "**/*.svelte, **/*.ts, **/*.js",
     "cpp-qt": "**/*.cpp, **/*.h, **/*.hpp, **/*.qml, CMakeLists.txt",
+    "java": "**/*.java, pom.xml, build.gradle, build.gradle.kts",
+    "php": "**/*.php, composer.json",
+    "delphi": "**/*.pas, **/*.dpr, **/*.dproj, **/*.dfm, **/*.fmx",
 }
 
 
