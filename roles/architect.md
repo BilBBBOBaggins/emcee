@@ -74,6 +74,15 @@ a couple of questions, a complex project needs more depth (+ SA). The full pipel
 5. **First day guides** — from the recorded slice: `docs/day-0-guide.md` (init the stack with the standard
    tool, if the project is new) + `docs/day-1-guide.md`. From then on — the usual ongoing cycle (`R D T`).
 
+**Thin brief → definition-of-done sign-off ([ADR-022](../docs/adr/022-obligations-governance-autonomous-profile.md)).**
+A rich functional reference ("like product X") answers *what to build* but stays silent on *what
+counts as done and how proven*. If the brief is thin on acceptance — no acceptance criteria, no
+stated assurance bar — the architect presents **"here is what I will treat as done"** as one page
+(the slice's acceptance sketch + the assurance bar: what gets tests, what gets evidence, what
+ships on faith) for the user to sign off at kickoff/slice entry — instead of inventing acceptance
+criteria mid-run. Field root: a one-line brief, and the run substituted an ever-growing
+proof-mass for the missing definition of done.
+
 **Existing project:** first read the code (subagents by module) and reconstruct the
 stack/architecture in the regimen entry file, then the same steps 3-5 on the remaining work. If the regimen has
 fallen behind the package version — first [upgrader](upgrader.md), then kickoff.

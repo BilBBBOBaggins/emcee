@@ -109,6 +109,8 @@ ORDER = [
      "ADR-020: Estimate-dilation meta-trigger"),
     ("docs/adr/021-documentation-actualization-cadence.md",
      "ADR-021: Documentation actualization cadence"),
+    ("docs/adr/022-obligations-governance-autonomous-profile.md",
+     "ADR-022: Obligations governance for autonomous runs"),
 ]
 
 

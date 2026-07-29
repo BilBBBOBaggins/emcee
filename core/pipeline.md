@@ -86,6 +86,18 @@ commits); a local `pre-push` hook on the slice branch is optional hardening. Del
 per-commit and NOT mid-slice, and no hosted-CI integration is shipped — details and rationale in
 [quality-gates.md](quality-gates.md) §Slice-close composite gate.
 
+**Early assembled-integration checkpoint ([ADR-022](../docs/adr/022-obligations-governance-autonomous-profile.md)).**
+Integration is paid in small installments, not at the end: **integrate what is ratified as early
+as possible** — never "integrate everything now". Load-bearing forks keep their own order (panel →
+verdict → ADR → wire-STOPs); but once a contract is ratified, a **thin** assembled path through
+the real shipping root lands promptly — one route, reachability evidence, not feature
+completeness — instead of integration deferring for many slices (the field failure: dozens of
+autonomous "days" with zero product endpoints, the integration risk surfacing only at
+acceptance). In overlay mode, where the product is already end-to-end, the same rule degenerates
+to: **wire new work into the existing skeleton continuously** — QG-NN-05 applied continuously,
+not once at close; accumulating an implemented-but-unwired layer to merge at the end is exactly
+the ADR-015 incident class.
+
 ## How one task passes through roles
 
 **Default (lightweight, solo; a.k.a. solo-collapse) — most tasks:**

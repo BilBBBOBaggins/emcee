@@ -162,6 +162,34 @@ Every failing test after your changes is your responsibility. There is no "pre-e
 
 Fix it so the test checks what it should, and passes because the code is correct.
 
+## Review Churn-Cap — barren rounds stop the carousel — [accountability · mechanical counter where the harness allows · [ADR-022](../docs/adr/022-obligations-governance-autonomous-profile.md)]
+
+Repeated review/acceptance rounds over the same item are legitimate **while they yield**: in the
+field, successive rounds each surfaced a real, distinct defect. They degenerate when rounds stop
+finding anything new and keep spinning (the field shape: acceptance → annulment → re-acceptance,
+three passes over one slice). The cap therefore counts **barren rounds**, not rounds:
+
+- A round is **non-empty** iff it produced a finding with a **new id** — lineage-inherited: a
+  renamed or re-split finding keeps its ancestor's count — **plus** an attached remediation commit
+  or red test. That is checkable from git artifacts (finding records, fix commits), not from the
+  model's self-assessment. Where the harness has a mechanical checker (`regimen-doctor.py`, an
+  orchestrator) the counter belongs there; harnesses without one degrade to this rule as prose —
+  the degradation is recorded in [portability.md](portability.md).
+- **N consecutive barren rounds over one item (owner-set threshold; default 2) → stop and ask the
+  user** — state the carousel on the record instead of scheduling round N+1. The cap never
+  auto-accepts and never forces green; it only converts a degenerate loop into a question.
+- A round that surfaced a new confirmed defect **resets the count** — productive chains are never
+  capped.
+
+## Acceptance Verdicts Are Whole — [accountability · [ADR-022](../docs/adr/022-obligations-governance-autonomous-profile.md) G2]
+
+An acceptance verdict over a frozen-scope item is **whole**: accepted or not accepted. An
+"accepted narrowly / partially" line without an explicitly sanctioned split of the item is
+forbidden — that is precisely the over-declare shape a field run recorded against its own
+mandate and later had to annul. Splitting an item is legitimate only as an explicit re-scoping
+on the record (user sanction; in an autonomous run — the entry/ADR that re-slices the item),
+after which each part is accepted whole.
+
 ## Assembled Feature Reachability — [QG-NN-05 · non-negotiable · accountability · ratified by the panel — [ADR-015](../docs/adr/015-assembled-reachability-gate.md)]
 
 Green tests prove that **units are correct** — not that **the product does what it promised**. A test
