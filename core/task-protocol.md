@@ -227,5 +227,8 @@ Rules:
 
 - Explicitly tell the user that parallel operations are being launched
 - Each parallel task has a clear brief and doesn't overlap with the others
+- Each brief declares its perimeter as default-deny — what the subagent MAY modify; everything else
+  is read-only, and a blocked path is a report after 2–3 retries, not an improvised workaround
+  ([principles.md](principles.md) → PR-NN-04)
 - Results from subagents are collected into shared context by the main agent
 - Don't parallelize what has dependencies — sequencing matters more than speed

@@ -180,6 +180,31 @@ After forming a list of findings:
 This is especially important for agents — LLMs tend to generate plausible but invented findings.
 Verification pass is the only defense.
 
+## Execution perimeter — [PR-NN-04 · non-negotiable · accountability]
+
+A delegated task declares its perimeter as **default-deny**: an explicit list of what the agent MAY
+modify (paths, machines, systems). Everything else — on every machine the agent can reach — is
+read-only. Deny-lists don't scale: an agent will always find an action nobody thought to forbid;
+the list of what's allowed is finite, the list of what's forbidden is not.
+
+- Infrastructure is never inside an implementation task's perimeter: ssh keys / `authorized_keys`,
+  tunnels, other machines' configs, installing software outside the project — even when touching
+  them "would unblock the task".
+- A broken standard path is a **report, not an adventure**: retry the SAME path 2–3 times → stop,
+  record the exact error, escalate. Inventing a new route (new keys, new tunnels, alternative
+  transport) is by definition a perimeter expansion and requires an explicit go-ahead from the
+  orchestrator or the user.
+- Self-check marker: if the next action involves ssh keys, `authorized_keys`, tunnels, another
+  machine's config, or installing software outside the project — stop. That is not your task,
+  no matter what is blocked.
+
+The economics are asymmetric: an improvised workaround saves the agent minutes; a broken access
+path costs the user hours of recovery — and sometimes the machine stays reachable only because a
+second auth method happened to survive. Field origin: an agent hit a transient network error while
+delivering a file to a lab machine (the standard route was in fact alive), decided to build a
+bypass, appended its key to the machine's `authorized_keys` — and while "rolling back" wiped the
+whole file, breaking key-based access for everyone.
+
 ## Meta-rule: evolution of rules
 
 These principles aren't dogma. They're fixed because mistakes without them kept recurring.
