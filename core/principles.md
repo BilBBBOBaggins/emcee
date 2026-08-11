@@ -78,7 +78,10 @@ For an **irreversible/load-bearing** decision a plan is not enough; that's the a
 If an edit led to a bad state — don't "patch on top" blindly: rewind to a clean point (a snapshot from
 before the change) and start over with a plan, rather than stacking fixes on something broken. **On Claude
 Code:** native `/rewind` (Esc-Esc) — rewinds code, conversation, or both to a snapshot. On other runtimes —
-a git rewind of the working tree + restart from a plan (`origin: harness:claude-code`). This complements
+a git rewind of the working tree + restart from a plan (`origin: harness:claude-code`); note the rewind
+commands (`git reset --hard` / `git checkout --`) are on the PR-NN-01 forbidden list precisely because
+they clobber parallel work — so the rewind goes through the same gate: **stop, tell the user what you're
+rewinding and why, get the go-ahead** (or have the user run it), don't fire it silently. This complements
 the recovery checkpoint before context compaction (see [memory.md](memory.md)): rewind is for "just broke
 something", the checkpoint is for "lost state during compaction".
 
@@ -153,7 +156,10 @@ The agent does not make architectural decisions without user confirmation.
 - If the task prompt is ambiguous — do the minimum necessary, don't second-guess
 - If a choice must be made between several reasonable options — ask the user
 - Don't give yourself a choice of "I'll do variant A or B" — if the prompt is specific, follow the prompt
-- Don't commit code — only the user commits, manually
+- Don't commit code — only the user commits, manually. **Sole exception:** an autonomous run, or a day
+  guide that explicitly assigns the commit to the role — there the role commits its OWN produced
+  substance the moment its gate is green, and stranding it uncommitted is the forbidden anti-pattern
+  ([task-protocol.md](task-protocol.md) → "Anti-pattern: stranding your own approved substance")
 - Don't end the session on your own ("I'm done, see you later") — that's the user's decision
 - Don't create files in other repositories of the project without an explicit path
 

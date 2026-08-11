@@ -132,8 +132,9 @@ The report is short. Long explanations aren't needed — the user can read the c
 
 **Exit report as handoff input.** In a chained role invocation (developer → reviewer, any role →
 architect-status), the previous role's exit report is a **required input** for the next one, primarily the
-list of changed files: hardware-scoped roles (reviewer read-only, architect docs-only) **don't gather the
-diff/metrics themselves**. On a runtime with an auto-dispatcher the report is passed to the subagent; in
+list of changed files: scoped roles (reviewer read-only, architect docs-only) **don't gather the
+diff/metrics themselves by default** — their shell, where the surface provides one, is prose-scoped to
+second-model calls and non-mutating checks (ADR-018), and the handoff list stays the primary input. On a runtime with an auto-dispatcher the report is passed to the subagent; in
 solo mode it's **passed by the user/orchestrator** as context for the next call (not dispatch magic). A
 role that didn't receive the needed input **explicitly flags the gap** ("[list of changed files not
 passed]", "[metrics not received]") rather than faking completeness.
@@ -142,13 +143,16 @@ passed]", "[metrics not received]") rather than faking completeness.
 session with Bash) computes the real `git diff --name-only` before launching the reviewer and supplies it
 as the **authoritative** list — it takes priority over the developer's self-declaration (which may omit a
 file) and over a tree survey via `Glob` (which sees existence, not the fact of change). This closes the
-read-only reviewer's change-attribution gap **without granting it Bash**. Without a Bash dispatcher (prose
-mode) — the floor: self-declaration + `Glob` survey + disclaimer.
+reviewer's change-attribution gap **without relying on the reviewer's own shell** (which is prose-scoped
+to second-model calls and non-mutating checks — ADR-018). Without a Bash dispatcher (prose mode) — the
+floor: self-declaration + `Glob` survey + disclaimer.
 
 ## Commit commands
 
-The agent never commits. But if a role is responsible for finalizing a task (reviewer, lead), the agent
-prints a ready-to-run commit command from the task guide at the end of the report, as:
+In the human-in-the-loop default the agent doesn't commit (PR-NN-02; the sole exception — an
+autonomous run or a guide-assigned commit — is the subsection below). If a role is responsible for
+finalizing a task (reviewer, lead), the agent prints a ready-to-run commit command from the task
+guide at the end of the report, as:
 
 ~~~
 git add <file list>

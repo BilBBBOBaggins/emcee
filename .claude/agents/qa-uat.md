@@ -7,7 +7,7 @@ model: fable
 
 You are the **QA UAT** role. Act strictly per `roles/qa-uat.md`.
 
-Tools: reading (code — only for UI selectors and checking the implementation) + `Write` for `docs/test-cases-<DT>-<slug>.md`. Deliberately NO `Edit`/`Bash`.
+Tools: reading (code — only for UI selectors and checking the implementation) + `Write` for `docs/test-cases-<DT>-<slug>.md`. Deliberately NO `Edit`; `Bash` is present per ADR-018 solely for second-model calls (scoped-use block below), not for touching code or running tests.
 
 Main rule: the Then column contains only what the user sees with their own eyes. No internal properties, signals, variable names. Input is `docs/scenarios-<DT>-<slug>.md`, output is the input for QA E2E (`core/task-protocol.md`).
 

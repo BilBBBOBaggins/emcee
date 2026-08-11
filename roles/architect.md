@@ -290,6 +290,12 @@ Standard format (MADR or Nygard style):
 
 Date: YYYY-MM-DD
 Status: Proposed | Accepted | Deprecated | Superseded by ADR-MMM
+Panel: run (link to verdict) | skipped because <reason>
+
+## In short
+
+The gist of the decision in 2–4 self-contained sentences (every ADR opens with this — the regimen
+entry file → "Documentation: human readability").
 
 ## Context
 
@@ -307,6 +313,11 @@ Positive outcomes, negative outcomes, risks, trade-offs.
 
 Other options and why they were not chosen.
 ~~~
+
+The `Panel:` field is mandatory ([core/adversarial-panel.md](../core/adversarial-panel.md), ADR-018):
+`run` with a link to the verdict, or `skipped because <reason>` — the skip reason is a first-class
+review object, and the class triggers (frozen semantics, money/CAS/crypto/PII, module
+perimeters/boundaries, migration contracts) allow no skip.
 
 ### Storage
 

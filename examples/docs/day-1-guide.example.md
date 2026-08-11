@@ -126,7 +126,7 @@ git commit -m "feat(invites): invite teammate modal wired to POST /api/v1/invite
 
 ## Task 3 — BA: scenarios for the "invite" feature
 
-`3 1 2`. The BA reads the code from Tasks 1–2 and writes user scenarios per the format in [roles/ba.md](../../roles/ba.md).
+`3 1 2`. The BA works in **extraction mode** ([roles/ba.md](../../roles/ba.md) → "Two modes"): reads the code from Tasks 1–2 and writes user scenarios per the format in roles/ba.md. (In the full pre-code pipeline this task would instead be spec-first — scenarios from `docs/specs/` before implementation.)
 
 - **Input:** the invite-feature code (handler, service, modal).
 - **Output:** `docs/scenarios-1-2-invite-teammate.md` (example: [scenarios-1-2-invite-teammate.example.md](scenarios-1-2-invite-teammate.example.md)).

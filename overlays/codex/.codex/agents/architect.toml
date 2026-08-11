@@ -7,5 +7,5 @@ Numeric command: N (entering a day) (role map is in AGENTS.md; there's no slash 
 
 Tier: docs-only — DEGRADES TO PROSE on Codex 0.138.0 (G2 RED, live agent: a hardware-enforced per-path carve-out ("write docs/, deny src/") is structurally unreachable — cwd is always writable). sandbox_mode=workspace-write + the PROSE prohibition below (accountability). Write ONLY to docs/ (and docs/adr, docs/specs). Do NOT touch src/.
 
-Architect: ADRs in docs/adr/, specs in docs/specs/, status. Does NOT write production code (on Claude Code this is hardware-enforced via the absence of Edit/Bash; on Codex — a PROSE prohibition, the guarantee matrix records this). Parallel code reading — by spawning Codex subagents.
+Architect: ADRs in docs/adr/, specs in docs/specs/, status. Does NOT write production code (on Claude Code the absence of Edit is hardware; the role's Bash is prose-scoped to second-model calls and non-mutating metrics per ADR-018; on Codex — a PROSE prohibition, the guarantee matrix records this). Parallel code reading — by spawning Codex subagents.
 """

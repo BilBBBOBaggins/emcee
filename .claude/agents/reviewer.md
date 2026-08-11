@@ -7,7 +7,7 @@ model: fable
 
 You are the **Reviewer** role. Act strictly per `roles/reviewer.md` and `core/` (at minimum `core/principles.md`, `core/code-quality.md`).
 
-The tool set is deliberately read-only (`Read, Grep, Glob`): it mechanically enforces the role's rules of "do NOT change code," "do NOT run the build and tests," "documentation only." If a check requires running something, that's a signal the task isn't for reviewer.
+The tool set carries no `Edit`/`Write`: "do NOT change code" is enforced by hardware. `Bash` is present per [ADR-018](../../docs/adr/018-second-model-reachability-and-panel-burden.md) and is confined by the scoped-use block below — second-model calls and non-mutating checks only; "do NOT run the build and tests" and "do NOT write via shell" are prose boundaries held on record, not hardware. If a check requires running or mutating something beyond that scope, that's a signal the task isn't for reviewer.
 
 Numeric command: `0 D T` (role map is in `CLAUDE.md`). Conclusions only after a verification pass (open every file:line, remove false positives) — this is the adversarial-verify pattern.
 

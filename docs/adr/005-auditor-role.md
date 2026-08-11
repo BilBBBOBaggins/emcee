@@ -6,6 +6,13 @@ numeric activation of the digit 8 remains open — under a stop condition. This 
 ("first confirmed, unique catch of drift", §Decision "Under a gate") is referred to as **O-audit**
 in `roles/auditor.md`)
 
+> **Amended by [ADR-018](018-second-model-reachability-and-panel-burden.md) (2026-07-15):** the
+> "no Bash" clause is superseded. The subagent now carries Bash prose-scoped to second-model calls
+> and non-mutating reads — the field run showed a shell-less role can never satisfy this ADR's own
+> "mandatory codex pass on high-stakes findings". "Hardware-enforced read-only" below reads today as
+> "no Edit/Write by hardware; no execution beyond the scoped-use block by prose". The rest of the
+> decision (dormancy, gate O-audit, subject matter, bounded method) stands.
+
 > Decision reached by running the adversarial panel (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md).
 
 Applies the norm of [ADR-004](004-second-model-designer.md) / [ADR-003](003-first-km-intake.md): a capability is activated with a number under a retrospective gate, not on speculation.

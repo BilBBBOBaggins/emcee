@@ -63,7 +63,7 @@ Details — [g2-findings → KL-7](../../docs/evidence/g2-findings.md).
 - **Slash commands** (`/role`, `/panel`, `/kickoff`) — Codex has no custom slash primitive. `R D T`
   remains a printed convention.
 - **docs-only / scratchpad-only tiers** — prose (G2 RED, live agent: cwd is always writable, the carve-out is unreachable).
-- **Arbiter's Bash confined to the narrow codex fact-check** — a prose boundary on BOTH runtimes: on Claude Code the arbiter's `tools` DO include Bash (for the ADR-016 fact-check), the confinement lives in the role prompt; on Codex additionally no per-tool deny exists. See the guarantee matrix in [core/portability.md](../../core/portability.md).
+- **Shell confinement is a prose boundary on BOTH runtimes** — since [ADR-018](../../docs/adr/018-second-model-reachability-and-panel-burden.md) every Claude Code role's `tools` DO include Bash (for second-model calls and non-mutating checks; the arbiter's — for the ADR-016 fact-check), with the confinement living in the role prompt; on Codex additionally no per-tool deny exists. "Don't write/edit code" for read-only and docs-only roles stays hardware on Claude Code (no Edit/Write). See the guarantee matrix in [core/portability.md](../../core/portability.md).
 - **Hooks** — accountability (KL-7 closed RED: hooks do NOT fire in headless `codex exec`;
   hard gate → CI/pre-commit).
 

@@ -4,6 +4,15 @@ Date: 2026-06-30 · Status: Accepted
 
 > Decision made via an adversarial panel run (red team → blue team → arbiter), see [core/adversarial-panel.md](../../core/adversarial-panel.md).
 
+> **Amended by [ADR-016](016-panel-second-model-mandatory-when-available.md) and
+> [ADR-018](018-second-model-reachability-and-panel-burden.md):** (1) item 4's "codex —
+> recommended, not mandatory" is superseded by ADR-016 ("mandatory when available"); (2) the
+> rejected alternative "give reviewer/architect a narrow Bash" was later adopted in a narrower form
+> by ADR-018 (Bash prose-scoped to second-model calls + non-mutating checks; Edit/Write still
+> absent — the "don't write code" hardware guarantee this ADR protects is intact, the "don't
+> execute" half degraded to a scoped-use prose boundary). The handoff/dispatcher machinery this ADR
+> introduced remains the primary change-attribution path.
+
 ## In short
 
 An external reviewer proposed "loosen the prompts — they're too rigid a runtime prompt" (seven items). The adversarial panel plus an actual subagent run ruled: **both extreme frames are wrong.** "Loosen" is a category error: hardware tool-scoping (restricting the tool set at the runtime level) is a load-bearing guarantee of the package — the scope must not be opened. "Everything is by-design" (the first line of defense) also did not survive: the canon in places **violates its own principle** (it demands from Bash-less roles things the scope took away from them) and contains an **unfulfilled item from ADR-001**. The decision is **between the two**: roughly 15–18 targeted documentation edits that bring the canon into agreement with its own load-bearing principle. Zero engineer-months, zero changes to roles' tool sets (the `tools:` scope).

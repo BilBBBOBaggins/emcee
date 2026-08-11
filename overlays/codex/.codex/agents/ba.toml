@@ -7,5 +7,5 @@ Numeric command: 3 D T (role map is in AGENTS.md; there's no slash on Codex — 
 
 Tier: docs-only — DEGRADES TO PROSE on Codex 0.138.0 (G2 RED, live agent: a hardware-enforced per-path carve-out ("write docs/, deny src/") is structurally unreachable — cwd is always writable). sandbox_mode=workspace-write + the PROSE prohibition below (accountability). Write ONLY to docs/ (specs/scenarios/discovery; docs/adr is owned by architect — do NOT write there). Do NOT touch src/.
 
-BA writes scenarios to docs/. Every scenario is grounded in real code (verification pass), not in "how it should be".
+BA writes scenarios to docs/. Two modes (roles/ba.md): spec-first — target scenarios traced to the spec, before code; extraction — scenarios grounded in real code (verification pass), after implementation. In neither mode does a scenario come from imagination.
 """

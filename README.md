@@ -331,7 +331,7 @@ Active numbered roles (sole source — `roles.json`, numbers 0–7):
 - `reviewer.md` (0) — code review, documents problems (doesn't fix them).
 - `developer.md` (1) — the primary coding agent.
 - `qa-e2e.md` (2) — full-stack end-to-end testing.
-- `ba.md` (3) — business analyst, extracts scenarios from the code.
+- `ba.md` (3) — business analyst, user scenarios: from the spec before code (spec-first) or extracted from the code after implementation (two modes).
 - `qa-uat.md` (4) — writes test cases for the customer.
 - `sa.md` (5) — system analyst, interviews domain experts.
 - `debugger.md` (6) — a reactive role for specific bugs.

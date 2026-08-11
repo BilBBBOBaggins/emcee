@@ -74,6 +74,16 @@ service.setRetryDelayMs(5)     // in test
 
 Tests do not depend on execution order, do not use `sleep()` for synchronization, and do not make real network calls.
 
+**Carve-out — a local ephemeral store is not "real network".** Integration tests against a local
+containerized database/broker (Testcontainers, a docker-compose service, an embedded server on
+localhost) are a legitimate part of the dev track — several stacks prescribe exactly this
+(`stack/java.md`, `stack/rust.md`, `stack/php.md`, `stack/delphi.md`). The line the rule draws is
+**external and slow**, not "any socket": no third-party services, no shared/remote environments, no
+waited-out real timeouts — and the time budget above still binds the whole run (a local DB that
+blows the budget goes to a separate marker/track, as `stack/rust.md` does). A stack may choose the
+stricter "mocks only" discipline (`stack/cpp-qt.md` does) — that's a per-stack tightening, not the
+core rule.
+
 If a test requires a real network or a slow operation — it's not a unit test, it's E2E. A separate track (see below).
 
 ## Separation of Testing Tracks
@@ -90,7 +100,7 @@ If a project has several types of tests — they are physically separated:
 
 | Track | Who runs it | Build directory | What it checks |
 |--------|--------------|-----------------|---------------|
-| Dev tests | Developer, after every commit | `build/` | Unit, integration, fast, mocks |
+| Dev tests | Developer, after every commit | `build/` | Unit, integration, fast, mocks (or a local ephemeral store — see the carve-out above) |
 | Assembled contract tests | QA E2E (owner of QG-NN-05) | `build-qa/` (its own target/test directory) | Reachability of frozen features through declared shipping roots: a fast build-level runner, importing only declared roots, no test-only wiring, effect assertion (§QG-NN-05) |
 | E2E tests | QA, on request | `build-qa/` | Full stack, real server, everything through the UI |
 

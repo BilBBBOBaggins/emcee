@@ -28,8 +28,9 @@ only the list, gate type, and check protocol. Read every session (see the regime
 | CQ-NN-03 | No commented-out code | [code-quality.md](code-quality.md) | accountability |
 | CQ-NN-04 | Security minimum: secrets not in code/logs, prepared statements | [code-quality.md](code-quality.md) | accountability |
 | PR-NN-01 | Don't touch what's outside the task; forbidden git operations (stash/reset --hard/checkout --/bisect/rebase -i) | [principles.md](principles.md) | accountability |
-| PR-NN-02 | Don't make architectural decisions unilaterally; don't commit for the user; don't end the session yourself | [principles.md](principles.md) | accountability |
+| PR-NN-02 | Don't make architectural decisions unilaterally; don't commit for the user (sole exception: autonomous run / guide-assigned commit — [task-protocol.md](task-protocol.md)); don't end the session yourself | [principles.md](principles.md) | accountability |
 | PR-NN-03 | Verification pass on any findings (check every file:line before showing it) | [principles.md](principles.md) | accountability |
+| PR-NN-04 | Execution perimeter is default-deny: modify only what the brief lists; infra (keys/tunnels/other machines) never in-perimeter; a blocked path = 2–3 retries → report, not an improvised workaround | [principles.md](principles.md) | accountability |
 
 The gate column names the enforcer on **Claude Code** (`.claude/hooks/*`); on Codex these mechanical gates
 have no enforcer from config (KL-7: hooks don't fire in headless mode) → they degrade to accountability or

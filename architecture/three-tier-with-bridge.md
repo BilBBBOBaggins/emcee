@@ -402,7 +402,7 @@ Solution: expose computed properties from the bridge:
 Q_PROPERTY(bool canPlaceOrder READ canPlaceOrder NOTIFY canPlaceOrderChanged)
 
 bool canPlaceOrder() const {
-    return m_user.balance > 0 && m_user.isActive;  // in core or bridge
+    return m_user.canPlaceOrder();  // the rule itself lives in core; the bridge only exposes it
 }
 ~~~
 

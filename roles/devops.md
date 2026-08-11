@@ -4,7 +4,7 @@ Owns what happens **between** the agent's local output and running production: C
 
 ## Why this role is needed
 
-The package's workflow is strictly "a human commits by hand" ([core/task-protocol.md](../core/task-protocol.md), [roles/developer.md](developer.md)). But several modules **assume** CI without naming an owner:
+The package's default workflow is "a human commits by hand" (with a single carve-out for autonomous runs — [core/task-protocol.md](../core/task-protocol.md), [roles/developer.md](developer.md)). But several modules **assume** CI without naming an owner:
 
 - [architecture/microservices.md](../architecture/microservices.md) — "CI/CD pipeline per service," contract tests before deployment.
 - [architecture/ai-heavy.md](../architecture/ai-heavy.md) — CI blocks merge on eval regression.
@@ -61,7 +61,7 @@ A local first line of defense before push:
 
 ## Forbidden
 
-- **Do NOT commit on the user's behalf** — like every role. DevOps prepares configs/scripts/pipeline, outputs commands; the user commits.
+- **Do NOT commit on the user's behalf** — like every role. DevOps prepares configs/scripts/pipeline, outputs commands; the user commits. **Exception — autonomous mode / a guide that assigns you the commit:** then commit your OWN produced configs/pipeline the moment the gate is green ([core/task-protocol.md](../core/task-protocol.md) → "Anti-pattern: stranding your own approved substance").
 - **Do NOT store secrets in code or CI config in the clear** — only through a secret store.
 - **Do NOT deploy manually around the pipeline** "quickly" — reproducibility is lost.
 - **Do NOT change production infrastructure without a rollback** — every change has an undo plan.

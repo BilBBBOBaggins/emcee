@@ -272,7 +272,9 @@ step 2:
 
 - Do NOT run the dev test suite (that's the developer's track)
 - Do NOT modify production code
-- Do NOT commit
+- Do NOT commit. **Exception — autonomous mode / a guide that assigns you the commit:** then commit
+  your OWN produced test code the moment the gate is green
+  ([core/task-protocol.md](../core/task-protocol.md) → "Anti-pattern: stranding your own approved substance")
 - Do NOT use a dev build
 - Do NOT write new tests in the old style (direct API calls bypassing the UI) — everything goes through the
   testing framework that drives the real application. **Scope of the ban: the E2E track**; in the assembled

@@ -62,18 +62,22 @@ that's **reviewer/debugger**, not auditor.
   an honest fallback per second-model.md (reinforced self-critique + a note about the gap), not a
   silent skip.
 - **Git archaeology for "why":** a subsystem's history answers "why it's like this," not just "what
-  it is now" — drift usually accrues through a series of small edits, not a single commit. Auditor has
-  no Bash → request the output of `git log --follow <path>` / `--grep <topic>` from whoever invoked it
-  (the dispatcher/user), like the rest of the dynamic data "from other people's logs"; cross-check the
-  resulting timeline against ADRs (that a decision was violated gradually is itself a finding).
+  it is now" — drift usually accrues through a series of small edits, not a single commit. Reading
+  history (`git log --follow <path>` / `--grep <topic>`) is a non-mutating command within the role's
+  scoped shell ([ADR-018](../docs/adr/018-second-model-reachability-and-panel-burden.md)); on a
+  shell-less runtime request the output from whoever invoked it (the dispatcher/user), like the rest
+  of the dynamic data "from other people's logs". Cross-check the resulting timeline against ADRs
+  (that a decision was violated gradually is itself a finding).
 - **Does not fix — documents** (like reviewer). Auditor delivers the map; architect/developer/debugger
   do the fixing.
 
-## Tool-scoping (hardware-enforced read-only)
+## Tool-scoping (write-less by hardware, shell prose-scoped)
 
-Subagent `.claude/agents/auditor.md`: tools = **`Read, Grep, Glob`**. **No Bash/Edit/Write-to-code** —
-auditor finds, doesn't change and doesn't run anything (it takes dynamic data from other people's
-logs). This is a hardware guarantee of "look only," same as reviewer.
+Subagent `.claude/agents/auditor.md`: tools = **`Read, Grep, Glob, Bash`**
+([ADR-018](../docs/adr/018-second-model-reachability-and-panel-burden.md)). **No Edit/Write** —
+"auditor finds, doesn't change" is a hardware guarantee, same as reviewer. Bash is a prose-scoped
+exception: second-model calls and non-mutating reads (git history) only — auditor still doesn't run
+tests/linters/builds (it takes dynamic data from other people's logs) and doesn't write via shell.
 
 ## Output — a map of pain points (forced consumer)
 
@@ -92,5 +96,6 @@ not a duplicate.
 - Read: the regimen entry file, [core/principles.md](../core/principles.md) (PR-NN-03),
   [core/code-quality.md](../core/code-quality.md), [core/quality-gates.md](../core/quality-gates.md)
   (LOC), the latest `docs/adr/` (what must NOT be violated), [core/second-model.md](../core/second-model.md).
-- Do NOT fix, do NOT run anything (no Bash), do NOT commit. Do NOT report per-task bugs (boundary above).
+- Do NOT fix, do NOT run anything mutating (shell only for codex + read-only commands — ADR-018), do
+  NOT commit. Do NOT report per-task bugs (boundary above).
 - Constitution exit like everyone else; findings without file:line = do not show (PR-NN-03).

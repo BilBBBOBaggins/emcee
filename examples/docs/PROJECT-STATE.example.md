@@ -22,9 +22,10 @@ Shipping root(s): `cmd/acme/main.go` (API) · `app/layout.tsx` (web) — fixed b
 task that changes the shipping entry point must update this line
 ([core/quality-gates.md](../../core/quality-gates.md) §Reachability).
 
-- `INV-01` — the owner invites a teammate by email with a role; after accepting, the invitee sees
-  the team. Evidence: `build-qa/invite-teammate.spec.ts` (annotation `@qg:INV-01` — the Playwright
-  suite created by day-1 Task 5).
+- `INV-01` — the owner invites a teammate by email → a pending invite appears in the team's invite
+  list and the email is queued. Evidence: `build-qa/invite-teammate.spec.ts` (annotation `@qg:INV-01`
+  — the Playwright suite created by day-1 Task 5). (Accepting the invite is Day 2 — see "In
+  progress"; its criterion gets frozen there. Role-at-invite is out of scope per the spec.)
 - `INV-02` — a repeat invite to a pending email is rejected with a user-visible error.
   Evidence: same file (`@qg:INV-02`).
 - `INV-03` — the toast auto-hides after 5 seconds — waiver: ergonomics with no outcome

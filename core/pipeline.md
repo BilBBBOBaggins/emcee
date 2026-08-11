@@ -56,7 +56,8 @@ The cycle repeats as long as there's a roadmap slice:
    `docs/day-<N>-guide.md`: tasks, each with "Prompt for Claude Code", "After completion", "Commit", and
    an assigned role.
 2. **Roles execute** their tasks (`R D T`). Every task: constitution preflight → work → gates
-   green → constitution exit → **your commit** (the agent doesn't commit).
+   green → constitution exit → **your commit** (the agent doesn't commit; sole exception —
+   autonomous run / guide-assigned commit, [task-protocol.md](task-protocol.md)).
 3. **Periodically:** status (`N`), replanning, `/panel` on load-bearing decisions, ad-hoc `auditor` on drift.
 4. Complexity grows → more roles get brought in (SA for a new domain; designer stays ad-hoc — its
    digit activation remains behind gate O1-D, ADR-004).
@@ -111,7 +112,9 @@ needed — the developer codes and runs the tests themselves.**
 
 1. **SA** — discovery with an expert → `docs/specs/<feature>.md` (requirements, acceptance in
    Given/When/Then).
-2. **BA** — from the spec → `docs/scenarios-<DT>-<slug>.md` (user scenarios).
+2. **BA** — from the spec → `docs/scenarios-<DT>-<slug>.md` (user scenarios; this is BA's
+   **spec-first mode** — the same role also has an extraction mode for existing code, see
+   [roles/ba.md](../roles/ba.md) → "Two modes").
 3. **designer** (dormant) — a wireframe from the spec (if it's a UI feature).
 4. **architect** — tech spec / breakdown into day tasks.
 5. **developer** — implementation per the guide.
@@ -130,17 +133,18 @@ risk.
 The pipeline above is not "suggestions" — these are **contracts**: each phase requires the previous
 phase's input artifact. Artifact missing or empty → **STOP**: return to the previous phase or ask the
 user, **don't simulate progress** (don't write code without a spec, don't write test cases without
-scenarios, don't review without a list of changed files from the developer).
+scenarios, don't review without a list of changed files — from the dispatcher or the developer's
+exit report, see [task-protocol.md](task-protocol.md) → "Authoritative change set").
 
 | Phase | Requires as input | Produces |
 |------|------------------|------------|
 | SA | request + domain expert | `docs/specs/<feature>.md` |
-| BA | spec | `docs/scenarios-<DT>-<slug>.md` |
+| BA | spec (spec-first) / code files named by the task (extraction — [roles/ba.md](../roles/ba.md)) | `docs/scenarios-<DT>-<slug>.md` |
 | architect | spec (+ scenarios) | task breakdown / `docs/day-<N>-guide.md` |
 | developer | day-guide (+ spec/design) | code + tests |
 | qa-uat | scenarios | `docs/test-cases-<DT>-<slug>.md` |
 | qa-e2e | test-cases | run on the full stack |
-| reviewer | list of changed files from the developer's exit report | static analysis (the actual git diff is not verified by the role — read-only by hardware) |
+| reviewer | authoritative change-set from the dispatcher, else the developer's exit report | static analysis (write-less by hardware; shell prose-scoped to non-mutating checks — ADR-018) |
 
 At the lightweight level (one developer) phases collapse — but the rule holds: **don't pass off an
 empty or invented artifact as a ready input.** A broken/empty input is a defect of the previous phase, not

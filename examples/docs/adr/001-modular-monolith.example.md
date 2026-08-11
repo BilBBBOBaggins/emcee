@@ -2,6 +2,8 @@
 
 Date: 2026-04-15
 Status: Accepted
+Panel: run — verdict in scratchpad/panel/2026-04-15-modular-monolith/ (class trigger: module
+boundaries/composition — a skip is not allowed for this class)
 
 ## In short
 

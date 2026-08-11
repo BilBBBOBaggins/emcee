@@ -569,6 +569,14 @@ def main() -> int:
         missing = [i for i in ids if i not in core_src]
         check(not missing, f"[pack] every constitution ID is tagged on the canon (untagged: {sorted(missing)})")
 
+        # reverse direction (2026-08-11 contradiction map, F1): every rule TAGGED non-negotiable in
+        # the canon must have a row in the constitution registry — PR-NN-04 shipped without one, so
+        # preflight/exit checks built from the registry silently skipped a non-negotiable.
+        tagged = set(re.findall(r"\[([A-Z]{2}-NN-\d{2}) · non-negotiable", core_src))
+        unregistered = [i for i in tagged if i not in ids]
+        check(not unregistered,
+              f"[pack] every canon non-negotiable has a constitution registry row (missing: {sorted(unregistered)})")
+
         check("_TEMPLATE" not in subprocess.run(
             [sys.executable, GEN, "--list"], capture_output=True, text=True).stdout,
             "[pack] _TEMPLATE.md didn't leak into the stack list")

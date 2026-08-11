@@ -85,9 +85,9 @@ implementation is [`overlays/codex/`](../overlays/codex/).
 
 | Guarantee (role rule) | Roles | Claude Code | Codex (0.138.0) |
 |---|---|---|---|
-| **read-only** (no writes/execution) | reviewer, auditor | hardware-enforced — `tools: Read,Grep,Glob` | **hardware-enforced** — `sandbox_mode="read-only"`, seatbelt blocks writes (G2-verified) |
+| **read-only** (no writes; execution prose-scoped) | reviewer, auditor | **hardware (writes) + prose (shell)** — no `Edit`/`Write` in `tools`; Bash carried for second-model calls + non-mutating checks, confined by the scoped-use block ([ADR-018](../docs/adr/018-second-model-reachability-and-panel-burden.md)) | **hardware-enforced** — `sandbox_mode="read-only"`, seatbelt blocks writes (G2-verified) |
 | **full write** (code/tests/build) | developer, qa-e2e, debugger, devops | hardware-enforced — +Edit,Write,Bash | **hardware-enforced** — `sandbox_mode="workspace-write"` |
-| **docs-only** (Write, but not code) | ba, qa-uat, sa, architect | hardware-enforced — `tools` without Edit/Bash | **prose** — `workspace-write`+accountability. G2 RED (live agent): a stable path is structurally impossible (cwd is always writable — the agent wrote to `src/`), `workspace_roots`=toggles, per-path only via the unstable `[permissions]` enum |
+| **docs-only** (Write, but not code) | ba, qa-uat, sa, architect | **hardware (Edit) + prose (shell)** — `tools` without Edit; Bash carried for second-model calls (ADR-018), "no writes/commits via shell" is a scoped-use prose boundary | **prose** — `workspace-write`+accountability. G2 RED (live agent): a stable path is structurally impossible (cwd is always writable — the agent wrote to `src/`), `workspace_roots`=toggles, per-path only via the unstable `[permissions]` enum |
 | **scratchpad-only** (writes analysis, not code) | red-team, blue-team, arbiter | hardware-enforced — scoped tools | **prose** — `workspace-write`+accountability (same reason as docs-only) |
 | **Bash only for narrow codex fact-checks** (judges what's presented; doesn't hand down the model's verdict) | arbiter | `tools` includes Bash, but the role prompt confines it to a narrow fact-check of the disputed empirical point (`adversarial-panel.md` §"The arbiter's codex does NOT hand down the verdict") — **a prose boundary, not a hardware one** | **prose** — no per-tool deny on Codex |
 | **slash dispatch** `/role /panel /kickoff` | all | hardware-enforced — `.claude/commands/*` | **prose** — the typed `R D T` convention (no custom slash) |
@@ -107,14 +107,15 @@ Not a single "pending" cell: the matrix is fully grounded in 0.138.0 empirics. D
 [g2-findings.md](../docs/evidence/g2-findings.md). Slash-dispatch and the docs/scratchpad tiers on
 Codex are a deliberately accepted degradation (ADR-010/011), not a defect.
 
-**A caveat on `Task` (ADR-014, empirically confirmed).** "docs-only **hardware-enforced**" for
-architect means "doesn't write code itself"; but architect carries `Task` and **can delegate** a
-Bash measurement to a read-only child (a subagent run confirmed: architect obtained exact
-git/test/LOC metrics without its own Bash). So the "hardware-enforced-ness" of docs-only for
-Task-bearing roles is **softer than for pure read-only**: the discipline is that the delegate is a
-read-only measurer, not a write-capable child (otherwise the boundary is bypassed). For metrics this
-is a deliberate, working path (see [../roles/architect.md](../roles/architect.md)); for the "doesn't
-write code" guarantee, it rests on the delegate not being given Edit/Write access to code.
+**A caveat on `Task` (ADR-014, empirically confirmed).** "docs-only" for architect means "doesn't
+write code itself"; architect also carries `Task` and **can delegate** a measurement to a read-only
+child (a subagent run confirmed this path back when the role carried no shell of its own; since
+ADR-018 the role also has prose-scoped Bash for metrics directly, and Task-delegation remains the
+path for parallel measurement). So the enforcement of docs-only for Task-bearing roles is **softer
+than for pure read-only**: the discipline is that the delegate is a read-only measurer, not a
+write-capable child (otherwise the boundary is bypassed). For metrics this is a deliberate, working
+path (see [../roles/architect.md](../roles/architect.md)); for the "doesn't write code" guarantee,
+it rests on the delegate not being given Edit/Write access to code.
 
 ## Discipline going forward: keep the core clean of the runtime
 

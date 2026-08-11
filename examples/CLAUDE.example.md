@@ -108,7 +108,7 @@ Test-and-code formation pipeline:
 
 Tests are a **specification**, not a check. A red test = a bug in the code (or an incomplete implementation), not a problem with the test.
 
-An end-to-end example of this chain for the "invite teammate" feature: spec → scenarios → test-cases → code — see [docs/](docs/).
+An end-to-end example of this chain's **artifacts** for the "invite teammate" feature: spec → scenarios → test-cases → code — see [docs/](docs/). Note the demo day-1 guide compresses the chain into one day and runs BA in **extraction mode** (scenarios written from the freshly built code — [roles/ba.md](../roles/ba.md) → "Two modes"); on a full-size feature the chain runs pre-code, with BA in spec-first mode, exactly in the order above.
 
 ## Project specifics
 

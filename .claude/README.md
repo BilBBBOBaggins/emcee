@@ -8,13 +8,13 @@ By default the package runs in prose mode: a single Claude Code reads `roles/<ro
 
 ### `agents/` — roles as real subagents
 
-Each file wraps a role in frontmatter (`name`, `description`, `tools`), making it a dispatchable subagent. The key benefit — **tool-scoping turns prose prohibitions into hardware ones**:
+Each file wraps a role in frontmatter (`name`, `description`, `tools`), making it a dispatchable subagent. The key benefit — **tool-scoping turns the "don't write" prohibitions into hardware ones**. Since [ADR-018](../docs/adr/018-second-model-reachability-and-panel-burden.md) every role also carries `Bash`, prose-scoped by its body to second-model (codex) calls and non-mutating checks — so "don't run" is a scoped-use prose boundary, while "don't write/edit code" stays physically impossible:
 
 | Subagent | tools | What it enforces |
 |----------|-------|--------------------|
-| `reviewer`, `auditor` (dormant, ad-hoc — ADR-005) | Read, Grep, Glob | "do NOT change code, do NOT run tests" — physically impossible |
-| `ba`, `qa-uat`, `sa` | + Write | write only documents, don't touch code |
-| `architect` | + Write, Task | documents (ADR/spec) + parallel reading via Task; no Edit/Bash on production |
+| `reviewer`, `auditor` (dormant, ad-hoc — ADR-005) | Read, Grep, Glob, Bash | "do NOT change code" — physically impossible (no Edit/Write); "do NOT run tests, Bash = codex + non-mutating checks only" — prose-scoped (ADR-018) |
+| `ba`, `qa-uat`, `sa` | + Write, Bash | write only documents, don't touch code (no Edit); Bash = codex calls only (ADR-018) |
+| `architect` | + Write, Task, Bash | documents (ADR/spec) + parallel reading via Task; no Edit; Bash = codex + non-mutating metrics (ADR-018) |
 | `developer`, `qa-e2e`, `debugger`, `devops` | + Edit, Write, Bash | write code/tests/configs |
 | `red-team`, `blue-team` | Read, Grep, Glob, Bash, Write | adversarial panel: write the attack/defense to `scratchpad/panel/`, Bash — to bring in codex |
 | `arbiter` | Read, Grep, Glob, Bash, Write | adversarial panel: judges and writes the verdict; Bash — **only for a narrow codex fact-check of a disputed empirical point** (`core/adversarial-panel.md` §"The arbiter's codex does NOT hand down the verdict"), NOT for ruling on "whose argument is stronger" |

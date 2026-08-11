@@ -381,7 +381,10 @@ Screenshots — expensive (visual analysis via VLM), use sparingly. JSON state �
 - If a test fails 3 times after fixes — stop, describe the problem
 - Don't change public core/bridge APIs without confirmation
 - Don't change architectural decisions
-- One commit = one fix
+- One commit = one fix — granularity for whoever owns the commit: in the human-in-the-loop default
+  the agent prints the command and the user commits (PR-NN-02); the agent itself commits only in an
+  autonomous run / under a guide-assigned commit
+  ([core/task-protocol.md](../core/task-protocol.md) → "Commit commands")
 
 ## Test accounts and data
 
