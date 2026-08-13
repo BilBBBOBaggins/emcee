@@ -87,7 +87,8 @@ The main rule: dependencies go **down**, not up.
 What this means in practice:
 
 - Presentation imports Business, not the other way around
-- Business imports Persistence (through interfaces), not the other way around
+- Business uses Persistence only through interfaces Business itself defines — it never imports the
+  implementation (how the import edge actually points after that — Dependency Inversion, below)
 - Domain doesn't know Presentation exists
 
 ### Dependency Inversion
@@ -118,6 +119,13 @@ func (r *PostgresUserRepository) FindByID(ctx context.Context, id UserID) (*User
 ~~~
 
 Result — Business doesn't import Persistence. The interface is defined in Business, the implementation is in Persistence. The dependency is inverted.
+
+**What "direction" means after inversion.** The layering rule counts **knowledge**, not raw import
+lines: after DIP the source-level import (Persistence imports the interface Business published) points
+up, and that is the inversion working as designed — not a forbidden back-import. What CQ-NN-02
+([core/code-quality.md](../core/code-quality.md)) bans without exception is a lower layer reaching
+into an upper layer's *logic or state*; implementing a contract the upper layer published is the
+sanctioned mechanism that keeps the ban enforceable.
 
 ## Concrete structure variants
 

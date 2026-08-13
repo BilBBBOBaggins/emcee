@@ -159,6 +159,8 @@ emcee/
   `docs/day-0-guide.md` — гайд инициализации, который **делегирует** работу агенту: тот сам
   запускает `go mod init` / `create-next-app` / `uv init` под выбранный стек (в актуальной версии
   инструмента, а не из зашитого scaffold'а), получает зелёный baseline и только потом берёт День 1.
+  (Последующий `/kickoff` опирается на этот файл — обновляет его на месте, если ваши ответы его
+  меняют, но не пишет дубликат.)
 - **`overlay`** — наложить регламент на существующий проект, ничего не затирая. Если `CLAUDE.md`
   уже есть, регламент кладётся рядом как `CLAUDE.regimen.md` для ручного слияния; `day-0-guide` не
   создаётся (проект уже инициализирован).
@@ -192,8 +194,10 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 
 1. Скопируйте **содержимое** `emcee/` в корень нового проекта так, чтобы `CLAUDE.md`
    оказался в корне репозитория, а папки `core/ stack/ architecture/ domain/ roles/` лежали рядом с
-   ним на верхнем уровне. Claude Code авто-читает именно корневой `CLAUDE.md`, и относительные
-   ссылки внутри него рассчитаны на этот layout.
+   ним на верхнем уровне — **кроме источников самого пакета** из дерева выше (`QUICKSTART.md`,
+   `docs/adr/`, `docs/evidence/`, `examples/`; `overlays/codex/` генератор собирает, а не копирует
+   как есть): генератор их пропускает — пропустите и вы. Claude Code авто-читает именно корневой
+   `CLAUDE.md`, и относительные ссылки внутри него рассчитаны на этот layout.
 
    **Не переносите** `CLAUDE.md` внутрь `.claude/` — оттуда он не подхватывается автоматически, и
    все ссылки поедут. Каталог `.claude/` зарезервирован под исполняемую обвязку — см.
@@ -263,14 +267,24 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 
 ### stack/ — правила под язык и фреймворк
 
+- `angular.md` — Angular 21+ standalone-only (zoneless + OnPush, signals-first, strict templates, Vitest).
+- `cpp.md` — чистый C++23 без Qt (CMakePresets, vcpkg/Conan 2, ошибки через std::expected, GoogleTest + контуры санитайзеров/фаззинга).
 - `cpp-qt.md` — C++23 / Qt 6 desktop (CMake, QML, GoogleTest + Qt Quick Test, clang-tidy).
+- `csharp.md` — C# / .NET 10 LTS (nullable + warnings-as-errors в Directory.Build.props, ASP.NET Core, дисциплина EF Core, xUnit + Testcontainers).
 - `delphi.md` — Delphi 12+ / Object Pascal (MSBuild, FireDAC, DUnitX, warnings-и-hints-как-гейт).
+- `flutter.md` — Flutter / Dart 3 (feature-first слои, Riverpod или bloc, very_good_analysis, const-first чистый build()).
 - `go.md` — Go 1.23+ (Echo, sqlc, slog, testify).
 - `java.md` — Java 21 LTS (Maven, Spring Boot 3, Error Prone + Checkstyle, JUnit 5 + Testcontainers).
+- `kotlin.md` — Kotlin 2.1+ / JDK 21 (Gradle Kotlin DSL, detekt + ktlint, дисциплина корутин, Spring Boot или Ktor).
+- `node.md` — Node 24 LTS / TypeScript strict backend (ESM, Fastify, Zod на всех границах, Vitest, pino, knip).
 - `php.md` — PHP 8.3+ (strict_types везде, PHPStan level max, PER-CS, PHPUnit 11).
 - `python.md` — Python 3.12+ (uv, ruff, mypy strict, FastAPI, pytest).
 - `react-nextjs.md` — Next.js App Router, TypeScript strict, shadcn/ui, TanStack Query.
+- `ruby-rails.md` — Ruby 3.3+ / Rails 7.2+ (RuboCop + Brakeman как гейт, RSpec, Hotwire, сервис-объекты).
 - `rust.md` — Rust stable, workspace (clippy warnings-as-errors, thiserror, tokio).
+- `svelte.md` — Svelte 5 runes-only / SvelteKit 2 (дисциплина $lib/server, form actions, svelte-check --fail-on-warnings).
+- `swift.md` — Swift 6 strict concurrency (SwiftPM, SwiftUI + @Observable, SwiftLint --strict, Swift Testing).
+- `vue-nuxt.md` — Vue 3.5+ / Nuxt 4 (только script setup, Pinia setup-stores, nuxi typecheck, Vitest + Playwright).
 
 Для своих стеков добавляйте новые файлы (см. `stack/_TEMPLATE.md`).
 
@@ -419,7 +433,7 @@ Claude Code дозаполнит этот файл. Новые `architecture/` �
 
 Добавлять не превентивно, а когда реальный проект потребует:
 
-- **Stack:** `svelte.md` (`rust.md` и `cpp-qt.md` уже добавлены из реальных проектов).
+- **Stack:** `elixir.md`, `scala.md` (`svelte.md`, `rust.md` и `cpp-qt.md` уже добавлены).
 - **Architecture:** `hexagonal.md`, `bff-pattern.md` (CQRS и event-sourcing уже покрыты в
   `architecture/event-driven.md`).
 - **Domain:** `consumer-product.md`, `marketplace.md`, `internal-tool.md`, `gaming.md`.

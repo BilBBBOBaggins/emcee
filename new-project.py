@@ -232,9 +232,17 @@ INIT_CMDS = {
     "node": "npm init -y",
     "svelte": "npx sv create .",
     "cpp-qt": "git init && touch CMakeLists.txt   # no standard scaffolder: author the root CMakeLists.txt by hand (stack/cpp-qt.md §Version and tools)",
+    "cpp": "git init && touch CMakeLists.txt CMakePresets.json   # no standard scaffolder: author them by hand (stack/cpp.md §Version and tools)",
     "java": "curl -s https://start.spring.io/starter.tgz -d type=maven-project -d javaVersion=21 | tar -xz   # Spring Boot; plain library: mvn -B archetype:generate",
     "php": "composer init   # framework app: symfony new . / composer create-project laravel/laravel .",
     "delphi": "git init   # no CLI scaffolder: create the .dpr/.dproj in the RAD Studio IDE (stack/delphi.md §Version and tools)",
+    "ruby-rails": "rails new .   # requires: gem install rails; API-only: rails new . --api",
+    "swift": "swift package init --type executable   # app target: create the Xcode project in Xcode or via tuist/xcodegen (stack/swift.md §Version and tools)",
+    "kotlin": "gradle init --type kotlin-application --dsl kotlin   # Spring Boot: curl -s https://start.spring.io/starter.tgz -d language=kotlin -d javaVersion=21 | tar -xz",
+    "csharp": "dotnet new webapi   # library: dotnet new classlib; solution wiring: dotnet new sln && dotnet sln add",
+    "vue-nuxt": "npx nuxi init .",
+    "flutter": "flutter create .",
+    "angular": "npx -p @angular/cli ng new <name> --directory .",
 }
 
 # glob patterns for path-scoped activation of stack skills (`paths:` in the skill frontmatter).
@@ -248,9 +256,17 @@ STACK_PATHS = {
     "node": "**/*.js, **/*.ts, package.json",
     "svelte": "**/*.svelte, **/*.ts, **/*.js",
     "cpp-qt": "**/*.cpp, **/*.h, **/*.hpp, **/*.qml, CMakeLists.txt",
+    "cpp": "**/*.cpp, **/*.h, **/*.hpp, CMakeLists.txt, CMakePresets.json",
     "java": "**/*.java, pom.xml, build.gradle, build.gradle.kts",
     "php": "**/*.php, composer.json",
     "delphi": "**/*.pas, **/*.dpr, **/*.dproj, **/*.dfm, **/*.fmx",
+    "ruby-rails": "**/*.rb, **/*.erb, Gemfile, Rakefile",
+    "swift": "**/*.swift, Package.swift",
+    "kotlin": "**/*.kt, **/*.kts, build.gradle.kts, gradle/libs.versions.toml",
+    "csharp": "**/*.cs, **/*.csproj, **/*.sln, Directory.Build.props",
+    "vue-nuxt": "**/*.vue, **/*.ts, nuxt.config.ts",
+    "flutter": "**/*.dart, pubspec.yaml",
+    "angular": "**/*.ts, **/*.html, angular.json",
 }
 
 # ---------- stack auto-detection (overlay mode) ----------
@@ -270,9 +286,11 @@ def detect_stacks(root: str) -> list[dict]:
     Returns [{slug, role: 'backend'|'frontend', evidence}]; empty list = nothing recognized."""
     keys = {"go.mod": "go", "Cargo.toml": "rust", "pom.xml": "maven",
             "build.gradle": "gradle", "build.gradle.kts": "gradle",
-            "composer.json": "composer", "package.json": "npm",
+            "composer.json": "composer", "package.json": "npm", "Gemfile": "gem",
             "pyproject.toml": "py", "setup.py": "py", "requirements.txt": "py",
-            "CMakeLists.txt": "cmake"}
+            "CMakeLists.txt": "cmake",
+            "Package.swift": "spm", "project.pbxproj": "xcodeproj",
+            "pubspec.yaml": "pubspec", "angular.json": "ngjson"}
     hits: dict[str, str] = {}                     # marker key -> shallowest relative path
     for dirpath, dirs, files in os.walk(root):
         rel = os.path.relpath(dirpath, root)
@@ -280,7 +298,8 @@ def detect_stacks(root: str) -> list[dict]:
         dirs[:] = [] if depth >= 3 else [d for d in dirs
                                          if d not in DETECT_PRUNE and not d.startswith(".")]
         for fn in files:
-            k = keys.get(fn) or {".dproj": "dproj", ".dpr": "dpr"}.get(os.path.splitext(fn)[1])
+            k = keys.get(fn) or {".dproj": "dproj", ".dpr": "dpr",
+                                 ".csproj": "csproj", ".sln": "sln"}.get(os.path.splitext(fn)[1])
             if k:
                 hits.setdefault(k, fn if rel == "." else os.path.join(rel, fn))
 
@@ -306,12 +325,22 @@ def detect_stacks(root: str) -> list[dict]:
         add("go", "backend", hits["go.mod"])
     if "rust" in hits:
         add("rust", "backend", hits["rust"])
+    def jvm_lang(relpath: str) -> str:
+        # Maven/Gradle serve both JVM languages — the Kotlin plugin wiring in the build file decides
+        kt = r"org\.jetbrains\.kotlin|kotlin-maven-plugin|\bkotlin\(|libs\.plugins\.kotlin"
+        return "kotlin" if re.search(kt, grab(relpath)) else "java"
+
     if "maven" in hits and "gradle" in hits:
-        add("java", "backend", f"{hits['maven']} + {hits['gradle']} → Maven AND Gradle both present")
+        add(jvm_lang(hits["gradle"]), "backend",
+            f"{hits['maven']} + {hits['gradle']} → Maven AND Gradle both present")
     elif "maven" in hits:
-        add("java", "backend", f"{hits['maven']} → Maven")
+        add(jvm_lang(hits["maven"]), "backend", f"{hits['maven']} → Maven")
     elif "gradle" in hits:
-        add("java", "backend", f"{hits['gradle']} → Gradle")
+        slug = jvm_lang(hits["gradle"])
+        ev = f"{hits['gradle']} → Gradle"
+        if slug == "kotlin" and "com.android" in grab(hits["gradle"]):
+            ev += ", Android"
+        add(slug, "backend", ev)
     if "composer" in hits:
         ev, deps = hits["composer"], deps_of(hits["composer"], "require", "require-dev")
         if "laravel/framework" in deps:
@@ -323,16 +352,40 @@ def detect_stacks(root: str) -> list[dict]:
         ev = hits.get("dproj") or hits.get("dpr")
         m = re.search(r"<FrameworkType>(\w+)</FrameworkType>", grab(hits.get("dproj", "")))
         add("delphi", "backend", ev + (f" → {m.group(1)}" if m else ""))
+    if "gem" in hits:
+        ev = hits["gem"]
+        if re.search(r"""^\s*gem\s+["']rails["']""", grab(hits["gem"]), re.M):
+            ev += " → Rails"
+        add("ruby-rails", "backend", ev)
     if "py" in hits:
         add("python", "backend", hits["py"])
-    if "cmake" in hits and re.search(r"\bQt[56]?\b", grab(hits["cmake"])):
-        add("cpp-qt", "backend", f"{hits['cmake']} → Qt")
+    if "cmake" in hits:
+        if re.search(r"\bQt[56]?\b", grab(hits["cmake"])):
+            add("cpp-qt", "backend", f"{hits['cmake']} → Qt")
+        else:
+            add("cpp", "backend", f"{hits['cmake']} → CMake, no Qt")
+    if "spm" in hits or "xcodeproj" in hits:
+        ev = hits.get("spm") or hits.get("xcodeproj")
+        add("swift", "backend", ev + (" → SwiftPM" if "spm" in hits else " → Xcode project"))
+    if "csproj" in hits or "sln" in hits:
+        ev = hits.get("csproj") or hits.get("sln")
+        m = re.search(r"<TargetFrameworks?>([^<]+)</", grab(hits.get("csproj", "")))
+        add("csharp", "backend", ev + (f" → {m.group(1)}" if m else ""))
+    if "pubspec" in hits:
+        flutterish = re.search(r"^\s*flutter:", grab(hits["pubspec"]), re.M)
+        add("flutter", "backend", hits["pubspec"] + (" → Flutter" if flutterish else " → Dart"))
     if "npm" in hits:
         ev, deps = hits["npm"], deps_of(hits["npm"], "dependencies", "devDependencies")
         if "next" in deps:
             add("react-nextjs", "frontend", ev + " → next")
+        elif "nuxt" in deps:
+            add("vue-nuxt", "frontend", ev + " → nuxt")
+        elif "@angular/core" in deps or "ngjson" in hits:
+            add("angular", "frontend", ev + " → angular")
         elif "svelte" in deps or "@sveltejs/kit" in deps:
             add("svelte", "frontend", ev + " → svelte")
+        elif "vue" in deps:
+            add("vue-nuxt", "frontend", ev + " → vue")
         elif not any(d["role"] == "backend" for d in out):
             add("node", "backend", ev)
     return out

@@ -19,7 +19,7 @@ This is the `Go + modular-monolith + b2b-saas` bundle from the package: backend 
 | [docs/adr/001-modular-monolith.example.md](docs/adr/001-modular-monolith.example.md) | architecture decision record | architect |
 | [docs/scenarios-1-2-invite-teammate.example.md](docs/scenarios-1-2-invite-teammate.example.md) | user scenarios (input for QA UAT) | BA |
 | [docs/test-cases-1-2-invite-teammate.example.md](docs/test-cases-1-2-invite-teammate.example.md) | formal test cases (input for QA E2E) | QA UAT |
-| [docs/PROCESS-METRICS.example.md](docs/PROCESS-METRICS.example.md) | **opt-in** log of whether the heavy process pays off (C+/panel/QA) — for checking the STOP gates of ADR-002/003; don't set it up for a simple project | operator |
+| [docs/PROCESS-METRICS.example.md](docs/PROCESS-METRICS.example.md) | **opt-in** log of whether the heavy process pays off (C+/panel/QA) — for checking the STOP gates of ADR-002/003; don't set it up for a simple project | architect (maintains the log — [core/task-protocol.md](../core/task-protocol.md) §artifact names); the operator reads it and rules the STOP gates |
 
 `<DT>` in file names = "day-task". Here the feature is pinned to Day 1, Task 2 (frontend), so its scenarios and test cases are `…-1-2-…`. Full naming convention — [core/task-protocol.md](../core/task-protocol.md).
 

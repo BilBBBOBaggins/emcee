@@ -35,7 +35,7 @@ doctor), grep-based audits.
 Three-tier with a bridge ([architecture/three-tier-with-bridge.md](../architecture/three-tier-with-bridge.md)):
 
 ~~~
-src/core/     # business logic, protocols, storage. Links QtCore ONLY — no QML/Widgets
+src/core/     # business logic, protocols, storage. Links QtCore (+ QtNetwork for protocols) — never QML/Widgets
 src/bridge/   # export to QML: QAbstractListModel, Q_PROPERTY, Q_INVOKABLE. Thin proxy layer
 src/ui/       # QML: components/, views/, theme/
 tests/        # dev tests: core/, bridge/, qml/, integration/ (+ e2e/, fuzz/ — separate tracks)

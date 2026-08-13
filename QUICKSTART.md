@@ -53,7 +53,9 @@ Then:
    for whom, on what stack), **fills in `CLAUDE.md` itself** (tagging the source of every fact;
    whatever it doesn't know, it leaves as a visible `{{placeholder}}` rather than inventing one),
    records your priorities in `docs/PROJECT-STATE.md`, runs the load-bearing architecture through
-   `/panel` → ADR, and produces `docs/day-0-guide.md` and `docs/day-1-guide.md`. You don't need to
+   `/panel` → ADR, and produces `docs/day-0-guide.md` and `docs/day-1-guide.md` (if the generator's
+   `--mode new` already created `day-0-guide`, kickoff updates that file in place rather than
+   writing a second one). You don't need to
    dig through `{{...}}` by hand — you just answer the questions. (Details —
    [core/pipeline.md](core/pipeline.md).)
 
@@ -185,7 +187,8 @@ The cycle for a single task (`R D T`):
    respected ([core/quality-gates.md](core/quality-gates.md)).
 4. **Exit.** A check-back block against the constitution: what was verified, no deviations.
 5. **The commit is yours.** The agent prints the ready-made command, but **only you commit**
-   (for every task).
+   (for every task; the sole exception — an autonomous run or a day guide that explicitly assigns
+   the commit to the role, [core/task-protocol.md](core/task-protocol.md)).
 
 ---
 

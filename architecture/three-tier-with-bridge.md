@@ -414,9 +414,12 @@ Button {
 
 ### Partial class split for large bridges
 
-The bridge class grows (> 250 LOC header, > 700 LOC impl). Signs of a God Object.
+The bridge class grows (> 250 LOC header, > 700 LOC impl). Crossing the threshold is a
+**suspicion, not a verdict** ([core/quality-gates.md](../core/quality-gates.md) §LOC): either give a
+reasoned "it does one thing, here's why" — a `Q_PROPERTY` facade's header is inherent surface, cap
+it with a documented ceiling instead of a mechanical cut (see `stack/cpp-qt.md`) — or split.
 
-Solution: split the impl across several .cpp files by functional groups:
+For a genuine God Object, split the impl across several .cpp files by functional groups:
 
 ~~~
 AppController.h  (one header)

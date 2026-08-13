@@ -187,7 +187,10 @@ func (db *DB) QueryWithTenant(ctx context.Context, query string, args ...interfa
 Admin and platform-level operations may legitimately require access to all tenants. Rules:
 
 - A separate admin role in the DB that bypasses RLS (via `TO admin_role USING (true)`)
-- Explicit activation of admin mode in code — not default behavior
+- Explicit activation of admin mode in code — not default behavior. What the code does is *select*
+  the admin DB role/connection explicitly; the tenant check itself is never skipped by application
+  code (that's the "admin bypass through a code flag" anti-pattern below — the bypass lives at the
+  DB role level, the selection of that role lives in code)
 - Audit log mandatory for all admin actions
 - Admin API endpoints are separate from tenant API endpoints, on separate paths (/admin/*)
 - Admin authentication is separate from tenant authentication (e.g., internal SSO instead of tenant JWT)

@@ -356,6 +356,10 @@ TestDriver — a critical part for autonomous AI-driven development.
 5. If there's a gap — the agent diagnoses the cause (reads code, logs, state)
 6. The agent writes a fix, repeats the loop
 
+One agent both codes and runs the scenario tests here — that's the **solo-collapse** mode
+([core/quality-gates.md](../core/quality-gates.md) §Separation of Testing Tracks); on a project
+with a deployed separate QA E2E track, split the loop's duties along the tracks instead.
+
 ### Key principle: state comparison
 
 The agent compares the UI state with the expected state in a structured format, not via screenshots.

@@ -103,10 +103,10 @@ Test-and-code formation pipeline:
 
 1. SA/BA forms acceptance criteria in domain language (Given/When/Then).
 2. QA UAT turns criteria into formal test cases with the expected visible behavior.
-3. QA E2E or the developer writes the test code.
+3. QA E2E or the developer writes the test code (whoever authors it, *running* E2E stays in QA E2E's track — [../core/quality-gates.md](../core/quality-gates.md) §Separation of Testing Tracks).
 4. The developer implements the code so the tests pass.
 
-Tests are a **specification**, not a check. A red test = a bug in the code (or an incomplete implementation), not a problem with the test.
+Tests are a **specification**, not a check. A red test = a bug in the code (or an incomplete implementation), not a problem with the test. (The default stance within this pipeline; the rare case where the test itself contradicts the spec is a **contract defect** with its own procedure — [../core/spec-driven.md](../core/spec-driven.md), don't force the code to fit a wrong test.)
 
 An end-to-end example of this chain's **artifacts** for the "invite teammate" feature: spec → scenarios → test-cases → code — see [docs/](docs/). Note the demo day-1 guide compresses the chain into one day and runs BA in **extraction mode** (scenarios written from the freshly built code — [roles/ba.md](../roles/ba.md) → "Two modes"); on a full-size feature the chain runs pre-code, with BA in spec-first mode, exactly in the order above.
 

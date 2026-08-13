@@ -166,7 +166,8 @@ How the two `--mode` values differ:
   `docs/day-0-guide.md` — an initialization guide that **delegates** the work to the agent: the
   agent runs `go mod init` / `create-next-app` / `uv init` itself for the chosen stack (using the
   tool's current version, not a baked-in scaffold), gets a green baseline, and only then picks up
-  Day 1.
+  Day 1. (A later `/kickoff` builds on this file — updates it in place if your answers change it,
+  never writes a duplicate.)
 - **`overlay`** — lay the regimen onto an existing project without overwriting anything. If
   `CLAUDE.md` already exists, the regimen is placed alongside it as `CLAUDE.regimen.md` for manual
   merging; no `day-0-guide` is created (the project is already initialized).
@@ -202,8 +203,11 @@ you're done.
 
 1. Copy the **contents** of `emcee/` to the root of the new project so that `CLAUDE.md` ends up at
    the repository root, with the `core/ stack/ architecture/ domain/ roles/` directories alongside
-   it at the top level. Claude Code auto-reads the root-level `CLAUDE.md` specifically, and the
-   relative links inside it assume this layout.
+   it at the top level — **except the package-only sources** listed in the tree above
+   (`QUICKSTART.md`, `docs/adr/`, `docs/evidence/`, `examples/`; `overlays/codex/` is assembled by
+   the generator, not copied as-is): the generator skips them, skip them too. Claude Code
+   auto-reads the root-level `CLAUDE.md` specifically, and the relative links inside it assume
+   this layout.
 
    **Do not move** `CLAUDE.md` into `.claude/` — from there it isn't picked up automatically, and
    every link breaks. The `.claude/` directory is reserved for executable wiring — see
@@ -276,14 +280,24 @@ context isn't loaded with anything unneeded):
 
 ### stack/ — language and framework rules
 
+- `angular.md` — Angular 21+ standalone-only (zoneless + OnPush, signals-first, strict templates, Vitest).
+- `cpp.md` — plain C++23 without Qt (CMakePresets, vcpkg/Conan 2, std::expected-first errors, GoogleTest + sanitizer/fuzz circuits).
 - `cpp-qt.md` — C++23 / Qt 6 desktop (CMake, QML, GoogleTest + Qt Quick Test, clang-tidy).
+- `csharp.md` — C# / .NET 10 LTS (nullable + warnings-as-errors in Directory.Build.props, ASP.NET Core, EF Core discipline, xUnit + Testcontainers).
 - `delphi.md` — Delphi 12+ / Object Pascal (MSBuild, FireDAC, DUnitX, warnings-and-hints-as-gate).
+- `flutter.md` — Flutter / Dart 3 (feature-first layers, Riverpod or bloc, very_good_analysis, const-first pure build()).
 - `go.md` — Go 1.23+ (Echo, sqlc, slog, testify).
 - `java.md` — Java 21 LTS (Maven, Spring Boot 3, Error Prone + Checkstyle, JUnit 5 + Testcontainers).
+- `kotlin.md` — Kotlin 2.1+ / JDK 21 (Gradle Kotlin DSL, detekt + ktlint, coroutines discipline, Spring Boot or Ktor).
+- `node.md` — Node 24 LTS / TypeScript strict backend (ESM, Fastify, Zod at all boundaries, Vitest, pino, knip).
 - `php.md` — PHP 8.3+ (strict_types everywhere, PHPStan level max, PER-CS, PHPUnit 11).
 - `python.md` — Python 3.12+ (uv, ruff, mypy strict, FastAPI, pytest).
 - `react-nextjs.md` — Next.js App Router, TypeScript strict, shadcn/ui, TanStack Query.
+- `ruby-rails.md` — Ruby 3.3+ / Rails 7.2+ (RuboCop + Brakeman as the gate, RSpec, Hotwire, service objects).
 - `rust.md` — Rust stable workspace (clippy warnings-as-errors, thiserror, tokio).
+- `svelte.md` — Svelte 5 runes-only / SvelteKit 2 ($lib/server discipline, form actions, svelte-check --fail-on-warnings).
+- `swift.md` — Swift 6 strict concurrency (SwiftPM, SwiftUI + @Observable, SwiftLint --strict, Swift Testing).
+- `vue-nuxt.md` — Vue 3.5+ / Nuxt 4 (script setup only, Pinia setup-stores, nuxi typecheck, Vitest + Playwright).
 
 Add new files for your own stacks (see `stack/_TEMPLATE.md`).
 
@@ -442,7 +456,7 @@ repository.
 
 Add these not preemptively, but when a real project calls for them:
 
-- **Stack:** `svelte.md` (`rust.md` and `cpp-qt.md` have since landed from real projects).
+- **Stack:** `elixir.md`, `scala.md` (`svelte.md`, `rust.md`, and `cpp-qt.md` have since landed).
 - **Architecture:** `hexagonal.md`, `bff-pattern.md` (CQRS and event sourcing are already covered in
   `architecture/event-driven.md`).
 - **Domain:** `consumer-product.md`, `marketplace.md`, `internal-tool.md`, `gaming.md`.

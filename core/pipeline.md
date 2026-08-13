@@ -95,9 +95,10 @@ the real shipping root lands promptly — one route, reachability evidence, not 
 completeness — instead of integration deferring for many slices (the field failure: dozens of
 autonomous "days" with zero product endpoints, the integration risk surfacing only at
 acceptance). In overlay mode, where the product is already end-to-end, the same rule degenerates
-to: **wire new work into the existing skeleton continuously** — QG-NN-05 applied continuously,
-not once at close; accumulating an implemented-but-unwired layer to merge at the end is exactly
-the ADR-015 incident class.
+to: **wire new work into the existing skeleton continuously** — the QG-NN-05 **discipline**
+applied continuously (the composite **checker** still runs once, at slice close — see
+[quality-gates.md](quality-gates.md) §Slice-close composite gate); accumulating an
+implemented-but-unwired layer to merge at the end is exactly the ADR-015 incident class.
 
 ## How one task passes through roles
 

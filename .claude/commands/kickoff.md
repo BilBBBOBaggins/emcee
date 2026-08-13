@@ -17,6 +17,8 @@ This is the entry into a project when there are no days or roadmap yet (the `N`/
    invented).
 4. **Load-bearing architecture** → `/panel` → ADR.
 5. **First day guides** — `docs/day-0-guide.md` (stack init, if a new project) + `docs/day-1-guide.md`.
+   If the generator already created `day-0-guide` (`--mode new`), do NOT write a second one — update
+   the existing file in place where the user's answers change it, otherwise leave it as is.
 
 `/kickoff` does NOT replace `day-0-guide` — it comes BEFORE the first working day and produces it itself. Full
 narrative (kickoff + ongoing + an example with all roles) — `core/pipeline.md`. Lightweight by default —

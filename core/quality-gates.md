@@ -4,7 +4,9 @@ Automated checks that must be green before a task is considered done.
 
 ## Mandatory Run on Completion — [QG-NN-01 · non-negotiable · mechanical: test runner]
 
-After the last change in the task — a full build and run of all tests.
+After the last change in the task — a full build and run of all tests. ("All" is scoped by the
+track where separate testing tracks are deployed — each role runs its own track's full suite, see
+§Separation of Testing Tracks; on solo-collapse it is simply all tests.)
 
 Project command:
 
@@ -305,7 +307,10 @@ requirement closes "in the index but not committed". It runs only at boundaries 
 "slice closed": the **orchestrator's** `projectDone`/slice-done in autonomous mode (mandatory,
 [pipeline.md](pipeline.md) §Closing a slice), the architect/user at slice close in interactive mode,
 optionally a local `pre-push` hook on the slice branch. Deliberately NOT per-commit and NOT
-mid-slice — `--qg` legitimately reds while evidence is still landing. **No hosted-CI integration is
+mid-slice — `--qg` legitimately reds while evidence is still landing. (This timing governs the
+**checker** — the composite command; the wiring **discipline** it audits is continuous — new work
+lands wired into the skeleton as you go, not merged at close: [pipeline.md](pipeline.md) §Early
+assembled-integration checkpoint. Two different sentences about two different things.) **No hosted-CI integration is
 shipped** (operator ruling 2026-07-06, recorded in ADR-017): the command is provider-neutral by
 construction — `python3` + `git` + the stack commands — so any runner that has a slice-close event
 can call it; owning per-provider config is the owned-debt class rejected by ADR-001/006/009. On solo
